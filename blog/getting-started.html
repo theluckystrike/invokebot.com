@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Getting Started with Bot Automation — InvokeBot</title>
+    <meta name="description" content="A comprehensive beginner's guide to bot automation covering architecture decisions, first bot deployment, and essential patterns for building reliable automation systems.">
+    <meta name="keywords" content="bot automation tutorial, getting started bots, serverless bot guide, first automation bot, beginner bot deployment">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Getting Started with Bot Automation — InvokeBot">
+    <meta property="og:description" content="A comprehensive beginner's guide to bot automation covering architecture decisions, first bot deployment, and essential patterns.">
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="https://invokebot.com/blog/getting-started">
+    <link rel="canonical" href="https://invokebot.com/blog/getting-started">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        html { scroll-behavior: smooth; }
+    </style>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "Getting Started with Bot Automation",
+        "url": "https://invokebot.com/blog/getting-started",
+        "description": "A comprehensive beginner's guide to bot automation.",
+        "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" }
+    }
+    </script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <nav class="bg-gradient-to-r from-teal-600 to-emerald-500 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <a href="/" class="text-white text-2xl font-bold tracking-tight">InvokeBot</a>
+                <div class="hidden md:flex space-x-8">
+                    <a href="/" class="text-teal-100 hover:text-white transition">Home</a>
+                    <a href="/guides" class="text-teal-100 hover:text-white transition">Guides</a>
+                    <a href="/tools" class="text-teal-100 hover:text-white transition">Tools</a>
+                    <a href="/blog/getting-started" class="text-white font-semibold transition">Blog</a>
+                    <a href="/about" class="text-teal-100 hover:text-white transition">About</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <article class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <header class="mb-12">
+            <span class="inline-block bg-teal-100 text-teal-700 text-sm font-medium px-3 py-1 rounded-full mb-4">Getting Started</span>
+            <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-4">Getting Started with Bot Automation</h1>
+            <p class="text-xl text-gray-500">Everything you need to know to build and deploy your first automation bot, from choosing an architecture to shipping to production.</p>
+        </header>
+
+        <div class="prose prose-lg max-w-none text-gray-600">
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Why Automate with Bots?</h2>
+            <p>
+                Bot automation has emerged as one of the most impactful practices in modern software engineering. At its simplest, a bot is a program that performs tasks automatically based on triggers, schedules, or events. But the real power of bots lies in their ability to orchestrate complex workflows across multiple systems without human intervention. A well-designed bot can deploy code, process payments, moderate content, respond to customer inquiries, and monitor infrastructure health, all while maintaining detailed logs and handling failures gracefully.
+            </p>
+            <p>
+                The business case for bot automation is straightforward: bots operate 24 hours a day without breaks, they execute tasks consistently without variation, and they respond to events in milliseconds rather than minutes. For operations teams, this means fewer pages during off-hours. For development teams, this means faster and more reliable deployments. For customer-facing teams, this means instant responses to common inquiries. The compound effect of automating repetitive tasks across an organization is enormous, freeing human expertise for creative problem-solving and strategic work.
+            </p>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Choosing Your Bot Architecture</h2>
+            <p>
+                Before writing any code, you need to decide on the architectural pattern that best fits your use case. The three most common patterns are long-running process bots, serverless event-driven bots, and workflow orchestration bots. Each has distinct advantages depending on your requirements for latency, state management, and complexity.
+            </p>
+            <p>
+                Long-running process bots maintain a persistent connection to one or more services, such as a WebSocket connection to Slack or Discord. They are simple to reason about because state lives in memory, but they require dedicated compute resources and introduce reliability challenges around process crashes and restarts. Serverless bots, by contrast, are stateless functions invoked by events. They scale automatically and cost nothing when idle, but they introduce cold start latency and require external state management. Workflow orchestration bots use a dedicated engine like Temporal or AWS Step Functions to coordinate multi-step processes with built-in retry and compensation logic.
+            </p>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Building Your First Bot: A Practical Example</h2>
+            <p>
+                Let us build a simple deployment notification bot that listens for GitHub webhook events and posts deployment summaries to a Slack channel. This example demonstrates the core concepts of webhook handling, API integration, and error handling that apply to any bot automation project.
+            </p>
+            <p>
+                First, set up a new Node.js project and install the required dependencies:
+            </p>
+            <pre class="bg-gray-900 text-green-400 rounded-lg p-6 overflow-x-auto"><code>mkdir deploy-bot && cd deploy-bot
+npm init -y
+npm install express @slack/web-api crypto</code></pre>
+            <p>
+                Create the main bot file that receives GitHub webhooks and forwards deployment events to Slack:
+            </p>
+            <pre class="bg-gray-900 text-green-400 rounded-lg p-6 overflow-x-auto"><code>const express = require('express');
+const crypto = require('crypto');
+const { WebClient } = require('@slack/web-api');
+
+const app = express();
+const slack = new WebClient(process.env.SLACK_TOKEN);
+
+app.post('/webhook', express.json(), async (req, res) => {
+  // Verify GitHub webhook signature
+  const sig = req.headers['x-hub-signature-256'];
+  const hmac = crypto.createHmac('sha256', process.env.GITHUB_SECRET);
+  const digest = 'sha256=' + hmac.update(JSON.stringify(req.body)).digest('hex');
+
+  if (sig !== digest) {
+    return res.status(401).send('Invalid signature');
+  }
+
+  // Handle deployment events
+  if (req.headers['x-github-event'] === 'deployment_status') {
+    const { deployment, deployment_status } = req.body;
+    await slack.chat.postMessage({
+      channel: process.env.SLACK_CHANNEL,
+      text: `Deployment ${deployment.sha.slice(0,7)} is now ${deployment_status.state}`
+    });
+  }
+
+  res.status(200).send('OK');
+});
+
+app.listen(3000);</code></pre>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Essential Patterns for Reliable Bots</h2>
+            <p>
+                Once your bot is receiving events and performing actions, you need to harden it for production use. The following patterns are essential for any bot that handles real workloads:
+            </p>
+            <p>
+                <strong>Idempotency:</strong> Ensure that processing the same event twice produces the same result. Store processed event IDs and check before processing to prevent duplicate actions. This is critical because webhook providers retry failed deliveries, and network issues can cause your bot to receive the same event multiple times.
+            </p>
+            <p>
+                <strong>Graceful degradation:</strong> When a downstream API is unavailable, your bot should queue the action for retry rather than failing silently or crashing. Implement exponential backoff with jitter to avoid thundering herd problems when the service recovers.
+            </p>
+            <p>
+                <strong>Structured logging:</strong> Log every action with a correlation ID that links back to the triggering event. This makes debugging production issues dramatically faster. Include the event type, timestamp, action taken, and result in every log entry.
+            </p>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Deploying to Production</h2>
+            <p>
+                For serverless deployment, package your bot as a Lambda function or Cloud Function and configure the webhook URL to point to your function's API Gateway endpoint. For container-based deployment, use Docker with a health check endpoint and deploy to ECS, Cloud Run, or Kubernetes. Regardless of the deployment model, ensure you have monitoring and alerting configured before directing real traffic to your bot.
+            </p>
+            <p>
+                Start with a single, simple bot that solves one well-defined problem. Resist the temptation to build a general-purpose automation framework before you have proven the value of specific automations. As your bot fleet grows, you can extract shared patterns into libraries and standardize on a common observability stack. Resources like <a href="https://lockml.com" class="text-teal-600 hover:text-teal-800 underline">LockML</a> provide additional guidance on securing automation pipelines in production environments.
+            </p>
+
+            <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Next Steps</h2>
+            <p>
+                With your first bot deployed and running, the natural next steps are to add more sophisticated error handling, implement conversation state for interactive bots, explore webhook aggregation for high-volume scenarios, and build a dashboard for monitoring bot health and activity. Each of these topics is covered in depth in our <a href="/guides" class="text-teal-600 hover:text-teal-800 underline">guides section</a>, where you will find detailed walkthroughs with complete code examples and architecture diagrams.
+            </p>
+        </div>
+    </article>
+
+    <footer class="bg-gray-900 text-gray-400 py-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="text-white text-xl font-bold mb-4 md:mb-0">InvokeBot</div>
+                <div class="flex space-x-8 mb-4 md:mb-0">
+                    <a href="/" class="hover:text-white transition">Home</a>
+                    <a href="/guides" class="hover:text-white transition">Guides</a>
+                    <a href="/tools" class="hover:text-white transition">Tools</a>
+                    <a href="/blog/getting-started" class="hover:text-white transition">Blog</a>
+                    <a href="/about" class="hover:text-white transition">About</a>
+                </div>
+                <p class="text-sm">&copy; 2025 InvokeBot. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

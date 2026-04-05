@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://invokebot.com/sitemap.xml

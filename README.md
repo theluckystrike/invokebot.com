@@ -20,9 +20,7 @@ Select your HTTP method, enter the webhook URL, and configure headers and body a
 
 - Vanilla JavaScript (no frameworks, no dependencies)
 - Client-side only — your data never leaves your browser
-- Part of the [Zovo Tools](https://zovo.one) open network
 
-## Related Tools
 
 - [JSON Explorer](https://kappafy.com) — parse and explore webhook response payloads
 - [Claude API Playground](https://claudkit.com) — test AI API calls specifically

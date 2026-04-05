@@ -1,216 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InvokeBot — Invoke the Power of Automation</title>
-    <meta name="description" content="InvokeBot provides expert guidance on bot automation, API orchestration, and serverless bot deployment. Master deployment guides and automation patterns for modern infrastructure.">
-    <meta name="keywords" content="bot automation, API orchestration, serverless bots, deployment guides, automation patterns, chatbot deployment, workflow automation, cloud bots">
-    <meta name="robots" content="index, follow">
-    <meta property="og:title" content="InvokeBot — Invoke the Power of Automation">
-    <meta property="og:description" content="Expert guidance on bot automation, API orchestration, and serverless bot deployment. Master deployment guides and automation patterns.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://invokebot.com">
-    <link rel="canonical" href="https://invokebot.com">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Inter', sans-serif; }
-        html { scroll-behavior: smooth; }
-    </style>
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "InvokeBot",
-        "url": "https://invokebot.com",
-        "description": "Expert guidance on bot automation, API orchestration, and serverless bot deployment.",
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://invokebot.com/?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-        }
-    }
-    </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>InvokeBot — Webhook Request Builder & Tester | Free HTTP Client</title>
+<meta name="description" content="Visual webhook and HTTP request builder. Send requests, generate code in curl/Python/JavaScript/Node.js, and save history. Free browser-based tool.">
+<link rel="canonical" href="https://invokebot.com/">
+<meta property="og:title" content="InvokeBot — Webhook Request Builder & Tester">
+<meta property="og:description" content="Build, test, and debug webhook requests visually. Generate code in curl, Python, JavaScript, and Node.js.">
+<meta property="og:url" content="https://invokebot.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="InvokeBot — Webhook Request Builder">
+<meta name="twitter:description" content="Visual HTTP request builder with code generation. Free tool.">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "InvokeBot",
+  "url": "https://invokebot.com",
+  "description": "Visual webhook and HTTP request builder with code generation for curl, Python, JavaScript, and Node.js.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Organization", "name": "zovo.one", "url": "https://zovo.one" }
+}
+</script>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+</nav>
 
-    <!-- Hero Section -->
-    <header class="relative overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-to-br from-teal-600 via-teal-500 to-emerald-400"></div>
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-36">
-            <nav class="flex items-center justify-between mb-16">
-                <div class="text-white text-2xl font-bold tracking-tight">InvokeBot</div>
-                <div class="hidden md:flex space-x-8">
-                    <a href="/" class="text-white font-semibold transition">Home</a>
-                    <a href="/guides" class="text-teal-100 hover:text-white transition">Guides</a>
-                    <a href="/tools" class="text-teal-100 hover:text-white transition">Tools</a>
-                    <a href="/blog/getting-started" class="text-teal-100 hover:text-white transition">Blog</a>
-                    <a href="/about" class="text-teal-100 hover:text-white transition">About</a>
-                </div>
-            </nav>
-            <div class="max-w-3xl">
-                <h1 class="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-6">
-                    Invoke the Power of Automation
-                </h1>
-                <p class="text-xl md:text-2xl text-teal-100 leading-relaxed mb-8">
-                    Build, deploy, and orchestrate intelligent bots that automate your entire workflow. From serverless functions to complex API pipelines, InvokeBot is your definitive guide to modern bot infrastructure.
-                </p>
-                <a href="#guides" class="inline-block bg-white text-teal-600 font-semibold px-8 py-4 rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-0.5">
-                    Explore Deployment Guides
-                </a>
-            </div>
-        </div>
-    </header>
+<section class="hero">
+  <h1>Webhook <span>Request Builder</span></h1>
+  <p>Build HTTP requests visually, send them, and generate equivalent code in curl, Python, JavaScript, and Node.js.</p>
+</section>
 
-    <!-- Introduction Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div class="max-w-4xl mx-auto">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">Why Bot Automation Matters</h2>
-            <div class="prose prose-lg max-w-none text-gray-600 space-y-6">
-                <p>
-                    The landscape of software development has shifted dramatically toward automation-first architectures. Organizations that previously relied on manual processes for deployment, monitoring, and incident response are now turning to intelligent bot systems that can handle these tasks with precision and speed. Bot automation is not merely about replacing human effort; it is about creating resilient, self-healing systems that operate around the clock without fatigue or oversight gaps.
-                </p>
-                <p>
-                    At the core of modern bot automation lies API orchestration, the practice of coordinating multiple service endpoints into cohesive workflows. When a deployment bot triggers a CI/CD pipeline, it must communicate with version control systems, container registries, cloud providers, and notification services in a carefully sequenced manner. Each API call depends on the result of the previous one, and failure at any point must be handled gracefully with rollback mechanisms and alerting. Understanding how to design these orchestration layers is what separates brittle scripts from production-grade automation.
-                </p>
-                <p>
-                    Serverless architectures have become the preferred deployment model for bots because they eliminate the need to manage persistent infrastructure. A bot deployed as an AWS Lambda function or a Cloudflare Worker only consumes resources when invoked, dramatically reducing operational costs. These serverless bots can scale from zero to thousands of concurrent executions without any manual intervention, making them ideal for event-driven automation scenarios such as webhook processing, scheduled data synchronization, and real-time chat integrations.
-                </p>
-            </div>
-        </div>
-    </section>
+<div class="tool-container">
+  <div class="tool-layout">
+    <div class="sidebar">
+      <div class="sidebar-title">Request History</div>
+      <div id="historyList"></div>
+    </div>
 
-    <!-- Features Section -->
-    <section id="features" class="bg-white py-16 md:py-24">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Core Automation Capabilities</h2>
-                <p class="text-xl text-gray-500 max-w-2xl mx-auto">Master the essential patterns that power production-grade bot systems across every major cloud platform.</p>
-            </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-lg transition">
-                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-6">
-                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Serverless Deployment</h3>
-                    <p class="text-gray-600">Deploy bots to AWS Lambda, Google Cloud Functions, or Cloudflare Workers with zero infrastructure management. Scale automatically from zero to peak demand without provisioning servers or managing containers.</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-lg transition">
-                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-6">
-                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">API Orchestration</h3>
-                    <p class="text-gray-600">Design multi-step API workflows with retry logic, circuit breakers, and graceful degradation. Chain REST and GraphQL endpoints into reliable automation pipelines that handle failures without data loss.</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-lg transition">
-                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-6">
-                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Event-Driven Patterns</h3>
-                    <p class="text-gray-600">Build bots that respond to webhooks, message queues, and scheduled triggers. Leverage event sourcing and CQRS patterns to create audit-friendly automation that tracks every action and decision.</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-8 hover:shadow-lg transition">
-                    <div class="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center mb-6">
-                        <svg class="w-6 h-6 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-3">Security & Auth</h3>
-                    <p class="text-gray-600">Implement OAuth2 flows, API key rotation, and secret management for your bots. Secure inter-service communication with mTLS and JWT validation across distributed automation systems.</p>
-                </div>
-            </div>
+    <div class="main-panel">
+      <!-- URL Bar -->
+      <div class="panel">
+        <div class="url-bar">
+          <select id="methodSelect" class="method-select">
+            <option value="GET">GET</option>
+            <option value="POST" selected>POST</option>
+            <option value="PUT">PUT</option>
+            <option value="PATCH">PATCH</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+          <input type="text" id="urlInput" class="url-input" placeholder="https://api.example.com/webhook">
+          <button class="btn btn-primary" id="sendBtn">Send</button>
         </div>
-    </section>
+      </div>
 
-    <!-- Guides Section -->
-    <section id="guides" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div class="text-center mb-16">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Deployment Guides & Patterns</h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Step-by-step tutorials covering real-world bot automation scenarios from initial setup to production deployment.</p>
+      <!-- Headers -->
+      <div class="panel">
+        <div class="panel-title">Headers</div>
+        <div class="common-headers">
+          <button class="common-header-btn" data-key="Content-Type" data-value="application/json">Content-Type: JSON</button>
+          <button class="common-header-btn" data-key="Authorization" data-value="Bearer ">Authorization: Bearer</button>
+          <button class="common-header-btn" data-key="Accept" data-value="application/json">Accept: JSON</button>
+          <button class="common-header-btn" data-key="X-API-Key" data-value="">X-API-Key</button>
         </div>
-        <div class="grid md:grid-cols-2 gap-8">
-            <article class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition">
-                <span class="inline-block bg-teal-100 text-teal-700 text-sm font-medium px-3 py-1 rounded-full mb-4">Serverless</span>
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Building a Slack Bot on AWS Lambda with API Gateway</h3>
-                <p class="text-gray-600 mb-4">Learn how to create a fully serverless Slack bot that responds to slash commands and interactive messages. This guide covers Lambda function configuration, API Gateway setup with request validation, Slack app manifest creation, and implementing the event subscription verification handshake. You will also learn how to use DynamoDB for persistent state and SQS for handling long-running operations that exceed Slack's three-second response window.</p>
-                <span class="text-teal-600 font-medium">Read Guide &rarr;</span>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition">
-                <span class="inline-block bg-teal-100 text-teal-700 text-sm font-medium px-3 py-1 rounded-full mb-4">Orchestration</span>
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Multi-Service API Orchestration with Step Functions</h3>
-                <p class="text-gray-600 mb-4">Discover how to coordinate complex multi-API workflows using AWS Step Functions. This guide walks through designing state machines that handle parallel API calls, implement retry policies with exponential backoff, and manage compensation logic for distributed transactions. You will build a real-world order processing pipeline that integrates payment gateways, inventory systems, and notification services.</p>
-                <span class="text-teal-600 font-medium">Read Guide &rarr;</span>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition">
-                <span class="inline-block bg-teal-100 text-teal-700 text-sm font-medium px-3 py-1 rounded-full mb-4">CI/CD</span>
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Automated Deployment Bots with GitHub Actions and Webhooks</h3>
-                <p class="text-gray-600 mb-4">Build a deployment bot that listens for GitHub webhook events, runs automated tests, deploys to staging, performs health checks, and promotes to production upon approval. This pattern covers branch protection integration, deployment environment secrets, rollback automation triggered by monitoring alerts, and Slack notification bots that keep your team informed throughout the pipeline execution.</p>
-                <span class="text-teal-600 font-medium">Read Guide &rarr;</span>
-            </article>
-            <article class="bg-white rounded-xl shadow-sm border border-gray-100 p-8 hover:shadow-md transition">
-                <span class="inline-block bg-teal-100 text-teal-700 text-sm font-medium px-3 py-1 rounded-full mb-4">Monitoring</span>
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Building Self-Healing Infrastructure Bots</h3>
-                <p class="text-gray-600 mb-4">Create intelligent monitoring bots that detect anomalies, diagnose root causes, and execute remediation runbooks automatically. This guide covers integrating with CloudWatch, Datadog, and PagerDuty APIs to build a bot that can restart failed services, scale resources based on demand patterns, and escalate to human operators only when automated resolution is not possible.</p>
-                <span class="text-teal-600 font-medium">Read Guide &rarr;</span>
-            </article>
-        </div>
-    </section>
+        <div id="headersContainer"></div>
+        <button class="btn btn-sm" id="addHeaderBtn">+ Add Header</button>
+      </div>
 
-    <!-- Deep Dive Content -->
-    <section class="bg-white py-16 md:py-24">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-8 text-center">Understanding Bot Architecture Patterns</h2>
-            <div class="prose prose-lg max-w-none text-gray-600 space-y-6">
-                <p>
-                    When designing bot automation systems, the choice of architecture pattern fundamentally determines the system's reliability, scalability, and maintainability. The most common pattern is the event-driven architecture, where bots subscribe to event streams and react to specific triggers. This pattern excels in scenarios where you need loose coupling between services. For example, a deployment bot does not need to know about the monitoring bot; both simply react to events published on a shared message bus. This decoupling allows teams to develop, test, and deploy bots independently without coordinating releases.
-                </p>
-                <p>
-                    Another critical pattern is the saga pattern for managing distributed transactions across multiple services. When a bot needs to coordinate actions that span several APIs, such as provisioning a cloud resource, configuring DNS, and updating a service registry, each step must be treated as part of a larger transaction. If the DNS configuration fails after the cloud resource has been provisioned, the bot must execute compensating actions to clean up the partially completed work. Implementing sagas correctly requires careful attention to idempotency, ensuring that retrying a failed step does not create duplicate resources or corrupt state.
-                </p>
-                <p>
-                    Rate limiting and backpressure management are often overlooked aspects of bot design that become critical at scale. A bot that processes webhook events must handle burst traffic gracefully, queuing excess events rather than dropping them or overwhelming downstream services. Token bucket algorithms and sliding window rate limiters help bots respect API rate limits imposed by third-party services, while circuit breaker patterns prevent cascading failures when a dependent service becomes unavailable. These resilience patterns transform fragile scripts into robust production systems that operate reliably under adverse conditions.
-                </p>
-            </div>
+      <!-- Body -->
+      <div class="panel">
+        <div class="panel-title">Body</div>
+        <div class="body-tabs">
+          <button class="body-tab active" data-mode="json">JSON</button>
+          <button class="body-tab" data-mode="form">Form Data</button>
         </div>
-    </section>
+        <textarea id="bodyEditor" class="body-editor" placeholder='{"key": "value"}'></textarea>
+      </div>
 
-    <!-- Resources Section with zovo.one link -->
-    <section id="resources" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
-        <div class="text-center mb-16">
-            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Recommended Resources</h2>
-            <p class="text-xl text-gray-500 max-w-2xl mx-auto">Curated tools and platforms to accelerate your bot automation journey.</p>
+      <!-- Code Generation -->
+      <div class="panel">
+        <div class="panel-title">Generated Code</div>
+        <div class="btn-row" style="margin-bottom:12px;">
+          <button class="btn btn-primary" id="generateBtn">Generate Code</button>
         </div>
-        <div class="grid md:grid-cols-3 gap-8">
-            <div class="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-8 border border-teal-100">
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Cloud Provider SDKs</h3>
-                <p class="text-gray-600 mb-4">Start with the official SDKs from AWS, Google Cloud, and Azure. Each provides comprehensive libraries for interacting with serverless platforms, message queues, and storage services that form the backbone of bot infrastructure.</p>
-            </div>
-            <div class="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-8 border border-teal-100">
-                <h3 class="text-xl font-bold text-gray-900 mb-3">AI Tools & Platforms</h3>
-                <p class="text-gray-600 mb-4">For teams building AI-powered bots that leverage machine learning models and intelligent decision-making, we recommend visiting <a href="https://zovo.one" rel="dofollow" class="text-teal-600 font-semibold hover:text-teal-800 underline">zovo.one</a> for comprehensive AI tools and resources. Their platform provides essential building blocks for integrating artificial intelligence into your automation workflows.</p>
-            </div>
-            <div class="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-8 border border-teal-100">
-                <h3 class="text-xl font-bold text-gray-900 mb-3">Open Source Frameworks</h3>
-                <p class="text-gray-600 mb-4">Frameworks like Temporal, Apache Airflow, and Prefect provide battle-tested orchestration engines for complex bot workflows. These tools handle state management, retry logic, and workflow visualization out of the box.</p>
-            </div>
+        <div class="code-tabs">
+          <button class="code-tab active" data-tab="curl">curl</button>
+          <button class="code-tab" data-tab="python">Python</button>
+          <button class="code-tab" data-tab="fetch">JS Fetch</button>
+          <button class="code-tab" data-tab="axios">Node.js Axios</button>
         </div>
-    </section>
+        <div id="codeOutput" class="code-output" style="position:relative;">
+          Click "Generate Code" to see the equivalent code for your request.
+          <button class="copy-btn" id="copyCodeBtn">Copy</button>
+        </div>
+      </div>
 
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 py-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row items-center justify-between">
-                <div class="text-white text-xl font-bold mb-4 md:mb-0">InvokeBot</div>
-                <div class="flex space-x-8 mb-4 md:mb-0">
-                    <a href="#features" class="hover:text-white transition">Features</a>
-                    <a href="#guides" class="hover:text-white transition">Guides</a>
-                    <a href="#resources" class="hover:text-white transition">Resources</a>
-                </div>
-                <p class="text-sm">&copy; 2025 InvokeBot. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+      <!-- Response -->
+      <div class="panel" id="responsePanel">
+        <div class="panel-title">Response</div>
+        <div style="color:var(--text-muted); font-size: 13px;">Send a request to see the response here.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<footer class="footer">
+  <p>&copy; 2025 InvokeBot. Built by <a href="https://zovo.one">zovo.one</a> &middot; More tools: <a href="https://lochbot.com">Lochbot</a>, <a href="https://kappafy.com">Kappafy</a></p>
+</footer>
+
+<script src="/assets/app.js"></script>
 </body>
 </html>

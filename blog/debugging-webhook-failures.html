@@ -297,6 +297,15 @@ const expected = hmac.digest('base64');  // You use base64 = mismatch
   <p>Webhook debugging is systematic, not mysterious. Work through the five layers in order: network, TLS, application, validation, processing. Most failures are at the network or application layer. Invest in structured logging, signature verification, and idempotent processing from the start, and you will spend far less time debugging webhook issues in production.</p>
 
   <p>The tools and techniques outlined here apply regardless of whether you are receiving webhooks from Stripe, GitHub, Shopify, or any custom integration. The protocol is the same, and the failure modes are predictable.</p>
+
+      <div class="external-resources">
+        <h3>External Resources</h3>
+        <ul>
+          <li><a href="https://stripe.com/docs/webhooks/best-practices" target="_blank">Stripe: Webhook Best Practices</a></li>
+          <li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status" target="_blank">MDN: HTTP Response Status Codes</a></li>
+          <li><a href="https://requestbin.com" rel="nofollow" target="_blank">RequestBin — Inspect Webhook Payloads</a></li>
+        </ul>
+      </div>
 </article>
 
 <footer>

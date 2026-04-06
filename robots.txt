@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: http://invokebot.com/sitemap.xml
+Sitemap: https://invokebot.com/sitemap.xml

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>InvokeBot — Webhook Request Builder &amp; Tester Blog</title>
+  <link href="http://invokebot.com/blog/" rel="alternate"/>
+  <link href="http://invokebot.com/blog/feed.xml" rel="self"/>
+  <id>http://invokebot.com/blog/</id>
+  <updated>2026-04-06T00:00:00Z</updated>
+  <author><name>InvokeBot — Webhook Request Builder &amp; Tester</name></author>
+  <entry>
+    <title>Webhooks Explained: The Complete Beginner&apos;s Guide for 2025 — InvokeBot</title>
+    <link href="https://invokebot.com/blog/webhooks-explained.html" rel="alternate"/>
+    <id>https://invokebot.com/blog/webhooks-explained.html</id>
+    <updated>2026-04-06T00:00:00Z</updated>
+    <summary>Complete beginner</summary>
+  </entry>
+  <entry>
+    <title>Debugging Webhook Failures: A Systematic Approach — InvokeBot</title>
+    <link href="https://invokebot.com/blog/debugging-webhook-failures.html" rel="alternate"/>
+    <id>https://invokebot.com/blog/debugging-webhook-failures.html</id>
+    <updated>2026-04-06T00:00:00Z</updated>
+    <summary>A methodical framework for diagnosing webhook delivery failures. Covers timeouts, authentication errors, payload mismatches, and retry strategies.</summary>
+  </entry>
+</feed>

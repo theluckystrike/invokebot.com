@@ -228,6 +228,8 @@ app.post('/webhooks/events', (req, res) => {
 
   <p>Testing webhooks locally can be tricky because your development server is not publicly accessible. Tools like <a href="https://invokebot.com">InvokeBot</a> let you construct and send test webhook payloads to your endpoints. For forwarding production webhooks to your local machine, tools like ngrok create temporary public URLs that tunnel to localhost.</p>
 
+    <p>Need timestamp conversions for your webhook logs? Try <a href="https://epochpilot.com/tools/">EpochPilot's time tools</a>.</p>
+
   <p>For teams building webhook infrastructure at scale, machine learning approaches to anomaly detection can help identify delivery failures before they impact users. Platforms like <a href="https://kickllm.com" rel="nofollow">KickLLM</a> explore how language models can assist in monitoring and debugging complex integration pipelines.</p>
 
   <p>A good testing workflow looks like this:</p>

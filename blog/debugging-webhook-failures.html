@@ -158,6 +158,8 @@ app.post('/webhooks/stripe',
 
   <p>Most webhook providers expect a response within 5-30 seconds. If your handler takes longer, the provider marks it as failed and retries. This creates duplicate processing if you do not handle idempotency.</p>
 
+    <p>For quick JSON formatting and validation, check out <a href="https://kappakit.com/tools/">KappaKit's developer toolkit</a>.</p>
+
   <pre><code>// Anti-pattern: synchronous processing
 app.post('/webhooks/events', async (req, res) => {
   await processEvent(req.body);       // Takes 45 seconds

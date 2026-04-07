@@ -1,34 +1,36 @@
-# Webhook Request Builder — Build & Test HTTP Requests with Code Generation
+# InvokeBot -- Webhook Request Builder & HTTP Client
 
-**[Build Requests →](https://invokebot.com)** | [About](https://invokebot.com/about.html) | [Blog](https://invokebot.com/blog/)
+**[-> Use InvokeBot (live tool)](https://invokebot.com/)**
 
-Webhook Request Builder is a lightweight HTTP client for building, testing, and debugging webhook integrations. Supports all HTTP methods (GET, POST, PUT, PATCH, DELETE), custom headers, request body editing, and automatic code generation in cURL, Python, JavaScript, and more. Save your request history locally and replay any previous call with one click.
+InvokeBot is a free visual webhook and HTTP request builder for developers. Construct HTTP requests with a clean UI, send them, inspect responses, and generate equivalent code in curl, Python, JavaScript, and Node.js. Request history is saved locally in your browser.
 
 ## Features
 
-- **All HTTP methods supported** — GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
-- **Custom headers and body editor** — JSON, form-data, and raw body formats
-- **Code generation** — export as cURL, Python requests, JavaScript fetch, and more
-- **Request history** — saved locally, replay any previous request instantly
-- **Response inspector** — status codes, headers, timing, and formatted body preview
+- Visual HTTP request builder with GET, POST, PUT, PATCH, DELETE methods
+- Code generation in curl, Python requests, JavaScript Fetch, and Node.js Axios
+- Header presets for Content-Type, Authorization Bearer, and API keys
+- Request history sidebar with re-run capability
+- JSON and form data body support
+- Full response inspection with status code, headers, and body
+- 100% client-side -- your data never leaves your browser
+- Open source -- inspect the code yourself
 
-## How It Works
+## Tech Stack
 
-Select your HTTP method, enter the webhook URL, and configure headers and body as needed. Hit send to fire the request and inspect the response — status code, headers, timing, and body are displayed in a clean interface. Switch to the code tab to get the equivalent request in your preferred language. All requests are logged in your local history for easy replay. No data is stored on any server.
+- Vanilla JavaScript (no frameworks, no build step)
+- Static HTML hosted on GitHub Pages
+- Cloudflare DNS + SSL
+- Zero dependencies, zero tracking, zero cookies
 
-## Built With
+## Part of Zovo Tools
 
-- Vanilla JavaScript (no frameworks, no dependencies)
-- Client-side only — your data never leaves your browser
+InvokeBot is part of [Zovo Tools](https://zovo.one/tools) -- a collection of free developer tools.
 
-
-- [JSON Explorer](https://kappafy.com) — parse and explore webhook response payloads
-- [Claude API Playground](https://claudkit.com) — test AI API calls specifically
-- [AI Workflow Builder](https://claudflow.com) — chain webhook calls into automated pipelines
-
-## Contributing
-
-Found a bug or have a feature request? [Open an issue](https://github.com/theluckystrike/invokebot.com/issues).
+**Other tools in the network:**
+- [EpochPilot](https://epochpilot.com) -- 30+ timestamp and timezone tools
+- [HeyTensor](https://heytensor.com) -- PyTorch tensor shape calculator
+- [LochBot](https://lochbot.com) -- Prompt injection vulnerability checker
+- [KappaKit](https://kappakit.com) -- Developer toolkit (Base64, JWT, hash, UUID)
 
 ## License
 

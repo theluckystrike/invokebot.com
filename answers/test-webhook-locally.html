@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Do I Test Webhooks Locally? | InvokeBot</title>
+<meta name="description" content="Use ngrok (ngrok http 3000), webhook.site (free, no install), or RequestBin to receive webhooks on localhost. Set retry policies, log payloads, verify signatures with HMAC.">
+<link rel="canonical" href="https://invokebot.com/answers/test-webhook-locally.html">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How Do I Test Webhooks Locally?">
+<meta property="og:description" content="Use ngrok, webhook.site, or RequestBin to test webhooks on localhost. Setup guide and best practices.">
+<meta property="og:url" content="https://invokebot.com/answers/test-webhook-locally.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How Do I Test Webhooks Locally?">
+<meta name="twitter:description" content="Use ngrok, webhook.site, or RequestBin to test webhooks on localhost. Setup guide and best practices.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I test webhooks locally?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use ngrok (ngrok http 3000), webhook.site (free, no install), or RequestBin to receive webhooks on localhost. For production testing: set a retry policy, log payloads, verify signatures, and use HMAC validation. ngrok creates a public URL that tunnels to your local server. webhook.site gives you an instant URL to inspect incoming requests without any code."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is ngrok and how do I use it for webhooks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ngrok creates a secure tunnel from a public URL to your localhost. Install it, run 'ngrok http 3000' (replace 3000 with your port), and it gives you a URL like https://abc123.ngrok.io. Use that URL as your webhook endpoint in Stripe, GitHub, Slack, etc. The ngrok dashboard shows all incoming requests."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I verify webhook signatures?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most webhook providers include an HMAC signature in a header (e.g., X-Hub-Signature-256 for GitHub). To verify: compute HMAC-SHA256 of the raw request body using your webhook secret, then compare it to the signature header. Never skip signature verification in production — it prevents payload tampering and replay attacks."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is webhook.site?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "webhook.site is a free web service that gives you a unique URL to receive and inspect HTTP requests. No installation needed — visit the site, copy your URL, and use it as a webhook endpoint. You can see headers, body, and query parameters for every incoming request in real time."
+      }
+    }
+  ]
+}
+</script>
+<link rel="alternate" hreflang="en" href="https://invokebot.com/answers/test-webhook-locally.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/answers/test-webhook-locally.html">
+</head>
+<body>
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<main style="max-width:800px;margin:0 auto;padding:2rem 1.5rem;">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/answers/">Answers</a> &rsaquo; <span>Test Webhooks Locally</span>
+  </nav>
+
+  <article>
+    <h1>How Do I Test Webhooks Locally?</h1>
+
+    <p><strong>Use ngrok (<code>ngrok http 3000</code>), webhook.site (free, no install), or RequestBin to receive webhooks on localhost. For production testing: set a retry policy, log payloads, verify signatures, and use HMAC validation.</strong></p>
+
+    <h2>Option 1: ngrok (Tunnel to Localhost)</h2>
+    <p>ngrok creates a public URL that forwards traffic to your local server.</p>
+    <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code># Install ngrok (macOS)
+brew install ngrok
+
+# Start your local server on port 3000
+node server.js
+
+# In another terminal, create the tunnel
+ngrok http 3000
+
+# Output:
+# Forwarding  https://abc123.ngrok.io -> http://localhost:3000</code></pre>
+    <p>Use the <code>https://abc123.ngrok.io</code> URL as your webhook endpoint in Stripe, GitHub, Slack, or any webhook provider. The ngrok web dashboard at <code>http://localhost:4040</code> shows all incoming requests with full headers and body.</p>
+
+    <h2>Option 2: webhook.site (No Install)</h2>
+    <ol>
+      <li>Visit <a href="https://webhook.site" target="_blank" rel="noopener">webhook.site</a></li>
+      <li>Copy the unique URL it generates</li>
+      <li>Paste it as your webhook endpoint in the service you are testing</li>
+      <li>Trigger the event and watch the request appear in real time</li>
+    </ol>
+    <p>Best for quick inspection when you do not need to process the payload programmatically.</p>
+
+    <h2>Option 3: RequestBin</h2>
+    <p>Similar to webhook.site but with additional features like custom responses. Create a bin, get a URL, and inspect incoming requests.</p>
+
+    <h2>Verifying Webhook Signatures (HMAC)</h2>
+    <p>Always verify webhook signatures in production to prevent tampering:</p>
+    <pre style="background:var(--bg-secondary,#1a1a2e);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code># Python example (GitHub webhooks)
+import hmac
+import hashlib
+
+def verify_signature(payload_body, secret, signature_header):
+    expected = 'sha256=' + hmac.new(
+        secret.encode('utf-8'),
+        payload_body,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)</code></pre>
+
+    <h2>Production Webhook Best Practices</h2>
+    <ul>
+      <li><strong>Retry policy</strong>: Return 200 quickly, process async. If you return 5xx, the sender will retry.</li>
+      <li><strong>Idempotency</strong>: Handle duplicate deliveries. Use the event ID to deduplicate.</li>
+      <li><strong>Log everything</strong>: Store raw payloads for debugging. You cannot replay what you did not save.</li>
+      <li><strong>Signature verification</strong>: Always validate HMAC signatures. Never trust unverified payloads.</li>
+      <li><strong>Timeout handling</strong>: Respond within 5-10 seconds. Queue long-running work for background processing.</li>
+    </ul>
+
+    <p>Use <a href="/">InvokeBot</a> to build and send test webhook payloads with custom headers, methods, and JSON bodies.</p>
+
+    <h2>Related Questions</h2>
+    <ul>
+      <li><a href="/blog/webhooks-explained.html">What is a webhook? Full guide</a></li>
+      <li><a href="/blog/debugging-webhook-failures.html">Debugging webhook failures</a></li>
+      <li><a href="/research/webhook-reliability-patterns.html">Webhook reliability patterns research</a></li>
+    </ul>
+
+    <div class="last-updated"><time datetime="2026-04-11">Last updated: April 11, 2026</time></div>
+  </article>
+</main>
+
+<footer class="site-footer">
+    <div class="footer-inner">
+        <div class="footer-brand">Zovo Tools</div>
+        <div class="footer-tagline">Free developer tools by a solo dev. No tracking.</div>
+        <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=footer-link" class="footer-cta">Zovo Lifetime — $99 once, free forever &rarr;</a>
+        <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo</a> &middot; 47/500 founding spots</div>
+    </div>
+</footer>
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex — A/B Testing</a>
+            <a href="https://claudflow.com">ClaudFlow — Workflows</a>
+            <a href="https://claudhq.com">ClaudHQ — Prompts</a>
+            <a href="https://claudkit.com">ClaudKit — API</a>
+            <a href="https://enhio.com">Enhio — Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot — Timestamps</a>
+            <a href="https://gen8x.com">Gen8X — Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X — AI Models</a>
+            <a href="https://heytensor.com">HeyTensor — ML Tools</a>
+            <a href="https://kappafy.com">Kappafy — JSON</a>
+            <a href="https://kappakit.com">KappaKit — Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM — LLM Costs</a>
+            <a href="https://krzen.com">Krzen — Image Tools</a>
+            <a href="https://lochbot.com">LochBot — Security</a>
+            <a href="https://lockml.com">LockML — ML Compare</a>
+            <a href="https://ml3x.com">ML3X — Matrix Math</a>
+        </div>
+    </div>
+</nav>
+</body>
+</html>

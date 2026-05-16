@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Test Webhooks Locally — 5 Methods Compared (2026 Guide) | InvokeBot</title>
+<meta name="description" content="Test webhooks locally using ngrok, Cloudflare Tunnel, localtunnel, VS Code port forwarding, or a request bin. Step-by-step setup, debugging tips, and an interactive cURL builder.">
+<link rel="canonical" href="https://invokebot.com/guides/test-webhooks-locally.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/guides/test-webhooks-locally.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/guides/test-webhooks-locally.html">
+<meta property="og:title" content="How to Test Webhooks Locally — 5 Methods Compared (2026 Guide)">
+<meta property="og:description" content="Test webhooks locally using ngrok, Cloudflare Tunnel, localtunnel, VS Code port forwarding, or a request bin. Step-by-step setup, debugging tips, and an interactive cURL builder.">
+<meta property="og:url" content="https://invokebot.com/guides/test-webhooks-locally.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Zovo Tools">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How to Test Webhooks Locally — 5 Methods Compared (2026 Guide)">
+<meta name="twitter:description" content="Test webhooks locally using ngrok, Cloudflare Tunnel, localtunnel, VS Code port forwarding, or a request bin.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "How to Test Webhooks Locally — 5 Methods Compared (2026 Guide)",
+  "description": "Test webhooks locally using ngrok, Cloudflare Tunnel, localtunnel, VS Code port forwarding, or a request bin. Step-by-step setup, debugging tips, and an interactive cURL builder.",
+  "datePublished": "2026-05-16",
+  "dateModified": "2026-05-16",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://invokebot.com/guides/test-webhooks-locally.html"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "name": "How to Test Webhooks Locally",
+  "description": "Five methods for receiving webhook requests on your local development machine, with step-by-step instructions for each approach.",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Choose a tunneling method",
+      "text": "Select between ngrok, Cloudflare Tunnel, localtunnel, VS Code port forwarding, or a request bin depending on your requirements for speed, persistence, and team collaboration."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Install and configure the tunnel",
+      "text": "Install your chosen tool (e.g., ngrok via brew install ngrok, cloudflared via brew install cloudflared) and authenticate with your account if required."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Start the tunnel to your local server",
+      "text": "Run the tunnel command pointing to your local server port. For example: ngrok http 3000. Copy the generated public HTTPS URL."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 4,
+      "name": "Register the tunnel URL as your webhook endpoint",
+      "text": "Go to your webhook provider (Stripe, GitHub, Slack, etc.) and paste the tunnel URL as the webhook endpoint. Append your webhook handler path, e.g., https://abc123.ngrok.io/api/webhooks."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 5,
+      "name": "Trigger events and inspect payloads",
+      "text": "Trigger a test event from the provider dashboard. Watch the request arrive in your local server logs and the tunnel inspection dashboard. Verify the payload, headers, and response code."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 6,
+      "name": "Validate signatures and debug failures",
+      "text": "Confirm HMAC signature verification works with the raw body. Check for common failures: timeout errors, incorrect content types, and signature mismatches caused by body parsing middleware."
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can I test webhooks without ngrok?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Alternatives include Cloudflare Tunnel (free, no account required for quick tunnels), localtunnel (npm package), VS Code port forwarding (built into the editor), and request bin services like webhook.site or InvokeBot. Each has trade-offs in setup complexity, URL stability, and features."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why can't webhook providers send to localhost directly?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Webhook providers run on remote servers that cannot resolve 'localhost' or '127.0.0.1' — those addresses refer to the provider's own machine, not yours. Your local machine sits behind NAT, a router, and likely a firewall. A tunneling tool creates a public URL that routes traffic through an intermediary server back to your local port."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I verify webhook signatures locally?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use your webhook secret to compute an HMAC-SHA256 hash of the raw request body, then compare it to the signature header sent by the provider. Critical: you must use the raw body bytes, not a parsed/re-serialized JSON object, because any whitespace change will invalidate the signature. In Express.js, use express.raw() middleware for your webhook route."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do free ngrok URLs change every time I restart?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Free ngrok accounts generate a random subdomain on each restart, which means you need to update your webhook URL in the provider dashboard every time. Paid ngrok plans let you reserve a static subdomain. Cloudflare Tunnel with a custom domain also provides a stable URL at no cost."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the best webhook testing tool for teams?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For teams, Cloudflare Tunnel with a shared domain or ngrok with team accounts works well. Request bin services like InvokeBot are useful for quick inspection without any local setup. For CI/CD pipelines, consider recording webhook payloads and replaying them in automated tests."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://invokebot.com/guides/"},{"@type":"ListItem","position":3,"name":"Test Webhooks Locally"}]}</script>
+
+<style>
+  .guide-tool {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .guide-tool-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-field textarea {
+    font-family: var(--font-display);
+    font-size: 12px;
+    min-height: 120px;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .header-entry {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .header-entry input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+  }
+  .header-entry input:focus { border-color: var(--accent); }
+  .header-remove {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: #ef4444;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 13px;
+    line-height: 1;
+  }
+  .header-remove:hover { border-color: #ef4444; }
+  .curl-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.6;
+    color: var(--text);
+    position: relative;
+    margin-top: 12px;
+    min-height: 60px;
+  }
+  .curl-copy {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--font-body);
+  }
+  .curl-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .inspection-url {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .inspection-url input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .inspection-url button {
+    padding: 10px 16px;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: var(--font-body);
+  }
+  .inspection-url button:hover { opacity: 0.9; }
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 14px;
+  }
+  .comparison-table th,
+  .comparison-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .comparison-table th {
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .comparison-table td {
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  .comparison-table tr:hover td {
+    background: var(--bg-card);
+  }
+  .step-number {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 50%;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .toc ol {
+    margin: 0 0 0 20px;
+    padding: 0;
+  }
+  .toc li {
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .toc a {
+    color: var(--text);
+  }
+  .toc a:hover {
+    color: var(--accent);
+  }
+  .badge-free {
+    display: inline-block;
+    padding: 2px 7px;
+    background: rgba(34,197,94,0.15);
+    color: #22c55e;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 3px;
+  }
+  .badge-paid {
+    display: inline-block;
+    padding: 2px 7px;
+    background: rgba(249,115,22,0.15);
+    color: #f59e0b;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 3px;
+  }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .comparison-table { font-size: 12px; }
+    .comparison-table th, .comparison-table td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/blog/">Blog</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span style="color:var(--text-muted);">Test Webhooks Locally</span>
+  </nav>
+
+  <h1>How to Test Webhooks Locally &mdash; 5 Methods Compared (2026 Guide)</h1>
+  <div class="meta">May 16, 2026 &middot; 14 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Webhooks are the backbone of modern event-driven architectures. Stripe fires a webhook when a payment succeeds. GitHub fires one when code is pushed. Shopify fires one when an order is placed. But when you're building the endpoint that receives those events, you hit a wall: <strong>the webhook provider cannot reach localhost</strong>.</p>
+
+  <p>This guide covers five proven methods for testing webhooks on your local development machine. Each section includes step-by-step instructions, real commands you can copy, and a comparison table so you can pick the right tool for your project. At the end, you'll find an interactive payload builder that generates ready-to-run cURL commands for manual testing.</p>
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#the-localhost-problem">Why Webhook Testing Is Hard (The Localhost Problem)</a></li>
+      <li><a href="#five-methods">5 Methods to Test Webhooks Locally</a></li>
+      <li><a href="#method-ngrok">Method 1: ngrok</a></li>
+      <li><a href="#method-cloudflare">Method 2: Cloudflare Tunnel</a></li>
+      <li><a href="#method-localtunnel">Method 3: localtunnel</a></li>
+      <li><a href="#method-vscode">Method 4: VS Code Port Forwarding</a></li>
+      <li><a href="#method-requestbin">Method 5: Request Bin (InvokeBot / webhook.site)</a></li>
+      <li><a href="#comparison">Side-by-Side Comparison</a></li>
+      <li><a href="#debugging">Debugging Common Webhook Failures</a></li>
+      <li><a href="#security">Security Best Practices</a></li>
+      <li><a href="#testing-patterns">Testing Patterns: Replay, Record, Mock</a></li>
+      <li><a href="#tool">Interactive Webhook Payload Builder</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </div>
+
+  <!-- ======================================================== -->
+  <h2 id="the-localhost-problem">Why Webhook Testing Is Hard</h2>
+
+  <p>When a webhook provider like Stripe or GitHub sends an HTTP request to your endpoint, it originates from their servers on the public internet. Your development machine sits behind multiple layers of isolation:</p>
+
+  <ul>
+    <li><strong>NAT (Network Address Translation)</strong> &mdash; Your router assigns private IP addresses (192.168.x.x) to devices on your local network. The outside world cannot route packets to those addresses.</li>
+    <li><strong>Firewalls</strong> &mdash; Your OS and network firewall block unsolicited incoming connections by default. Even if NAT weren't an issue, the request would likely be dropped.</li>
+    <li><strong>DNS resolution</strong> &mdash; <code>localhost</code> and <code>127.0.0.1</code> resolve to the machine that runs the lookup. When Stripe resolves <code>localhost</code>, it points to Stripe's own server, not yours.</li>
+    <li><strong>HTTPS requirements</strong> &mdash; Most providers require webhook endpoints to use HTTPS. Self-signed certificates on localhost get rejected.</li>
+  </ul>
+
+  <p>The result: you cannot simply paste <code>http://localhost:3000/api/webhooks</code> into a Stripe dashboard and expect it to work. You need a bridge between the public internet and your local machine. That bridge is called a <strong>tunnel</strong>.</p>
+
+  <blockquote>Need a quick refresher on how webhooks work end-to-end? Read our <a href="/answers/test-webhook-locally.html">short answer on testing webhooks locally</a> or the <a href="/blog/debugging-webhook-failures.html">deep dive on debugging webhook failures</a>.</blockquote>
+
+  <!-- ======================================================== -->
+  <h2 id="five-methods">5 Methods to Test Webhooks Locally</h2>
+
+  <p>Each method solves the localhost problem differently. Some create a real TCP tunnel. Others intercept and forward requests through a proxy. The right choice depends on your priorities: speed of setup, URL stability, team workflows, and whether you need to inspect raw payloads.</p>
+
+  <!-- ======================================================== -->
+  <h3 id="method-ngrok">Method 1: ngrok</h3>
+
+  <p>ngrok is the most widely used tunneling tool for local webhook development. It creates a secure tunnel from a public HTTPS URL to a port on your machine, with a built-in web dashboard for inspecting every request and response.</p>
+
+  <p><strong>Setup (macOS/Linux):</strong></p>
+
+  <p><span class="step-number">1</span> Install ngrok:</p>
+  <pre><code># macOS (Homebrew)
+brew install ngrok
+
+# Linux (snap)
+snap install ngrok
+
+# Or download directly
+curl -s https://ngrok-agent.s3.amazonaws.com/ngrok-v3-stable-linux-amd64.tgz | tar xz
+sudo mv ngrok /usr/local/bin/</code></pre>
+
+  <p><span class="step-number">2</span> Authenticate (free account required since 2024):</p>
+  <pre><code>ngrok config add-authtoken YOUR_AUTH_TOKEN</code></pre>
+
+  <p><span class="step-number">3</span> Start the tunnel pointing to your local server:</p>
+  <pre><code># If your server runs on port 3000
+ngrok http 3000</code></pre>
+
+  <p><span class="step-number">4</span> Copy the <code>Forwarding</code> URL from the output:</p>
+  <pre><code>Forwarding  https://a1b2c3d4.ngrok-free.app -> http://localhost:3000</code></pre>
+
+  <p><span class="step-number">5</span> Register the URL in your webhook provider. For Stripe, that would be:</p>
+  <pre><code>https://a1b2c3d4.ngrok-free.app/api/webhooks/stripe</code></pre>
+
+  <p><span class="step-number">6</span> Open the inspection dashboard at <code>http://127.0.0.1:4040</code> to see every request in real time.</p>
+
+  <p><strong>Pros:</strong> Battle-tested, excellent inspection UI, replay button for re-sending requests, supports custom domains on paid plans.<br>
+  <strong>Cons:</strong> Free URLs change on every restart. Free tier shows an interstitial warning page for browser requests (does not affect API/webhook calls). Requires an account.</p>
+
+  <!-- ======================================================== -->
+  <h3 id="method-cloudflare">Method 2: Cloudflare Tunnel (cloudflared)</h3>
+
+  <p>Cloudflare Tunnel (formerly Argo Tunnel) creates a secure outbound-only connection from your machine to Cloudflare's edge network. The <code>--url</code> quick-tunnel mode requires no Cloudflare account and generates a temporary public URL instantly.</p>
+
+  <p><strong>Setup:</strong></p>
+
+  <p><span class="step-number">1</span> Install cloudflared:</p>
+  <pre><code># macOS
+brew install cloudflared
+
+# Linux (Debian/Ubuntu)
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+sudo dpkg -i cloudflared.deb</code></pre>
+
+  <p><span class="step-number">2</span> Start a quick tunnel:</p>
+  <pre><code>cloudflared tunnel --url http://localhost:3000</code></pre>
+
+  <p><span class="step-number">3</span> Copy the generated URL from the output:</p>
+  <pre><code>+-----------------------------------------------------------+
+|  Your quick Tunnel has been created! Visit it at:          |
+|  https://random-words-here.trycloudflare.com              |
++-----------------------------------------------------------+</code></pre>
+
+  <p><span class="step-number">4</span> Use the URL as your webhook endpoint. For persistent tunnels with a custom domain, authenticate with <code>cloudflared tunnel login</code> and create a named tunnel.</p>
+
+  <p><strong>Pros:</strong> No account needed for quick tunnels. Free for personal use. Faster cold-start than ngrok. No interstitial pages. Can use your own domain for stable URLs at no extra cost.<br>
+  <strong>Cons:</strong> No built-in request inspection dashboard (you need to log requests in your own app). Quick tunnel URLs change on restart.</p>
+
+  <!-- ======================================================== -->
+  <h3 id="method-localtunnel">Method 3: localtunnel</h3>
+
+  <p>localtunnel is an open-source npm package that creates a public URL for your local server with a single command. It's the fastest option if you already have Node.js installed.</p>
+
+  <p><strong>Setup:</strong></p>
+
+  <p><span class="step-number">1</span> Install globally:</p>
+  <pre><code>npm install -g localtunnel</code></pre>
+
+  <p><span class="step-number">2</span> Start the tunnel:</p>
+  <pre><code>lt --port 3000</code></pre>
+
+  <p><span class="step-number">3</span> For a consistent subdomain (helpful to avoid updating webhook URLs):</p>
+  <pre><code>lt --port 3000 --subdomain my-webhook-dev</code></pre>
+
+  <p>This gives you <code>https://my-webhook-dev.loca.lt</code> &mdash; the subdomain persists across restarts as long as nobody else claims it.</p>
+
+  <p><strong>Pros:</strong> Zero config, open source, supports custom subdomains for free, lightweight.<br>
+  <strong>Cons:</strong> Shows a click-through interstitial on first browser visit (can be bypassed by setting the <code>Bypass-Tunnel-Reminder</code> header). Less reliable than ngrok/cloudflared for high-throughput testing. No inspection dashboard.</p>
+
+  <!-- ======================================================== -->
+  <h3 id="method-vscode">Method 4: VS Code Port Forwarding</h3>
+
+  <p>If you use VS Code (or a GitHub Codespace), port forwarding is built in. No installation required.</p>
+
+  <p><strong>Setup:</strong></p>
+
+  <p><span class="step-number">1</span> Open the VS Code terminal and start your local server on any port.</p>
+
+  <p><span class="step-number">2</span> Open the <strong>Ports</strong> panel (View &rarr; Ports, or click the port icon in the bottom panel).</p>
+
+  <p><span class="step-number">3</span> Click <strong>Forward a Port</strong>, enter your local port (e.g., 3000).</p>
+
+  <p><span class="step-number">4</span> VS Code generates a public URL like <code>https://username-port-3000.app.github.dev</code>.</p>
+
+  <p><span class="step-number">5</span> Set the port visibility to <strong>Public</strong> (right-click the port entry) so webhook providers can reach it without authentication.</p>
+
+  <p><span class="step-number">6</span> Use the URL as your webhook endpoint.</p>
+
+  <p><strong>Pros:</strong> Zero installation, integrated into the editor, works in GitHub Codespaces out of the box, free.<br>
+  <strong>Cons:</strong> Requires VS Code. URL changes per session. Not scriptable for CI/CD. Port must be manually set to public for unauthenticated webhook access.</p>
+
+  <!-- ======================================================== -->
+  <h3 id="method-requestbin">Method 5: Request Bin (InvokeBot / webhook.site)</h3>
+
+  <p>Sometimes you do not need a tunnel at all. A <strong>request bin</strong> is a hosted URL that captures incoming HTTP requests and displays them in a web UI. You paste the bin URL into the webhook provider, trigger an event, and inspect the raw payload in your browser.</p>
+
+  <p><strong>Setup with <a href="/">InvokeBot</a>:</strong></p>
+
+  <p><span class="step-number">1</span> Open <a href="/">invokebot.com</a>.</p>
+
+  <p><span class="step-number">2</span> You get a unique inspection URL instantly &mdash; no account needed.</p>
+
+  <p><span class="step-number">3</span> Paste the URL into your webhook provider dashboard.</p>
+
+  <p><span class="step-number">4</span> Trigger an event. The incoming request appears in the InvokeBot inspector with full headers, body, and timing data.</p>
+
+  <p><span class="step-number">5</span> Once you understand the payload shape, build your local handler. Use the payload builder below to replay the exact request against your local endpoint.</p>
+
+  <p><strong>Pros:</strong> Zero setup, no installation, works from any device, ideal for quick inspection and team debugging.<br>
+  <strong>Cons:</strong> Your local code does not execute &mdash; you are only capturing payloads. Not suitable for end-to-end testing of your handler logic. Payloads are visible to the service operator.</p>
+
+  <!-- ======================================================== -->
+  <h2 id="comparison">Side-by-Side Comparison</h2>
+
+  <table class="comparison-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>ngrok</th>
+        <th>Cloudflare Tunnel</th>
+        <th>localtunnel</th>
+        <th>VS Code</th>
+        <th>Request Bin</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Install required</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes (npm)</td>
+        <td>No</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Account required</td>
+        <td>Yes (free)</td>
+        <td>No (quick mode)</td>
+        <td>No</td>
+        <td>GitHub login</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Stable URL</td>
+        <td><span class="badge-paid">Paid</span></td>
+        <td><span class="badge-free">Free</span> (named tunnel)</td>
+        <td><span class="badge-free">Free</span> (subdomain flag)</td>
+        <td>No</td>
+        <td>Per-session</td>
+      </tr>
+      <tr>
+        <td>HTTPS</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td>Inspection UI</td>
+        <td>Yes (excellent)</td>
+        <td>No</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <td>Replay requests</td>
+        <td>Yes</td>
+        <td>No</td>
+        <td>No</td>
+        <td>No</td>
+        <td>Manual</td>
+      </tr>
+      <tr>
+        <td>Custom domain</td>
+        <td><span class="badge-paid">Paid</span></td>
+        <td><span class="badge-free">Free</span></td>
+        <td>No</td>
+        <td>No</td>
+        <td>No</td>
+      </tr>
+      <tr>
+        <td>Best for</td>
+        <td>Full-stack dev</td>
+        <td>Production tunnels</td>
+        <td>Quick prototypes</td>
+        <td>Codespaces users</td>
+        <td>Payload inspection</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ======================================================== -->
+  <h2 id="debugging">Debugging Common Webhook Failures</h2>
+
+  <p>Even after you set up a tunnel, webhooks can fail in subtle ways. Here are the most common failure modes and how to fix them.</p>
+
+  <h3>1. Signature Verification Fails</h3>
+
+  <p>This is the number one issue developers encounter. The webhook provider signs the request body with a secret key and sends the signature in a header (e.g., <code>X-Hub-Signature-256</code> for GitHub, <code>Stripe-Signature</code> for Stripe). Your handler computes the signature from the raw body and compares.</p>
+
+  <p><strong>The problem:</strong> Most web frameworks parse the JSON body automatically, and when you re-serialize it to verify the signature, whitespace or key ordering changes. The computed hash no longer matches.</p>
+
+  <p><strong>The fix:</strong> Capture the raw body <em>before</em> any parsing middleware runs.</p>
+
+  <pre><code>// Express.js — correct approach
+app.post('/api/webhooks/stripe',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const event = stripe.webhooks.constructEvent(
+      req.body,  // raw Buffer, not parsed JSON
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+    // handle event...
+    res.json({ received: true });
+  }
+);</code></pre>
+
+  <pre><code># Python Flask — correct approach
+@app.route('/api/webhooks/stripe', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data()  # raw bytes
+    sig = request.headers.get('Stripe-Signature')
+    event = stripe.Webhook.construct_event(
+        payload, sig, WEBHOOK_SECRET
+    )
+    # handle event...
+    return jsonify(success=True)</code></pre>
+
+  <h3>2. Timeout Errors</h3>
+
+  <p>Webhook providers expect a response within a tight window &mdash; typically 5 to 30 seconds. If your handler takes longer (e.g., it writes to a slow database, calls a third-party API, or processes a large file), the provider marks the delivery as failed and retries.</p>
+
+  <p><strong>The fix:</strong> Acknowledge the webhook immediately, then process asynchronously.</p>
+
+  <pre><code>// Acknowledge first, process later
+app.post('/api/webhooks', express.json(), async (req, res) => {
+  // Respond immediately
+  res.status(200).json({ received: true });
+
+  // Process in background
+  try {
+    await processWebhookEvent(req.body);
+  } catch (err) {
+    console.error('Background processing failed:', err);
+    // Queue for retry via your own mechanism
+  }
+});</code></pre>
+
+  <h3>3. Retry Storms and Duplicate Processing</h3>
+
+  <p>When a provider does not receive a 2xx response, it retries &mdash; sometimes aggressively. Stripe retries up to 3 times over 3 hours. GitHub retries once after 10 seconds. If your handler is not idempotent, retries cause duplicate side effects: double charges, duplicate emails, duplicated database rows.</p>
+
+  <p><strong>The fix:</strong> Store the event ID and check for duplicates before processing.</p>
+
+  <pre><code>async function handleWebhook(event) {
+  // Check if we've already processed this event
+  const existing = await db.webhookEvents.findOne({
+    eventId: event.id
+  });
+  if (existing) {
+    console.log(`Duplicate event ${event.id}, skipping`);
+    return;
+  }
+
+  // Store the event ID first
+  await db.webhookEvents.insertOne({
+    eventId: event.id,
+    type: event.type,
+    processedAt: new Date()
+  });
+
+  // Now process
+  await processEvent(event);
+}</code></pre>
+
+  <h3>4. Event Ordering Issues</h3>
+
+  <p>Webhooks are not guaranteed to arrive in order. A <code>payment_intent.succeeded</code> event might arrive before the <code>payment_intent.created</code> event. If your handler assumes creation happens first, it will break.</p>
+
+  <p><strong>The fix:</strong> Design handlers that are order-independent. Use the event timestamp or sequence number (if the provider includes one) to determine the latest state. Alternatively, fetch the current resource state from the provider API instead of relying on the webhook payload alone.</p>
+
+  <h3>5. Wrong Content-Type</h3>
+
+  <p>Some providers send <code>application/x-www-form-urlencoded</code> instead of <code>application/json</code>. If your handler only parses JSON, the body appears empty. Always check the provider documentation for the expected content type and configure your parser accordingly.</p>
+
+  <!-- ======================================================== -->
+  <h2 id="security">Security Best Practices</h2>
+
+  <p>Webhook endpoints are publicly accessible HTTP routes. Without proper security, an attacker could forge webhook payloads to trigger actions in your system &mdash; creating fake orders, granting unauthorized access, or corrupting data.</p>
+
+  <h3>HMAC Signature Validation</h3>
+
+  <p>Always verify the webhook signature. The standard approach:</p>
+
+  <ol>
+    <li>Extract the signature from the request header.</li>
+    <li>Compute HMAC-SHA256 of the raw request body using your webhook secret.</li>
+    <li>Compare the computed signature to the received one using a constant-time comparison function to prevent timing attacks.</li>
+  </ol>
+
+  <pre><code>const crypto = require('crypto');
+
+function verifySignature(rawBody, signature, secret) {
+  const computed = crypto
+    .createHmac('sha256', secret)
+    .update(rawBody)
+    .digest('hex');
+
+  // Constant-time comparison — prevents timing attacks
+  return crypto.timingSafeEqual(
+    Buffer.from(computed, 'hex'),
+    Buffer.from(signature, 'hex')
+  );
+}</code></pre>
+
+  <h3>IP Allowlisting</h3>
+
+  <p>Major providers publish the IP ranges their webhook servers use. Add firewall rules or middleware to reject requests from unknown IPs. This provides defense-in-depth alongside signature verification.</p>
+
+  <pre><code># Stripe webhook IPs (check docs for current list)
+# https://docs.stripe.com/ips
+
+# GitHub webhook IPs
+curl -s https://api.github.com/meta | jq '.hooks'</code></pre>
+
+  <p>In your application:</p>
+
+  <pre><code>const ALLOWED_IPS = new Set([
+  '3.18.12.63',
+  '3.130.192.149',
+  // ... add all provider IPs
+]);
+
+function ipAllowlist(req, res, next) {
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0]
+    || req.socket.remoteAddress;
+  if (!ALLOWED_IPS.has(clientIp)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}</code></pre>
+
+  <h3>Additional Measures</h3>
+
+  <ul>
+    <li><strong>Timestamp validation:</strong> Reject events older than 5 minutes to prevent replay attacks. Stripe includes a timestamp in the <code>Stripe-Signature</code> header for this purpose.</li>
+    <li><strong>HTTPS only:</strong> Never accept webhooks over plain HTTP in production. All tunnel tools in this guide provide HTTPS by default.</li>
+    <li><strong>Rate limiting:</strong> Protect your webhook endpoint from abuse. A legitimate provider sends events at a known rate; sudden spikes likely indicate an attack.</li>
+    <li><strong>Secrets rotation:</strong> Rotate your webhook signing secrets periodically. Most providers let you have two active secrets during rotation so you do not miss events.</li>
+  </ul>
+
+  <!-- ======================================================== -->
+  <h2 id="testing-patterns">Testing Patterns: Replay, Record, Mock</h2>
+
+  <p>Beyond tunnel-based development, three patterns make webhook testing reliable and repeatable.</p>
+
+  <h3>Record and Replay</h3>
+
+  <p>Capture real webhook payloads during development (using a request bin or ngrok's inspector), save them as JSON fixtures, and replay them in your test suite.</p>
+
+  <pre><code># Record: save a webhook payload to a file
+curl -X POST https://a1b2c3d4.ngrok-free.app/api/webhooks \
+  -H "Content-Type: application/json" \
+  -d @stripe-payment-succeeded.json
+
+# Replay: send a saved payload to your local server
+curl -X POST http://localhost:3000/api/webhooks \
+  -H "Content-Type: application/json" \
+  -H "Stripe-Signature: t=1234,v1=abc..." \
+  -d @fixtures/stripe-payment-succeeded.json</code></pre>
+
+  <p>This approach gives you deterministic, repeatable test inputs without depending on external services.</p>
+
+  <h3>Mock Webhook Servers</h3>
+
+  <p>For integration tests, spin up a mock server that sends webhook-shaped requests to your handler. This lets you test edge cases (malformed payloads, missing headers, wrong content types) that are impossible to trigger from real providers.</p>
+
+  <pre><code>// test/webhook.test.js
+const request = require('supertest');
+const app = require('../app');
+
+describe('Webhook handler', () => {
+  it('processes a valid Stripe event', async () => {
+    const payload = require('./fixtures/stripe-payment-succeeded.json');
+    const signature = generateTestSignature(
+      JSON.stringify(payload),
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+
+    const res = await request(app)
+      .post('/api/webhooks/stripe')
+      .set('Content-Type', 'application/json')
+      .set('Stripe-Signature', signature)
+      .send(payload);
+
+    expect(res.status).toBe(200);
+    expect(res.body.received).toBe(true);
+  });
+
+  it('rejects requests with invalid signatures', async () => {
+    const res = await request(app)
+      .post('/api/webhooks/stripe')
+      .set('Stripe-Signature', 'invalid')
+      .send({ type: 'payment_intent.succeeded' });
+
+    expect(res.status).toBe(400);
+  });
+});</code></pre>
+
+  <h3>Provider CLI Tools</h3>
+
+  <p>Several providers offer CLI tools that forward events directly to your local server, eliminating the need for a tunnel entirely:</p>
+
+  <pre><code># Stripe CLI — forward events to localhost
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+
+# GitHub CLI — create a webhook that forwards to smee.io
+# (smee.io acts as a proxy to your local machine)
+smee -u https://smee.io/YOUR_CHANNEL -t http://localhost:3000/api/webhooks/github</code></pre>
+
+  <p>These tools handle signature generation automatically, making local development nearly identical to production.</p>
+
+  <!-- ======================================================== -->
+  <h2 id="tool">Interactive Webhook Payload Builder</h2>
+
+  <p>Use this tool to build a webhook request and generate a ready-to-run cURL command. Paste the command in your terminal to send a test webhook to your local server or tunnel URL.</p>
+
+  <div class="guide-tool">
+    <div class="guide-tool-title">Webhook Payload Builder</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Inspection URL (use this as your webhook endpoint for capturing payloads)</label>
+      <div class="inspection-url">
+        <input type="text" id="inspectionUrl" readonly>
+        <button onclick="generateInspectionUrl()">New URL</button>
+        <button onclick="copyInspectionUrl()" style="background:var(--bg-hover);color:var(--text);border:1px solid var(--border);">Copy</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field" style="max-width:140px;">
+        <label>Method</label>
+        <select id="webhookMethod" onchange="updateCurl()">
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Endpoint URL</label>
+        <input type="text" id="webhookUrl" placeholder="http://localhost:3000/api/webhooks" value="http://localhost:3000/api/webhooks" oninput="updateCurl()">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Headers</label>
+      <div id="headersContainer">
+        <div class="header-entry">
+          <input type="text" placeholder="Header name" value="Content-Type" oninput="updateCurl()">
+          <input type="text" placeholder="Header value" value="application/json" oninput="updateCurl()">
+          <button class="header-remove" onclick="removeHeader(this)" title="Remove header">&times;</button>
+        </div>
+        <div class="header-entry">
+          <input type="text" placeholder="Header name" value="X-Webhook-Secret" oninput="updateCurl()">
+          <input type="text" placeholder="Header value" value="whsec_test123" oninput="updateCurl()">
+          <button class="header-remove" onclick="removeHeader(this)" title="Remove header">&times;</button>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="addHeader()" style="margin-top:8px;">+ Add Header</button>
+      <span style="margin-left:12px;">
+        <button class="btn btn-sm" onclick="addPresetHeader('X-Hub-Signature-256','sha256=...')">GitHub</button>
+        <button class="btn btn-sm" onclick="addPresetHeader('Stripe-Signature','t=1234567890,v1=...')">Stripe</button>
+        <button class="btn btn-sm" onclick="addPresetHeader('X-Shopify-Hmac-SHA256','base64hash...')">Shopify</button>
+      </span>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">JSON Body</label>
+      <textarea id="webhookBody" class="tool-field" style="width:100%;min-height:150px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:var(--font-display);font-size:12px;padding:12px;outline:none;resize:vertical;tab-size:2;" oninput="updateCurl()">{
+  "id": "evt_1234567890",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_abc123",
+      "amount": 2000,
+      "currency": "usd",
+      "status": "succeeded"
+    }
+  },
+  "created": 1716000000
+}</textarea>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Generated cURL Command</label>
+        <button class="btn btn-sm btn-primary" onclick="copyCurl()">Copy cURL</button>
+      </div>
+      <div class="curl-output" id="curlOutput"></div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <h2 id="faq">Frequently Asked Questions</h2>
+
+  <h3>Can I test webhooks without ngrok?</h3>
+  <p>Yes. Cloudflare Tunnel, localtunnel, VS Code port forwarding, and request bin services like <a href="/">InvokeBot</a> are all viable alternatives. Cloudflare Tunnel is the strongest free alternative, with support for custom domains and no interstitial pages.</p>
+
+  <h3>Why can't webhook providers send to localhost directly?</h3>
+  <p><code>localhost</code> and <code>127.0.0.1</code> resolve to the machine making the request &mdash; which is the provider's server, not yours. Your machine is also behind NAT and firewalls that block incoming connections. A tunneling tool solves this by creating an outbound connection from your machine to a relay server that the provider can reach.</p>
+
+  <h3>How do I verify webhook signatures locally?</h3>
+  <p>Use the same verification code you would use in production. Compute HMAC-SHA256 of the <strong>raw request body</strong> using your webhook secret, then compare it to the signature header. The critical mistake is using a parsed/re-serialized body instead of the raw bytes. In Express.js, use <code>express.raw()</code> middleware on your webhook route.</p>
+
+  <h3>Do free ngrok URLs change every time I restart?</h3>
+  <p>Yes. Free ngrok accounts get a random subdomain on each restart, which means you need to update the webhook URL in your provider's dashboard every time. Paid ngrok plans support reserved subdomains. Cloudflare Tunnel with a named tunnel and custom domain provides a stable URL for free.</p>
+
+  <h3>What is the best webhook testing tool for teams?</h3>
+  <p>For teams, use Cloudflare Tunnel with a shared domain or ngrok with team accounts for tunnel-based testing. For payload inspection, <a href="/">InvokeBot</a> lets your team share a single inspection URL. For automated testing in CI/CD, record webhook payloads as JSON fixtures and replay them with cURL or your test framework.</p>
+
+  <h3>How do I handle webhook retries?</h3>
+  <p>Return a <code>200</code> status code quickly (within 5 seconds) to prevent retries. Process the event asynchronously after responding. Store event IDs to detect and skip duplicates. If you intentionally want retries (e.g., for at-least-once delivery), make your handler idempotent so duplicate processing is safe.</p>
+
+  <!-- ======================================================== -->
+  <h2>Next Steps</h2>
+
+  <p>Now that you can receive webhooks locally, the next challenge is building a robust production handler. Read our <a href="/blog/debugging-webhook-failures.html">guide to debugging webhook failures</a> for a systematic framework covering network, transport, application, validation, and processing layers. For a quick reference, see the <a href="/answers/test-webhook-locally.html">concise answer on testing webhooks locally</a>.</p>
+
+  <p>Ready to inspect payloads without any local setup? Open the <a href="/">InvokeBot webhook tester</a> and get a unique inspection URL in seconds.</p>
+
+</article>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Inspection URL Generator
+// ============================================================
+function generateInspectionUrl() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let id = '';
+  for (let i = 0; i < 12; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const url = 'https://invokebot.com/inspect/' + id;
+  document.getElementById('inspectionUrl').value = url;
+}
+
+function copyInspectionUrl() {
+  const input = document.getElementById('inspectionUrl');
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = input.nextElementSibling.nextElementSibling;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+// Generate on load
+generateInspectionUrl();
+
+// ============================================================
+// Header Management
+// ============================================================
+function addHeader(name, value) {
+  const container = document.getElementById('headersContainer');
+  const entry = document.createElement('div');
+  entry.className = 'header-entry';
+  entry.innerHTML = `
+    <input type="text" placeholder="Header name" value="${name || ''}" oninput="updateCurl()">
+    <input type="text" placeholder="Header value" value="${value || ''}" oninput="updateCurl()">
+    <button class="header-remove" onclick="removeHeader(this)" title="Remove header">&times;</button>
+  `;
+  container.appendChild(entry);
+  updateCurl();
+}
+
+function addPresetHeader(name, value) {
+  addHeader(name, value);
+}
+
+function removeHeader(btn) {
+  const entry = btn.parentElement;
+  entry.remove();
+  updateCurl();
+}
+
+// ============================================================
+// cURL Generator
+// ============================================================
+function updateCurl() {
+  const method = document.getElementById('webhookMethod').value;
+  const url = document.getElementById('webhookUrl').value || 'http://localhost:3000/api/webhooks';
+  const body = document.getElementById('webhookBody').value.trim();
+
+  // Collect headers
+  const headerEntries = document.querySelectorAll('#headersContainer .header-entry');
+  const headers = [];
+  headerEntries.forEach(entry => {
+    const inputs = entry.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const value = inputs[1].value.trim();
+    if (name) {
+      headers.push({ name, value });
+    }
+  });
+
+  // Build cURL command
+  let curl = 'curl';
+  if (method !== 'POST') {
+    curl += ' -X ' + method;
+  } else {
+    curl += ' -X POST';
+  }
+  curl += ' \\\n  ' + escapeShell(url);
+
+  headers.forEach(h => {
+    curl += ' \\\n  -H ' + escapeShell(h.name + ': ' + h.value);
+  });
+
+  if (body) {
+    // Check if body is valid JSON for formatting
+    try {
+      JSON.parse(body);
+      curl += " \\\n  -d '" + body.replace(/'/g, "'\\''") + "'";
+    } catch {
+      curl += " \\\n  -d '" + body.replace(/'/g, "'\\''") + "'";
+    }
+  }
+
+  document.getElementById('curlOutput').textContent = curl;
+}
+
+function escapeShell(str) {
+  if (/^[a-zA-Z0-9_./:@\-=]+$/.test(str)) {
+    return str;
+  }
+  return "'" + str.replace(/'/g, "'\\''") + "'";
+}
+
+function copyCurl() {
+  const output = document.getElementById('curlOutput').textContent;
+  navigator.clipboard.writeText(output).then(() => {
+    const btns = document.querySelectorAll('.btn-primary');
+    const btn = btns[btns.length - 1];
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+// Initialize on load
+updateCurl();
+</script>
+
+</body>
+</html>

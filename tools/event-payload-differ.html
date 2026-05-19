@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Payload Differ &mdash; Webhook Payload Diff Tool for Debugging Changes | InvokeBot</title>
+<meta name="description" content="Compare two webhook payloads side by side to identify field additions, removals, type changes, and value differences. Debug payload schema changes with visual diffs, deep object comparison, and JSON path highlighting.">
+<link rel="canonical" href="https://invokebot.com/tools/event-payload-differ.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/tools/event-payload-differ.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/tools/event-payload-differ.html">
+<meta property="og:title" content="Event Payload Differ &mdash; Webhook Payload Diff Tool for Debugging Changes">
+<meta property="og:description" content="Compare two webhook payloads side by side to identify field additions, removals, type changes, and value differences with visual diffs.">
+<meta property="og:url" content="https://invokebot.com/tools/event-payload-differ.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Event Payload Differ &mdash; Webhook Payload Diff Tool for Debugging Changes">
+<meta name="twitter:description" content="Compare two webhook payloads side by side to identify field additions, removals, type changes, and value differences with visual diffs.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Event Payload Differ",
+  "url": "https://invokebot.com/tools/event-payload-differ.html",
+  "description": "Compare two webhook or API event payloads side by side to identify added fields, removed fields, type changes, and value differences. Supports deep nested object comparison, array diffing, JSON path highlighting, and exportable diff reports.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "featureList": ["Side-by-side JSON diff", "Deep nested comparison", "Type change detection", "JSON path highlighting", "Added/removed field tracking", "Diff summary statistics"]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I debug webhook payload changes?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "To debug webhook payload changes, capture the original and modified payloads and run a structured diff. Look for three categories of changes: added fields (new keys in the payload), removed fields (keys that disappeared), and modified fields (same key with different value or type). Use a JSON diff tool that shows the JSON path for each change (e.g., $.data.user.email) so you can trace exactly which part of your parsing logic needs updating. Always check for type changes (string to number, null to object) as these cause the most subtle bugs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What causes webhook payload format changes?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Webhook payload formats change for several reasons: API version upgrades that add new fields or deprecate old ones, provider-side schema migrations, feature launches that extend event data, bug fixes that correct field types or naming, and regional differences in data formatting (date formats, currency codes). Most well-maintained APIs version their webhooks and announce breaking changes, but non-breaking changes (new optional fields) are often added without notice. Always design your webhook handler to ignore unknown fields and validate expected fields."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I compare deeply nested JSON objects?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Deep JSON comparison requires recursive traversal of both objects simultaneously. At each level, compare the set of keys to find additions and removals, then recursively compare values for shared keys. For arrays, you can compare by index (positional diff) or by a key field (semantic diff, matching objects by ID). The diff result should include the full JSON path (e.g., $.orders[0].items[2].price) for each difference so you can locate changes in complex nested structures. This tool performs recursive comparison with full path tracking."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is a breaking change in a webhook payload?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A breaking change is any modification that causes existing webhook consumers to fail. This includes: removing a field that consumers depend on, changing a field's data type (string to integer, object to array), renaming a field, changing the nesting structure, altering enum values, or changing the event type identifier. Non-breaking changes include adding new optional fields, adding new event types, or extending enum values. Well-designed webhook APIs follow additive-only change policies for non-major versions."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How should I handle webhook schema versioning?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Handle webhook schema versioning by: (1) subscribing to a specific API version when registering your webhook endpoint, (2) including version-aware parsing logic that checks the payload version field before processing, (3) implementing a schema validation layer that rejects unexpected formats and alerts your team, (4) maintaining backward-compatible handlers that can process both old and new formats during migration periods, and (5) using a payload diff tool to identify exactly what changed between versions before updating your handler code."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://invokebot.com/tools/"},{"@type":"ListItem","position":3,"name":"Event Payload Differ"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-field textarea {
+    font-family: var(--font-display);
+    font-size: 12px;
+    min-height: 180px;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .template-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .template-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .template-btn:hover,
+  .template-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .diff-stats {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .stat-chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stat-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .dot-added { background: #22c55e; }
+  .dot-removed { background: #ef4444; }
+  .dot-modified { background: var(--accent); }
+  .dot-type { background: #a855f7; }
+  .diff-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.8;
+    max-height: 500px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .diff-line { padding: 2px 8px; border-radius: 3px; margin: 1px 0; display: block; }
+  .diff-added { background: rgba(34,197,94,0.12); color: #22c55e; }
+  .diff-removed { background: rgba(239,68,68,0.12); color: #ef4444; }
+  .diff-modified { background: rgba(249,115,22,0.12); color: var(--accent); }
+  .diff-type-change { background: rgba(168,85,247,0.12); color: #a855f7; }
+  .diff-path { color: var(--text-muted); font-size: 11px; }
+  .diff-unchanged { color: var(--text-muted); }
+  .json-error {
+    color: #ef4444;
+    font-family: var(--font-display);
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .template-btns { flex-direction: column; }
+    .diff-stats { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span style="color:var(--text-muted);">Event Payload Differ</span>
+  </nav>
+
+  <h1>Event Payload Differ &mdash; Webhook Payload Diff Tool for Debugging Changes</h1>
+  <div class="meta">May 25, 2026 &middot; 14 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Webhook payload changes are one of the most common causes of silent integration failures. A provider adds a new field, changes a field type from string to integer, renames a nested key, or restructures an array &mdash; and your handler either crashes or silently drops data. The Event Payload Differ lets you paste two JSON payloads side by side and instantly see every difference: added fields, removed fields, value changes, type changes, and structural modifications. Each difference is annotated with its full JSON path so you can trace exactly which part of your parsing logic needs attention.</p>
+
+  <p>Paste the original payload on the left and the new payload on the right. The tool performs a deep recursive comparison, handling nested objects, arrays, null values, and mixed types. Results are color-coded: green for additions, red for removals, orange for value changes, and purple for type changes. The summary statistics at the top give you an instant overview of the change magnitude, and every diff line shows the full JSON path for precise debugging.</p>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Event Payload Differ</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Example Payloads</label>
+      <div class="template-btns">
+        <button class="template-btn active" onclick="loadExample('stripe', this)">Stripe Payment</button>
+        <button class="template-btn" onclick="loadExample('github', this)">GitHub Push</button>
+        <button class="template-btn" onclick="loadExample('shopify', this)">Shopify Order</button>
+        <button class="template-btn" onclick="loadExample('slack', this)">Slack Event</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Original Payload (Before)</label>
+        <textarea id="payloadA" spellcheck="false" placeholder='{"event": "payment.completed", "data": {...}}'></textarea>
+        <div class="json-error" id="errorA"></div>
+      </div>
+      <div class="tool-field">
+        <label>New Payload (After)</label>
+        <textarea id="payloadB" spellcheck="false" placeholder='{"event": "payment.completed", "data": {...}}'></textarea>
+        <div class="json-error" id="errorB"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="template-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="runDiff()">Compare Payloads</button>
+      <button class="template-btn" onclick="swapPayloads()">Swap</button>
+      <button class="template-btn" onclick="formatBoth()">Format JSON</button>
+      <button class="template-btn" onclick="clearAll()">Clear</button>
+    </div>
+
+    <hr class="section-divider">
+
+    <div class="diff-stats" id="diffStats" style="display:none;">
+      <div class="stat-chip"><span class="dot dot-added"></span> Added: <span id="statAdded">0</span></div>
+      <div class="stat-chip"><span class="dot dot-removed"></span> Removed: <span id="statRemoved">0</span></div>
+      <div class="stat-chip"><span class="dot dot-modified"></span> Modified: <span id="statModified">0</span></div>
+      <div class="stat-chip"><span class="dot dot-type"></span> Type Changed: <span id="statType">0</span></div>
+    </div>
+
+    <div class="diff-output" id="diffOutput" style="display:none;">No differences found.</div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>Why Webhook Payloads Change</h2>
+
+  <p>Webhook payloads are living data structures that evolve alongside the APIs they represent. Every time a provider ships a new feature, fixes a bug, or refactors their data model, the webhook payload has the potential to change. Understanding why and how payloads change is critical for building resilient integrations that do not break every time the upstream provider deploys an update. The most common categories of changes are additive extensions, type modifications, structural reorganizations, and deprecation removals.</p>
+
+  <p>Additive changes are the most frequent and least disruptive. The provider adds a new field to the payload &mdash; for example, a Stripe payment event might gain a <code>receipt_url</code> field or a <code>metadata</code> expansion. Well-designed webhook handlers should ignore unknown fields, so additive changes are non-breaking by convention. However, if your handler uses strict schema validation that rejects unknown properties, even additive changes will cause failures. The JSON diff tool highlights added fields in green so you can quickly spot new data that your handler might want to consume.</p>
+
+  <h3>Detecting Breaking Changes</h3>
+
+  <p>A breaking change is any modification that causes existing consumers to fail. The most dangerous breaking changes are silent &mdash; they do not cause an immediate error but produce incorrect behavior. For example, if a <code>amount</code> field changes from cents (integer <code>1500</code>) to dollars (string <code>"15.00"</code>), your handler might parse it without error but calculate the wrong value. Type changes like this are highlighted in purple by the differ because they require special attention.</p>
+
+  <p>Field removals are the most obvious breaking change. If your code accesses <code>payload.data.customer.address.line2</code> and the provider removes <code>line2</code>, you get a null reference error or a missing value. Removals are highlighted in red. Field renames are effectively a removal plus an addition &mdash; the old field disappears and a new one appears with the same semantic meaning but a different key. The differ shows both the removal and the addition, and experienced developers learn to correlate a red removal with a green addition of similar type and value.</p>
+
+  <p>Structural changes reorganize the nesting of fields. A flat structure like <code>{"customer_email": "..."}</code> might become nested as <code>{"customer": {"email": "..."}}</code>. These changes break any code that accesses the old path. The full JSON path in the diff output (e.g., <code>$.customer_email</code> removed, <code>$.customer.email</code> added) makes structural changes immediately visible. Building webhook handlers that use <a href="https://kappafy.com">schema-driven field mapping</a> rather than hardcoded paths reduces the impact of structural changes.</p>
+
+  <h3>Deep Object Comparison Techniques</h3>
+
+  <p>Comparing two JSON payloads requires recursive traversal with type-aware comparison at every level. The algorithm starts at the root of both objects and processes each key. For keys present in both objects, it compares the values recursively. For keys present in only the left object, it records a removal. For keys present in only the right object, it records an addition. At each comparison step, the algorithm checks whether the types match before comparing values &mdash; a type mismatch (e.g., string vs. number, object vs. array) is flagged as a type change, which is semantically different from a simple value modification.</p>
+
+  <p>Array comparison is the most complex aspect of payload diffing. There are two approaches: positional comparison (compare array[0] with array[0], array[1] with array[1], etc.) and identity-based comparison (match array elements by a key field like <code>id</code> and compare matched pairs). Positional comparison is simpler but produces misleading results when elements are reordered. Identity-based comparison is more semantically accurate but requires knowing which field serves as the identity key. This tool uses positional comparison by default, which works well for most webhook payloads where array order is stable.</p>
+
+  <p>Null handling requires special attention. In JSON, <code>null</code>, missing keys, and empty strings are semantically different. A field changing from <code>"value"</code> to <code>null</code> is a modification. A field being removed entirely is a deletion. A field changing from <code>null</code> to <code>"value"</code> might indicate a previously empty field being populated for the first time. The differ distinguishes all three cases, which is important for integrations that treat null and missing differently (as many database ORMs do).</p>
+
+  <h3>JSON Path Notation</h3>
+
+  <p>Every difference in the diff output is annotated with its full JSON path using dot notation with bracket syntax for array indices. The path <code>$.data.items[0].price</code> means: root object, <code>data</code> key, <code>items</code> key (which is an array), first element, <code>price</code> key. This notation lets you immediately locate the change in the payload structure, map it to the corresponding line in your handler code, and make the precise fix needed.</p>
+
+  <p>JSON path notation is also the standard format used by JSON Schema validation, JSONPath query libraries, and most logging frameworks. When your webhook handler logs the path of a field it could not parse, you can paste that path directly into the differ to understand what changed. This creates a tight debugging loop: webhook fails, logs report <code>$.data.customer.tax_ids[0].type</code>, you capture two payloads and diff them, and the path immediately highlights the change. Teams that build <a href="https://lochbot.com">systematic webhook monitoring</a> use this pattern to resolve payload issues in minutes rather than hours.</p>
+
+  <h3>Building Resilient Webhook Handlers</h3>
+
+  <p>The goal of payload diffing is not just to identify what changed but to inform a handler architecture that tolerates change gracefully. Resilient webhook handlers follow several principles. First, they use permissive parsing: accept unknown fields without error (the opposite of strict schema validation). Second, they validate the presence and type of required fields before processing, with explicit error messages when expectations are not met. Third, they use default values for optional fields so that a missing field does not crash the handler.</p>
+
+  <p>Version-aware handlers check the payload for a version indicator (often in a header like <code>X-Webhook-Version</code> or a top-level field like <code>api_version</code>) and route to the appropriate parsing logic. This allows the handler to support multiple payload versions simultaneously during migration periods. The diff tool is invaluable here &mdash; by diffing payloads from different API versions, you can build exact transformation maps that convert between versions.</p>
+
+  <h3>Schema Evolution Best Practices</h3>
+
+  <p>If you are the webhook provider rather than the consumer, following schema evolution best practices prevents breaking your subscribers. The core principle is additive-only changes: new fields can be added at any time, but existing fields must not be removed, renamed, or have their types changed without a major version bump. When a breaking change is necessary, introduce a new API version, give subscribers a deprecation timeline (minimum 6 months for production APIs), and support both old and new versions concurrently during the transition.</p>
+
+  <p>Field deprecation should be explicit: mark deprecated fields in documentation, return them with their original type and value alongside the new replacement fields, and log warnings when subscribers are still reading deprecated fields. The payload differ can validate that deprecated fields are still present and correctly populated in both the old and new payload versions. This verification step catches accidental premature removal of deprecated fields that would break subscribers who have not yet migrated.</p>
+
+  <h3>Automating Payload Monitoring</h3>
+
+  <p>Manual diffing is effective for debugging individual issues, but production integrations benefit from automated payload monitoring. The approach is straightforward: capture a baseline payload for each webhook event type, store its schema (field names, types, and nesting structure), and compare every incoming payload against the baseline. Any structural deviation triggers an alert. Value changes are expected and ignored, but type changes, field additions, and field removals are flagged for review.</p>
+
+  <p>This monitoring layer acts as an early warning system for API changes. When a webhook provider deploys an update that modifies the payload structure, your monitoring detects the change within minutes (on the very next webhook delivery) rather than waiting for a user-facing bug report. The alert includes a full diff against the baseline, exactly like the output of this tool, giving the on-call engineer everything they need to assess the impact and determine whether code changes are required.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>How do I debug webhook payload changes?</summary>
+    <p>To debug webhook payload changes, capture the original and modified payloads and run a structured diff. Look for three categories of changes: added fields (new keys in the payload), removed fields (keys that disappeared), and modified fields (same key with different value or type). Use a JSON diff tool that shows the JSON path for each change so you can trace exactly which part of your parsing logic needs updating. Always check for type changes (string to number, null to object) as these cause the most subtle bugs.</p>
+  </details>
+  <details>
+    <summary>What causes webhook payload format changes?</summary>
+    <p>Webhook payload formats change for several reasons: API version upgrades that add new fields or deprecate old ones, provider-side schema migrations, feature launches that extend event data, bug fixes that correct field types or naming, and regional differences in data formatting. Most well-maintained APIs version their webhooks and announce breaking changes, but non-breaking changes (new optional fields) are often added without notice.</p>
+  </details>
+  <details>
+    <summary>How do I compare deeply nested JSON objects?</summary>
+    <p>Deep JSON comparison requires recursive traversal of both objects simultaneously. At each level, compare the set of keys to find additions and removals, then recursively compare values for shared keys. For arrays, you can compare by index (positional diff) or by a key field (semantic diff). The diff result should include the full JSON path for each difference so you can locate changes in complex nested structures.</p>
+  </details>
+  <details>
+    <summary>What is a breaking change in a webhook payload?</summary>
+    <p>A breaking change is any modification that causes existing webhook consumers to fail. This includes: removing a field that consumers depend on, changing a field's data type, renaming a field, changing the nesting structure, altering enum values, or changing the event type identifier. Non-breaking changes include adding new optional fields, adding new event types, or extending enum values.</p>
+  </details>
+  <details>
+    <summary>How should I handle webhook schema versioning?</summary>
+    <p>Handle webhook schema versioning by subscribing to a specific API version, including version-aware parsing logic, implementing schema validation that alerts on unexpected formats, maintaining backward-compatible handlers during migration periods, and using a payload diff tool to identify exactly what changed between versions before updating your handler code.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Example Payloads
+// ============================================================
+const examples = {
+  stripe: {
+    a: {
+      "id": "evt_1N8x2Q2eZvKYlo2C",
+      "type": "payment_intent.succeeded",
+      "api_version": "2023-10-16",
+      "data": {
+        "object": {
+          "id": "pi_3N8x2P2eZvKYlo2C",
+          "amount": 1500,
+          "currency": "usd",
+          "status": "succeeded",
+          "customer": "cus_O2b5Y1MHpKirTH",
+          "payment_method": "pm_1N8x2O2eZvKYlo2C",
+          "metadata": { "order_id": "ORD-12345" },
+          "charges": { "total_count": 1, "data": [{ "id": "ch_3N8x2P2eZvKYlo2C", "amount": 1500, "refunded": false }] }
+        }
+      }
+    },
+    b: {
+      "id": "evt_1N8x2Q2eZvKYlo2C",
+      "type": "payment_intent.succeeded",
+      "api_version": "2024-04-10",
+      "data": {
+        "object": {
+          "id": "pi_3N8x2P2eZvKYlo2C",
+          "amount": 1500,
+          "amount_received": 1500,
+          "currency": "usd",
+          "status": "succeeded",
+          "customer": "cus_O2b5Y1MHpKirTH",
+          "payment_method": "pm_1N8x2O2eZvKYlo2C",
+          "metadata": { "order_id": "ORD-12345", "source": "web" },
+          "latest_charge": "ch_3N8x2P2eZvKYlo2C",
+          "receipt_url": "https://pay.stripe.com/receipts/..."
+        }
+      }
+    }
+  },
+  github: {
+    a: {
+      "ref": "refs/heads/main",
+      "before": "abc123",
+      "after": "def456",
+      "repository": { "id": 12345, "name": "my-app", "full_name": "user/my-app", "private": false },
+      "pusher": { "name": "devuser", "email": "dev@example.com" },
+      "commits": [{ "id": "def456", "message": "Fix login bug", "timestamp": "2026-05-20T10:30:00Z", "author": { "name": "devuser", "email": "dev@example.com" } }]
+    },
+    b: {
+      "ref": "refs/heads/main",
+      "before": "abc123",
+      "after": "def456",
+      "repository": { "id": 12345, "name": "my-app", "full_name": "user/my-app", "private": false, "visibility": "public" },
+      "pusher": { "name": "devuser", "email": "dev@example.com" },
+      "sender": { "login": "devuser", "id": 67890, "type": "User" },
+      "commits": [{ "id": "def456", "message": "Fix login bug", "timestamp": "2026-05-20T10:30:00Z", "author": { "name": "devuser", "email": "dev@example.com", "username": "devuser" }, "added": [], "removed": [], "modified": ["src/auth.js"] }]
+    }
+  },
+  shopify: {
+    a: {
+      "id": 820982911946154500,
+      "email": "customer@example.com",
+      "financial_status": "paid",
+      "total_price": "199.00",
+      "line_items": [{ "id": 866550311766439000, "title": "IPod Nano - 8GB", "quantity": 1, "price": "199.00" }],
+      "shipping_address": { "city": "Ottawa", "province": "Ontario", "country": "Canada" }
+    },
+    b: {
+      "id": 820982911946154500,
+      "email": "customer@example.com",
+      "financial_status": "paid",
+      "total_price": "199.00",
+      "total_tax": "25.87",
+      "line_items": [{ "id": 866550311766439000, "title": "IPod Nano - 8GB", "quantity": 1, "price": "199.00", "sku": "IPOD2008NANO", "taxable": true }],
+      "shipping_address": { "city": "Ottawa", "province": "Ontario", "country": "Canada", "zip": "K1A0B1" },
+      "currency": "CAD"
+    }
+  },
+  slack: {
+    a: {
+      "token": "XXYYZZ",
+      "type": "event_callback",
+      "event": { "type": "message", "channel": "C024BE91L", "user": "U2147483697", "text": "Hello world", "ts": "1355517523.000005" },
+      "event_time": 1355517523
+    },
+    b: {
+      "token": "XXYYZZ",
+      "type": "event_callback",
+      "event": { "type": "message", "subtype": "bot_message", "channel": "C024BE91L", "user": "U2147483697", "text": "Hello world", "ts": "1355517523.000005", "blocks": [{ "type": "rich_text", "elements": [] }] },
+      "event_time": 1355517523,
+      "event_id": "Ev0PV52K25"
+    }
+  }
+};
+
+function loadExample(key, btn) {
+  document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const ex = examples[key];
+  document.getElementById('payloadA').value = JSON.stringify(ex.a, null, 2);
+  document.getElementById('payloadB').value = JSON.stringify(ex.b, null, 2);
+  document.getElementById('errorA').textContent = '';
+  document.getElementById('errorB').textContent = '';
+  runDiff();
+}
+
+// ============================================================
+// Diff Engine
+// ============================================================
+function deepDiff(a, b, path) {
+  const diffs = [];
+  path = path || '$';
+
+  if (a === b) return diffs;
+  if (a === null || b === null || typeof a !== typeof b) {
+    if (typeof a !== typeof b) {
+      diffs.push({ type: 'type', path: path, from: typeLabel(a), to: typeLabel(b), oldVal: a, newVal: b });
+    } else {
+      diffs.push({ type: 'modified', path: path, from: a, to: b });
+    }
+    return diffs;
+  }
+
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const maxLen = Math.max(a.length, b.length);
+    for (let i = 0; i < maxLen; i++) {
+      const p = path + '[' + i + ']';
+      if (i >= a.length) {
+        diffs.push({ type: 'added', path: p, value: b[i] });
+      } else if (i >= b.length) {
+        diffs.push({ type: 'removed', path: p, value: a[i] });
+      } else {
+        diffs.push(...deepDiff(a[i], b[i], p));
+      }
+    }
+    return diffs;
+  }
+
+  if (typeof a === 'object' && typeof b === 'object') {
+    const allKeys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of allKeys) {
+      const p = path + '.' + key;
+      if (!(key in a)) {
+        diffs.push({ type: 'added', path: p, value: b[key] });
+      } else if (!(key in b)) {
+        diffs.push({ type: 'removed', path: p, value: a[key] });
+      } else {
+        diffs.push(...deepDiff(a[key], b[key], p));
+      }
+    }
+    return diffs;
+  }
+
+  if (a !== b) {
+    diffs.push({ type: 'modified', path: path, from: a, to: b });
+  }
+  return diffs;
+}
+
+function typeLabel(v) {
+  if (v === null) return 'null';
+  if (Array.isArray(v)) return 'array';
+  return typeof v;
+}
+
+function truncate(v, len) {
+  const s = typeof v === 'string' ? '"' + v + '"' : JSON.stringify(v);
+  if (s && s.length > (len || 80)) return s.substring(0, len || 80) + '...';
+  return s;
+}
+
+// ============================================================
+// Run Diff
+// ============================================================
+function runDiff() {
+  const rawA = document.getElementById('payloadA').value.trim();
+  const rawB = document.getElementById('payloadB').value.trim();
+  document.getElementById('errorA').textContent = '';
+  document.getElementById('errorB').textContent = '';
+
+  if (!rawA || !rawB) return;
+
+  let objA, objB;
+  try { objA = JSON.parse(rawA); } catch (e) { document.getElementById('errorA').textContent = 'Invalid JSON: ' + e.message; return; }
+  try { objB = JSON.parse(rawB); } catch (e) { document.getElementById('errorB').textContent = 'Invalid JSON: ' + e.message; return; }
+
+  const diffs = deepDiff(objA, objB, '$');
+
+  const stats = { added: 0, removed: 0, modified: 0, type: 0 };
+  diffs.forEach(d => { if (d.type === 'type') stats.type++; else stats[d.type]++; });
+
+  document.getElementById('statAdded').textContent = stats.added;
+  document.getElementById('statRemoved').textContent = stats.removed;
+  document.getElementById('statModified').textContent = stats.modified;
+  document.getElementById('statType').textContent = stats.type;
+  document.getElementById('diffStats').style.display = 'flex';
+  document.getElementById('diffOutput').style.display = 'block';
+
+  if (diffs.length === 0) {
+    document.getElementById('diffOutput').innerHTML = '<span class="diff-unchanged">Payloads are identical. No differences found.</span>';
+    return;
+  }
+
+  let html = '';
+  diffs.forEach(d => {
+    const pathHtml = '<span class="diff-path">' + escHtml(d.path) + '</span> ';
+    if (d.type === 'added') {
+      html += '<span class="diff-line diff-added">+ ' + pathHtml + escHtml(truncate(d.value, 100)) + '</span>';
+    } else if (d.type === 'removed') {
+      html += '<span class="diff-line diff-removed">- ' + pathHtml + escHtml(truncate(d.value, 100)) + '</span>';
+    } else if (d.type === 'modified') {
+      html += '<span class="diff-line diff-modified">~ ' + pathHtml + escHtml(truncate(d.from, 50)) + ' &rarr; ' + escHtml(truncate(d.to, 50)) + '</span>';
+    } else if (d.type === 'type') {
+      html += '<span class="diff-line diff-type-change">! ' + pathHtml + 'type: ' + d.from + ' &rarr; ' + d.to + ' (' + escHtml(truncate(d.oldVal, 30)) + ' &rarr; ' + escHtml(truncate(d.newVal, 30)) + ')</span>';
+    }
+  });
+  document.getElementById('diffOutput').innerHTML = html;
+}
+
+function escHtml(s) {
+  if (s === null || s === undefined) return 'null';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+function swapPayloads() {
+  const a = document.getElementById('payloadA').value;
+  document.getElementById('payloadA').value = document.getElementById('payloadB').value;
+  document.getElementById('payloadB').value = a;
+  runDiff();
+}
+
+function formatBoth() {
+  ['payloadA', 'payloadB'].forEach(id => {
+    try {
+      const el = document.getElementById(id);
+      el.value = JSON.stringify(JSON.parse(el.value), null, 2);
+    } catch (e) {}
+  });
+}
+
+function clearAll() {
+  document.getElementById('payloadA').value = '';
+  document.getElementById('payloadB').value = '';
+  document.getElementById('errorA').textContent = '';
+  document.getElementById('errorB').textContent = '';
+  document.getElementById('diffStats').style.display = 'none';
+  document.getElementById('diffOutput').style.display = 'none';
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+loadExample('stripe', document.querySelector('.template-btn'));
+</script>
+
+</body>
+</html>

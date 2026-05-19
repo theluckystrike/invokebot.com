@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Payload Builder — Construct & Validate Webhook Payloads | InvokeBot</title>
+<meta name="description" content="Build webhook payloads with JSON schema validation, HMAC signature calculation, and templates for GitHub, Stripe, Slack, and Discord. Free browser-based tool.">
+<link rel="canonical" href="https://invokebot.com/tools/webhook-payload-builder.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/tools/webhook-payload-builder.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/tools/webhook-payload-builder.html">
+<meta property="og:title" content="Webhook Payload Builder — Construct & Validate Webhook Payloads">
+<meta property="og:description" content="Build webhook payloads with JSON schema validation, HMAC signature calculation, and templates for GitHub, Stripe, Slack, and Discord.">
+<meta property="og:url" content="https://invokebot.com/tools/webhook-payload-builder.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Webhook Payload Builder — Construct & Validate Webhook Payloads">
+<meta name="twitter:description" content="Build webhook payloads with JSON schema validation, HMAC signature calculation, and templates for GitHub, Stripe, Slack, and Discord.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Webhook Payload Builder",
+  "url": "https://invokebot.com/tools/webhook-payload-builder.html",
+  "description": "Construct webhook payloads with JSON schema validation, HMAC signature calculation, and templates for GitHub, Stripe, Slack, and Discord webhook formats.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "featureList": ["JSON payload editor", "Schema validation", "Template library (GitHub, Stripe, Slack, Discord)", "Header builder", "HMAC signature calculator"]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is a webhook payload?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A webhook payload is the JSON or form data body sent in an HTTP POST request when an event occurs. It contains structured information about the event — for example, a Stripe payment webhook includes the payment amount, currency, customer ID, and status. The payload format varies by provider but is typically JSON with a consistent schema."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I validate a webhook payload against a schema?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use JSON Schema validation to verify that a webhook payload has the correct structure, required fields, and proper data types. In JavaScript, libraries like Ajv perform schema validation. This tool provides built-in validation that checks for required fields, type mismatches, and structural errors against each provider's expected format."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I calculate an HMAC signature for a webhook?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Compute HMAC-SHA256 by hashing the raw request body using your webhook secret key. In Node.js: crypto.createHmac('sha256', secret).update(rawBody).digest('hex'). The result is compared against the signature header sent by the provider. Always use the raw bytes of the body, not a parsed or re-serialized version."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What headers should a webhook request include?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Essential webhook headers include Content-Type (usually application/json), a signature header (like X-Hub-Signature-256 for GitHub or Stripe-Signature for Stripe), a unique event ID header, and optionally a timestamp header. The signature header is critical for verifying the payload was not tampered with in transit."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I use this tool to test webhooks for Slack and Discord?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The Webhook Payload Builder includes templates for Slack incoming webhooks (with blocks and attachments) and Discord webhook payloads (with embeds). You can customize the template, validate the JSON structure, generate the HMAC signature, and copy the complete cURL command to send the webhook from your terminal."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://invokebot.com/tools/"},{"@type":"ListItem","position":3,"name":"Webhook Payload Builder"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-field textarea {
+    font-family: var(--font-display);
+    font-size: 12px;
+    min-height: 180px;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .template-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .template-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .template-btn:hover,
+  .template-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .header-entry {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .header-entry input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    font-family: var(--font-display);
+  }
+  .header-entry input:focus {
+    border-color: var(--accent);
+  }
+  .header-remove {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .header-remove:hover {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  .validation-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: var(--text-muted);
+    min-height: 40px;
+    margin-top: 8px;
+  }
+  .validation-pass { color: #22c55e; }
+  .validation-fail { color: #ef4444; }
+  .validation-warn { color: #f59e0b; }
+  .hmac-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--accent);
+    margin-top: 8px;
+    min-height: 20px;
+  }
+  .curl-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+    margin-top: 8px;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .template-btns { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span style="color:var(--text-muted);">Webhook Payload Builder</span>
+  </nav>
+
+  <h1>Webhook Payload Builder &mdash; Construct &amp; Validate Webhook Payloads</h1>
+  <div class="meta">May 25, 2026 &middot; 12 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Building webhook payloads by hand is tedious and error-prone. A missing field, a wrong type, or an invalid JSON structure will cause silent failures that are difficult to debug in production. The Webhook Payload Builder gives you a visual editor with real-time JSON validation, provider-specific templates, a header constructor, and an HMAC signature calculator &mdash; everything you need to construct, validate, and test webhook payloads from your browser.</p>
+
+  <p>Select a template for GitHub, Stripe, Slack, or Discord to start with a valid payload structure. Customize fields, add headers, compute the HMAC-SHA256 signature, and copy the generated cURL command to send the webhook to any endpoint. The validator checks for structural errors, type mismatches, and missing required fields before you send a single byte.</p>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Webhook Payload Builder</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Template Library</label>
+      <div class="template-btns">
+        <button class="template-btn active" onclick="loadTemplate('github')">GitHub Push</button>
+        <button class="template-btn" onclick="loadTemplate('stripe')">Stripe Payment</button>
+        <button class="template-btn" onclick="loadTemplate('slack')">Slack Message</button>
+        <button class="template-btn" onclick="loadTemplate('discord')">Discord Embed</button>
+        <button class="template-btn" onclick="loadTemplate('custom')">Custom / Empty</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field" style="max-width:120px;">
+        <label>Method</label>
+        <select id="payloadMethod">
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Endpoint URL</label>
+        <input type="text" id="payloadUrl" placeholder="https://your-app.com/api/webhooks" value="https://your-app.com/api/webhooks">
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Headers</label>
+      <div id="headersContainer">
+        <div class="header-entry">
+          <input type="text" placeholder="Header name" value="Content-Type">
+          <input type="text" placeholder="Header value" value="application/json">
+          <button class="header-remove" onclick="removeHeader(this)" title="Remove header">&times;</button>
+        </div>
+      </div>
+      <button class="btn btn-sm" onclick="addHeader()" style="margin-top:8px;">+ Add Header</button>
+    </div>
+
+    <hr class="section-divider">
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">JSON Payload Editor</label>
+      <div class="tool-field">
+        <textarea id="payloadEditor" oninput="validatePayload()">{
+  "ref": "refs/heads/main",
+  "repository": {
+    "id": 123456789,
+    "full_name": "octocat/Hello-World",
+    "html_url": "https://github.com/octocat/Hello-World"
+  },
+  "pusher": {
+    "name": "octocat",
+    "email": "octocat@github.com"
+  },
+  "commits": [
+    {
+      "id": "abc123def456",
+      "message": "Fix webhook handler",
+      "timestamp": "2026-05-25T10:30:00Z",
+      "author": {
+        "name": "octocat",
+        "email": "octocat@github.com"
+      }
+    }
+  ]
+}</textarea>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Validation Result</label>
+        <button class="btn btn-sm btn-primary" onclick="validatePayload()">Validate JSON</button>
+      </div>
+      <div class="validation-output" id="validationOutput">Click "Validate JSON" or start typing to validate your payload.</div>
+    </div>
+
+    <hr class="section-divider">
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">HMAC-SHA256 Signature Calculator</label>
+      <div class="tool-row">
+        <div class="tool-field">
+          <label>Webhook Secret</label>
+          <input type="text" id="hmacSecret" placeholder="whsec_your_secret_here" value="whsec_test_secret_key_123">
+        </div>
+        <div class="tool-field" style="max-width:180px;">
+          <label>Algorithm</label>
+          <select id="hmacAlgo">
+            <option value="SHA-256" selected>HMAC-SHA256</option>
+            <option value="SHA-1">HMAC-SHA1</option>
+            <option value="SHA-384">HMAC-SHA384</option>
+            <option value="SHA-512">HMAC-SHA512</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;margin-top:8px;">
+        <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Computed Signature</label>
+        <button class="btn btn-sm btn-primary" onclick="computeHmac()">Compute HMAC</button>
+      </div>
+      <div class="hmac-output" id="hmacOutput">Click "Compute HMAC" to generate the signature.</div>
+    </div>
+
+    <hr class="section-divider">
+
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Generated cURL Command</label>
+        <button class="btn btn-sm btn-primary" onclick="copyCurl()">Copy cURL</button>
+      </div>
+      <div class="curl-output" id="curlOutput"></div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>Understanding Webhook Payload Construction</h2>
+
+  <p>A webhook payload is the structured data transmitted in an HTTP request body when an event occurs in a source system. When Stripe processes a payment, when GitHub receives a push, or when a Slack workflow triggers, the originating system constructs a payload describing the event and sends it to a pre-configured URL. The payload carries the essential context that the receiving system needs to react &mdash; event type, affected resources, timestamps, and metadata.</p>
+
+  <p>Getting the payload right matters. A malformed payload will be rejected by the receiving endpoint. A payload with missing fields will cause downstream logic to fail. A payload without a valid signature will be discarded by any properly-secured webhook handler. The Webhook Payload Builder addresses each of these failure modes by providing a structured editing environment with real-time validation and signature generation.</p>
+
+  <h3>JSON Schema Validation for Webhook Payloads</h3>
+
+  <p>JSON Schema is the standard mechanism for defining the structure of a JSON document. In the context of webhooks, schema validation ensures that every required field is present, every value has the correct type, and the overall structure matches what the receiving endpoint expects. Without schema validation, subtle errors like a string where a number is expected or a missing nested object can pass through undetected until they cause a runtime crash.</p>
+
+  <p>The validation engine in this tool checks several layers of correctness. First, it verifies that the payload is syntactically valid JSON &mdash; matching braces, proper quoting, correct comma placement. Second, it checks for common structural patterns specific to each provider template. For GitHub push events, it verifies the presence of <code>ref</code>, <code>repository</code>, <code>pusher</code>, and <code>commits</code> fields. For Stripe events, it checks for <code>id</code>, <code>type</code>, <code>data.object</code>, and <code>created</code> timestamp. Each validation error includes the specific field path and a human-readable explanation.</p>
+
+  <p>Schema validation is not just a development convenience &mdash; it is a production safety mechanism. Webhook handlers that skip validation are vulnerable to unexpected payloads from provider API changes, version upgrades, and edge cases that documentation does not cover. Building validation into your payload construction workflow catches these issues before they reach production.</p>
+
+  <h3>The Anatomy of Webhook Payloads by Provider</h3>
+
+  <p><strong>GitHub Webhooks</strong> follow a consistent structure across all event types. Every payload includes a top-level <code>action</code> or event-specific identifier, a <code>repository</code> object with full repository metadata, and a <code>sender</code> object identifying the user who triggered the event. Push events include a <code>commits</code> array with individual commit details. GitHub sends the event type in the <code>X-GitHub-Event</code> header and the signature in <code>X-Hub-Signature-256</code>.</p>
+
+  <p><strong>Stripe Webhooks</strong> use an Event object wrapper. Every payload contains <code>id</code> (the event ID), <code>type</code> (like <code>payment_intent.succeeded</code>), <code>data.object</code> (the affected resource), and <code>created</code> (Unix timestamp). The signature is sent in the <code>Stripe-Signature</code> header with a format of <code>t=timestamp,v1=signature</code>. Stripe requires signature verification using the timestamp to prevent replay attacks.</p>
+
+  <p><strong>Slack Incoming Webhooks</strong> accept a payload with <code>text</code> for simple messages or <code>blocks</code> for rich formatting using Block Kit. Slack also supports <code>attachments</code> (legacy) and <code>unfurl_links</code> control. Unlike GitHub and Stripe, Slack incoming webhooks do not include a signature header &mdash; security relies on keeping the webhook URL secret.</p>
+
+  <p><strong>Discord Webhooks</strong> use a similar structure to Slack but with different field names. The payload accepts <code>content</code> for plain text and <code>embeds</code> for rich content with titles, descriptions, colors, and fields. Discord webhooks also support <code>username</code> and <code>avatar_url</code> overrides to customize the sender appearance.</p>
+
+  <h3>HMAC Signature Verification Deep Dive</h3>
+
+  <p>HMAC (Hash-based Message Authentication Code) is the cryptographic mechanism that webhook providers use to prove payload authenticity. The sender computes HMAC by hashing the raw request body with a shared secret key, then includes the resulting hash in a request header. The receiver performs the same computation and compares results. If they match, the payload was sent by someone who knows the secret and was not modified in transit.</p>
+
+  <p>The most common mistake in HMAC verification is using a parsed and re-serialized body instead of the raw bytes. When a web framework parses JSON and you serialize it back to a string, whitespace and key ordering may change. Even a single extra space invalidates the signature. In Express.js, use <code>express.raw({ type: 'application/json' })</code> on your webhook route. In Python Flask, use <code>request.get_data()</code> instead of <code>request.json</code>.</p>
+
+  <p>Timing attacks are another subtle vulnerability. Comparing signatures using <code>===</code> or <code>==</code> in JavaScript leaks information through execution time differences. Use <code>crypto.timingSafeEqual()</code> in Node.js or <code>hmac.compare_digest()</code> in Python to perform constant-time comparison. This tool uses the Web Crypto API for HMAC computation, which provides the same cryptographic primitives available server-side.</p>
+
+  <h3>Building Custom Headers for Webhook Requests</h3>
+
+  <p>Headers carry metadata that is essential for webhook processing. The <code>Content-Type</code> header tells the receiver how to parse the body &mdash; almost always <code>application/json</code> for modern webhooks. The signature header varies by provider: <code>X-Hub-Signature-256</code> for GitHub, <code>Stripe-Signature</code> for Stripe, <code>X-Shopify-Hmac-SHA256</code> for Shopify. Custom headers like <code>X-Request-ID</code> provide idempotency keys for deduplication.</p>
+
+  <p>When building webhook integrations, include a unique event ID header so the receiver can detect and skip duplicate deliveries. Include a timestamp header to enable replay attack prevention. Some providers also include a <code>User-Agent</code> header identifying the sender, which is useful for logging and access control. The header builder in this tool lets you add any combination of standard and custom headers.</p>
+
+  <h3>Payload Size and Performance Considerations</h3>
+
+  <p>Webhook payloads should be as small as possible while still containing the information needed for the receiver to act. Most providers impose size limits &mdash; GitHub limits payloads to 25 MB, Stripe to around 64 KB for most events, and Slack to 40 KB per message. Exceeding these limits causes silent failures or truncation.</p>
+
+  <p>A common pattern is to send a lightweight notification payload containing only the event type, resource ID, and timestamp, then have the receiver fetch the full resource data via API call. This approach keeps payloads small, avoids data staleness (the API call returns the current state), and reduces the volume of sensitive data transmitted via webhooks. The trade-off is an additional API call per event, which adds latency and requires API authentication on the receiver side.</p>
+
+  <h3>Testing Webhook Payloads in Development</h3>
+
+  <p>Before sending a webhook payload to a production endpoint, test it against a local development server. Use this builder to construct the payload, validate its structure, and generate the cURL command. Then use a tunneling tool like ngrok or Cloudflare Tunnel to expose your local server to the internet, or use <a href="/">InvokeBot's request builder</a> to send the payload directly.</p>
+
+  <p>For systematic testing, save a library of known-good payloads for each event type you handle. Use these as fixtures in your automated test suite. The template library in this tool provides a starting point for GitHub, Stripe, Slack, and Discord payloads. Customize them with your test data, then export the JSON for use in unit tests, integration tests, and CI/CD pipelines.</p>
+
+  <p>Webhook testing should cover four scenarios: valid payload with correct signature, valid payload with incorrect signature (should be rejected), malformed payload (should return 400), and duplicate payload with the same event ID (should be idempotent). Each scenario tests a different layer of your webhook handler. Teams building <a href="https://lochbot.com">secure webhook endpoints</a> should also test for replay attacks by sending a valid signature with an expired timestamp.</p>
+
+  <h3>Common Payload Construction Errors</h3>
+
+  <p>The most frequent errors when constructing webhook payloads are missing required fields, incorrect data types, invalid JSON syntax, and wrong content types. A missing <code>type</code> field in a Stripe event will cause the handler to crash. An integer where a string is expected will pass JSON parsing but fail validation. A trailing comma in JSON (valid in JavaScript but not in JSON) causes a parse error. Setting <code>Content-Type: text/plain</code> instead of <code>application/json</code> causes the body to be interpreted as a raw string.</p>
+
+  <p>This tool addresses each of these errors with real-time feedback. As you type, the validator highlights syntax errors with line numbers. When you click Validate, the schema checker reports missing fields and type mismatches. The template library ensures you start with a structurally valid payload, reducing the chance of fundamental errors. For teams managing <a href="https://kappafy.com">complex JSON structures</a>, the visual editor is significantly more reliable than hand-editing raw JSON in a text editor.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is a webhook payload?</summary>
+    <p>A webhook payload is the JSON or form data body sent in an HTTP POST request when an event occurs. It contains structured information about the event &mdash; for example, a Stripe payment webhook includes the payment amount, currency, customer ID, and status. The payload format varies by provider but is typically JSON with a consistent schema.</p>
+  </details>
+  <details>
+    <summary>How do I validate a webhook payload against a schema?</summary>
+    <p>Use JSON Schema validation to verify that a webhook payload has the correct structure, required fields, and proper data types. In JavaScript, libraries like Ajv perform schema validation at runtime. This tool provides built-in validation that checks for required fields, type mismatches, and structural errors against each provider's expected format.</p>
+  </details>
+  <details>
+    <summary>How do I calculate an HMAC signature for a webhook?</summary>
+    <p>Compute HMAC-SHA256 by hashing the raw request body using your webhook secret key. In Node.js: <code>crypto.createHmac('sha256', secret).update(rawBody).digest('hex')</code>. The result is compared against the signature header sent by the provider. Always use the raw bytes of the body, not a parsed or re-serialized version.</p>
+  </details>
+  <details>
+    <summary>What headers should a webhook request include?</summary>
+    <p>Essential webhook headers include Content-Type (usually application/json), a signature header (like X-Hub-Signature-256 for GitHub or Stripe-Signature for Stripe), a unique event ID header for idempotency, and optionally a timestamp header for replay attack prevention.</p>
+  </details>
+  <details>
+    <summary>Can I use this tool to test webhooks for Slack and Discord?</summary>
+    <p>Yes. The Webhook Payload Builder includes templates for Slack incoming webhooks (with blocks and attachments) and Discord webhook payloads (with embeds). Customize the template, validate the JSON structure, generate the HMAC signature, and copy the complete cURL command to send the webhook from your terminal.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Template Library
+// ============================================================
+const TEMPLATES = {
+  github: {
+    payload: JSON.stringify({
+      ref: "refs/heads/main",
+      repository: {
+        id: 123456789,
+        full_name: "octocat/Hello-World",
+        html_url: "https://github.com/octocat/Hello-World"
+      },
+      pusher: {
+        name: "octocat",
+        email: "octocat@github.com"
+      },
+      commits: [
+        {
+          id: "abc123def456",
+          message: "Fix webhook handler",
+          timestamp: "2026-05-25T10:30:00Z",
+          author: { name: "octocat", email: "octocat@github.com" }
+        }
+      ]
+    }, null, 2),
+    headers: [
+      ["Content-Type", "application/json"],
+      ["X-GitHub-Event", "push"],
+      ["X-Hub-Signature-256", "sha256=..."],
+      ["X-GitHub-Delivery", "72d3162e-cc78-11e3-81ab-4c9367dc0958"]
+    ],
+    requiredFields: ["ref", "repository", "pusher", "commits"],
+    typeChecks: { "repository.id": "number", "repository.full_name": "string", "commits": "array" }
+  },
+  stripe: {
+    payload: JSON.stringify({
+      id: "evt_1PL3Q02eZvKYlo2C0XnQUzs6",
+      object: "event",
+      type: "payment_intent.succeeded",
+      created: 1716648000,
+      data: {
+        object: {
+          id: "pi_3PL3Px2eZvKYlo2C1H9tV3qR",
+          object: "payment_intent",
+          amount: 2000,
+          currency: "usd",
+          status: "succeeded",
+          customer: "cus_QR4s5t6u7v8w9x",
+          payment_method: "pm_1PL3Pq2eZvKYlo2CfJYpBvNz"
+        }
+      },
+      livemode: false,
+      pending_webhooks: 1
+    }, null, 2),
+    headers: [
+      ["Content-Type", "application/json"],
+      ["Stripe-Signature", "t=1716648000,v1=..."]
+    ],
+    requiredFields: ["id", "object", "type", "created", "data"],
+    typeChecks: { "created": "number", "data.object.amount": "number", "type": "string", "livemode": "boolean" }
+  },
+  slack: {
+    payload: JSON.stringify({
+      text: "New deployment completed successfully",
+      blocks: [
+        {
+          type: "header",
+          text: { type: "plain_text", text: "Deployment Notification", emoji: true }
+        },
+        {
+          type: "section",
+          fields: [
+            { type: "mrkdwn", text: "*Environment:*\nProduction" },
+            { type: "mrkdwn", text: "*Status:*\nSuccess" },
+            { type: "mrkdwn", text: "*Version:*\nv2.4.1" },
+            { type: "mrkdwn", text: "*Duration:*\n3m 42s" }
+          ]
+        },
+        {
+          type: "actions",
+          elements: [
+            { type: "button", text: { type: "plain_text", text: "View Logs" }, url: "https://logs.example.com" }
+          ]
+        }
+      ]
+    }, null, 2),
+    headers: [
+      ["Content-Type", "application/json"]
+    ],
+    requiredFields: ["text"],
+    typeChecks: { "text": "string", "blocks": "array" }
+  },
+  discord: {
+    payload: JSON.stringify({
+      content: "Build pipeline completed",
+      username: "CI Bot",
+      avatar_url: "https://example.com/bot-avatar.png",
+      embeds: [
+        {
+          title: "Build #1847 - Success",
+          description: "All 142 tests passed. Coverage: 94.2%",
+          color: 3066993,
+          fields: [
+            { name: "Branch", value: "main", inline: true },
+            { name: "Commit", value: "`abc123d`", inline: true },
+            { name: "Duration", value: "4m 18s", inline: true }
+          ],
+          timestamp: "2026-05-25T10:30:00Z",
+          footer: { text: "GitHub Actions" }
+        }
+      ]
+    }, null, 2),
+    headers: [
+      ["Content-Type", "application/json"]
+    ],
+    requiredFields: ["content"],
+    typeChecks: { "content": "string", "embeds": "array" }
+  },
+  custom: {
+    payload: JSON.stringify({
+      event: "custom.event",
+      data: {}
+    }, null, 2),
+    headers: [
+      ["Content-Type", "application/json"]
+    ],
+    requiredFields: [],
+    typeChecks: {}
+  }
+};
+
+let currentTemplate = 'github';
+
+function loadTemplate(name) {
+  currentTemplate = name;
+  const t = TEMPLATES[name];
+  document.getElementById('payloadEditor').value = t.payload;
+
+  // Update template button active state
+  document.querySelectorAll('.template-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Update headers
+  const container = document.getElementById('headersContainer');
+  container.innerHTML = '';
+  t.headers.forEach(([k, v]) => addHeader(k, v));
+
+  validatePayload();
+  updateCurl();
+}
+
+// ============================================================
+// Header Management
+// ============================================================
+function addHeader(name, value) {
+  const container = document.getElementById('headersContainer');
+  const entry = document.createElement('div');
+  entry.className = 'header-entry';
+  entry.innerHTML = `
+    <input type="text" placeholder="Header name" value="${name || ''}" oninput="updateCurl()">
+    <input type="text" placeholder="Header value" value="${value || ''}" oninput="updateCurl()">
+    <button class="header-remove" onclick="removeHeader(this)" title="Remove header">&times;</button>
+  `;
+  container.appendChild(entry);
+  updateCurl();
+}
+
+function removeHeader(btn) {
+  btn.parentElement.remove();
+  updateCurl();
+}
+
+function getHeaders() {
+  const entries = document.querySelectorAll('#headersContainer .header-entry');
+  const headers = [];
+  entries.forEach(entry => {
+    const inputs = entry.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    const value = inputs[1].value.trim();
+    if (name) headers.push({ name, value });
+  });
+  return headers;
+}
+
+// ============================================================
+// JSON Validation
+// ============================================================
+function validatePayload() {
+  const output = document.getElementById('validationOutput');
+  const raw = document.getElementById('payloadEditor').value.trim();
+  const messages = [];
+
+  if (!raw) {
+    output.innerHTML = '<span class="validation-warn">Payload is empty.</span>';
+    updateCurl();
+    return;
+  }
+
+  // Step 1: Syntax validation
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+    messages.push('<span class="validation-pass">JSON syntax: Valid</span>');
+  } catch (e) {
+    const match = e.message.match(/position (\d+)/);
+    let lineInfo = '';
+    if (match) {
+      const pos = parseInt(match[1]);
+      const lines = raw.substring(0, pos).split('\n');
+      lineInfo = ` (line ${lines.length}, column ${lines[lines.length - 1].length + 1})`;
+    }
+    output.innerHTML = '<span class="validation-fail">JSON syntax error: ' + escapeHtml(e.message) + lineInfo + '</span>';
+    updateCurl();
+    return;
+  }
+
+  // Step 2: Type check (must be object)
+  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+    messages.push('<span class="validation-warn">Warning: Top-level value should be an object, got ' + (Array.isArray(parsed) ? 'array' : typeof parsed) + '</span>');
+  }
+
+  // Step 3: Template-specific required fields
+  const t = TEMPLATES[currentTemplate];
+  if (t && t.requiredFields.length > 0) {
+    t.requiredFields.forEach(field => {
+      if (getNestedValue(parsed, field) === undefined) {
+        messages.push('<span class="validation-fail">Missing required field: ' + field + '</span>');
+      } else {
+        messages.push('<span class="validation-pass">Required field present: ' + field + '</span>');
+      }
+    });
+  }
+
+  // Step 4: Type checks
+  if (t && t.typeChecks) {
+    Object.entries(t.typeChecks).forEach(([path, expectedType]) => {
+      const val = getNestedValue(parsed, path);
+      if (val !== undefined) {
+        const actualType = Array.isArray(val) ? 'array' : typeof val;
+        if (actualType !== expectedType) {
+          messages.push('<span class="validation-fail">Type mismatch: ' + path + ' should be ' + expectedType + ', got ' + actualType + '</span>');
+        }
+      }
+    });
+  }
+
+  // Step 5: Size check
+  const sizeBytes = new Blob([raw]).size;
+  const sizeKB = (sizeBytes / 1024).toFixed(1);
+  if (sizeBytes > 65536) {
+    messages.push('<span class="validation-warn">Payload size: ' + sizeKB + ' KB (exceeds 64 KB Stripe limit)</span>');
+  } else {
+    messages.push('<span class="validation-pass">Payload size: ' + sizeKB + ' KB</span>');
+  }
+
+  output.innerHTML = messages.join('\n');
+  updateCurl();
+}
+
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : undefined, obj);
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ============================================================
+// HMAC Signature Calculator (Web Crypto API)
+// ============================================================
+async function computeHmac() {
+  const secret = document.getElementById('hmacSecret').value;
+  const body = document.getElementById('payloadEditor').value;
+  const algo = document.getElementById('hmacAlgo').value;
+  const output = document.getElementById('hmacOutput');
+
+  if (!secret) {
+    output.textContent = 'Enter a webhook secret to compute the signature.';
+    return;
+  }
+
+  try {
+    const enc = new TextEncoder();
+    const keyData = enc.encode(secret);
+    const msgData = enc.encode(body);
+
+    const key = await crypto.subtle.importKey(
+      'raw', keyData, { name: 'HMAC', hash: algo }, false, ['sign']
+    );
+
+    const sig = await crypto.subtle.sign('HMAC', key, msgData);
+    const hashArray = Array.from(new Uint8Array(sig));
+    const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    let prefix = '';
+    if (algo === 'SHA-256') prefix = 'sha256=';
+    else if (algo === 'SHA-1') prefix = 'sha1=';
+    else if (algo === 'SHA-384') prefix = 'sha384=';
+    else if (algo === 'SHA-512') prefix = 'sha512=';
+
+    output.textContent = prefix + hexHash;
+
+    // Update signature header if present
+    const entries = document.querySelectorAll('#headersContainer .header-entry');
+    entries.forEach(entry => {
+      const nameInput = entry.querySelectorAll('input')[0];
+      const valueInput = entry.querySelectorAll('input')[1];
+      const n = nameInput.value.toLowerCase();
+      if (n.includes('signature') || n.includes('hmac')) {
+        if (currentTemplate === 'stripe') {
+          valueInput.value = 't=' + Math.floor(Date.now() / 1000) + ',v1=' + hexHash;
+        } else {
+          valueInput.value = prefix + hexHash;
+        }
+      }
+    });
+    updateCurl();
+  } catch (e) {
+    output.textContent = 'Error: ' + e.message;
+  }
+}
+
+// ============================================================
+// cURL Generator
+// ============================================================
+function updateCurl() {
+  const method = document.getElementById('payloadMethod').value;
+  const url = document.getElementById('payloadUrl').value || 'https://your-app.com/api/webhooks';
+  const body = document.getElementById('payloadEditor').value.trim();
+  const headers = getHeaders();
+
+  let curl = 'curl -X ' + method;
+  curl += ' \\\n  ' + escapeShell(url);
+
+  headers.forEach(h => {
+    curl += ' \\\n  -H ' + escapeShell(h.name + ': ' + h.value);
+  });
+
+  if (body) {
+    curl += " \\\n  -d '" + body.replace(/'/g, "'\\''") + "'";
+  }
+
+  document.getElementById('curlOutput').textContent = curl;
+}
+
+function escapeShell(str) {
+  if (/^[a-zA-Z0-9_./:@\-=]+$/.test(str)) return str;
+  return "'" + str.replace(/'/g, "'\\''") + "'";
+}
+
+function copyCurl() {
+  const output = document.getElementById('curlOutput').textContent;
+  navigator.clipboard.writeText(output).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+validatePayload();
+updateCurl();
+</script>
+
+</body>
+</html>

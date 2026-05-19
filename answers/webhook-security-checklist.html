@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Security Checklist — HMAC Signature Validator & Security Audit Tool | InvokeBot</title>
+<meta name="description" content="Interactive webhook security audit checklist with HMAC-SHA256 signature calculator, 18-item pass/fail assessment, and request validation demo. Secure your webhook endpoints.">
+<link rel="canonical" href="https://invokebot.com/answers/webhook-security-checklist.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/answers/webhook-security-checklist.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/answers/webhook-security-checklist.html">
+<meta property="og:title" content="Webhook Security Checklist — HMAC Signature Validator & Security Audit Tool">
+<meta property="og:description" content="Interactive webhook security audit checklist with HMAC-SHA256 signature calculator, 18-item pass/fail assessment, and request validation demo.">
+<meta property="og:url" content="https://invokebot.com/answers/webhook-security-checklist.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Webhook Security Checklist — HMAC Signature Validator & Security Audit Tool">
+<meta name="twitter:description" content="Interactive webhook security audit checklist with HMAC-SHA256 signature calculator and 18-item security assessment.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Webhook Security Checklist — HMAC Signature Validator & Security Audit Tool",
+  "description": "Interactive webhook security audit checklist with HMAC-SHA256 signature calculator, 18-item pass/fail assessment, and request validation demo. Secure your webhook endpoints.",
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://invokebot.com/answers/webhook-security-checklist.html"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I verify a webhook signature with HMAC-SHA256?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Compute HMAC-SHA256 of the raw request body using your webhook secret, then compare the hex digest to the signature header. In Node.js: const sig = crypto.createHmac('sha256', secret).update(rawBody).digest('hex'). Use crypto.timingSafeEqual() for comparison to prevent timing attacks. Always hash the raw bytes, never parsed JSON."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the most common webhook security vulnerabilities?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The top vulnerabilities are: missing signature verification (accepting any request), using parsed JSON instead of raw body for HMAC (breaks signatures), string comparison instead of constant-time comparison (enables timing attacks), no timestamp validation (allows replay attacks), missing TLS (payloads visible in transit), and overly permissive IP allowlists."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Should I restrict webhook endpoints by IP address?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IP allowlisting is a defense-in-depth measure but should not be your only protection. Major providers publish their webhook source IPs: GitHub publishes theirs via the Meta API, Stripe provides a list in their docs. IP allowlisting blocks spoofed requests before they reach your application code, but HMAC signature verification is still required because IPs can be spoofed at the network level."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I prevent webhook replay attacks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Include a timestamp in the signed payload and reject requests older than 5 minutes. Stripe includes the timestamp in the Stripe-Signature header (t=timestamp). Store processed event IDs and reject duplicates. Together, timestamp validation and idempotency keys prevent both replay attacks and duplicate processing from legitimate retries."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What should my webhook endpoint return on failure?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Return 200 for successfully processed events, 202 for accepted-but-queued events, 400 for malformed payloads, 401 for invalid signatures, and 500 for internal processing errors. Never return detailed error messages — they leak implementation details to attackers. The status code alone tells the provider whether to retry (5xx) or not (4xx)."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Answers","item":"https://invokebot.com/answers/"},{"@type":"ListItem","position":3,"name":"Webhook Security Checklist"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-field textarea {
+    font-family: var(--font-display);
+    font-size: 12px;
+    min-height: 100px;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .hmac-result {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    word-break: break-all;
+    min-height: 20px;
+    margin-top: 8px;
+  }
+  .hmac-match { color: #22c55e; border-color: #22c55e; }
+  .hmac-mismatch { color: #ef4444; border-color: #ef4444; }
+  .hmac-neutral { color: var(--accent); }
+  /* Checklist styles */
+  .checklist-section {
+    margin: 16px 0;
+  }
+  .checklist-category {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 16px 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: var(--radius);
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .checklist-item:hover {
+    background: var(--bg);
+  }
+  .checklist-item input[type="checkbox"] {
+    margin-top: 3px;
+    accent-color: var(--accent);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .checklist-label {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .checklist-label .severity {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 6px;
+  }
+  .severity-critical { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .severity-high { background: rgba(249,115,22,0.15); color: #f97316; }
+  .severity-medium { background: rgba(234,179,8,0.15); color: #eab308; }
+  .severity-low { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .score-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 20px;
+    margin: 16px 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .score-ring {
+    position: relative;
+    width: 100px;
+    height: 100px;
+  }
+  .score-ring svg {
+    transform: rotate(-90deg);
+  }
+  .score-ring-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .score-details {
+    text-align: left;
+  }
+  .score-details .grade {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .score-details .grade-label {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .grade-a { color: #22c55e; }
+  .grade-b { color: #84cc16; }
+  .grade-c { color: #eab308; }
+  .grade-d { color: #f97316; }
+  .grade-f { color: #ef4444; }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/answers/">Answers</a> &rsaquo; <span style="color:var(--text-muted);">Webhook Security Checklist</span>
+  </nav>
+
+  <h1>Webhook Security Checklist &mdash; HMAC Signature Validator &amp; Security Audit</h1>
+  <div class="meta">May 25, 2026 &middot; 13 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Webhook endpoints are attack surfaces. Every publicly reachable URL that accepts POST requests and triggers actions in your system is a target for payload injection, replay attacks, and denial of service. The difference between a secure webhook endpoint and a vulnerable one comes down to a checklist of specific, verifiable security measures &mdash; signature verification, timestamp validation, IP allowlisting, rate limiting, and proper error handling.</p>
+
+  <p>This page provides two interactive tools. The HMAC Signature Validator lets you compute and verify webhook signatures using the same cryptographic primitives that providers like Stripe and GitHub use. The Security Audit Checklist is an 18-item assessment covering every layer of webhook security, from transport encryption to application-level validation. Check off what you have implemented, and the tool calculates a security score with a letter grade.</p>
+
+  <!-- ======================================================== -->
+  <!-- TOOL 1: HMAC SIGNATURE VALIDATOR -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">HMAC Signature Validator</div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Webhook Secret Key</label>
+        <input type="text" id="hmacSecret" placeholder="whsec_your_secret_here" value="whsec_test_secret_key_123">
+      </div>
+      <div class="tool-field" style="max-width:180px;">
+        <label>Algorithm</label>
+        <select id="hmacAlgo">
+          <option value="SHA-256" selected>HMAC-SHA256</option>
+          <option value="SHA-1">HMAC-SHA1</option>
+          <option value="SHA-384">HMAC-SHA384</option>
+          <option value="SHA-512">HMAC-SHA512</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Request Body (raw)</label>
+      <div class="tool-field">
+        <textarea id="hmacBody" oninput="computeSignature()">{"id":"evt_1PL3Q02eZvKYlo2C","type":"payment_intent.succeeded","data":{"object":{"amount":2000,"currency":"usd"}}}</textarea>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Expected Signature (from header)</label>
+        <input type="text" id="expectedSig" placeholder="sha256=abc123..." oninput="verifySig()">
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Computed Signature</label>
+      <div>
+        <button class="btn btn-sm btn-primary" onclick="computeSignature()">Compute</button>
+        <button class="btn btn-sm" onclick="copySignature()">Copy</button>
+      </div>
+    </div>
+    <div class="hmac-result hmac-neutral" id="hmacResult">Click "Compute" to generate the HMAC signature.</div>
+
+    <div style="margin-top:12px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Verification Result</label>
+      <div class="hmac-result" id="verifyResult" style="color:var(--text-muted);">Enter an expected signature above to verify.</div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- TOOL 2: SECURITY AUDIT CHECKLIST -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Webhook Security Audit Checklist</div>
+
+    <div class="score-display" id="scoreDisplay">
+      <div class="score-ring" id="scoreRing">
+        <svg width="100" height="100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border, #333)" stroke-width="6"/>
+          <circle cx="50" cy="50" r="42" fill="none" stroke="var(--accent, #f97316)" stroke-width="6" stroke-dasharray="264" stroke-dashoffset="264" id="scoreArc" stroke-linecap="round"/>
+        </svg>
+        <div class="score-ring-text" id="scorePercent">0%</div>
+      </div>
+      <div class="score-details">
+        <div class="grade grade-f" id="scoreGrade">F</div>
+        <div class="grade-label" id="scoreLabel">Complete the checklist below</div>
+        <div class="grade-label" id="scoreCount">0 / 18 items passed</div>
+      </div>
+    </div>
+
+    <div class="checklist-section" id="checklistSection">
+
+      <div class="checklist-category">Transport Security</div>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="3">
+        <span class="checklist-label">Webhook endpoint uses HTTPS (TLS 1.2+) <span class="severity severity-critical">Critical</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">TLS certificate is valid and not self-signed <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">HSTS header is set on webhook endpoint <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <div class="checklist-category">Signature Verification</div>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="3">
+        <span class="checklist-label">HMAC signature is verified on every request <span class="severity severity-critical">Critical</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="3">
+        <span class="checklist-label">Raw request body is used for HMAC computation (not parsed JSON) <span class="severity severity-critical">Critical</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Constant-time comparison used for signature check (timingSafeEqual) <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Webhook secret is stored in environment variable, not in code <span class="severity severity-high">High</span></span>
+      </label>
+
+      <div class="checklist-category">Replay & Duplication Protection</div>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Timestamp validation rejects requests older than 5 minutes <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Event IDs are stored and duplicates are rejected (idempotency) <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Processed event ID cache TTL matches provider retry window <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <div class="checklist-category">Access Control</div>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">IP allowlist restricts to provider's published webhook source IPs <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Rate limiting is applied to webhook endpoint <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Webhook endpoint URL contains a random token (not guessable) <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <div class="checklist-category">Error Handling & Monitoring</div>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="2">
+        <span class="checklist-label">Endpoint returns 200 quickly, processes events asynchronously <span class="severity severity-high">High</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Error responses do not leak internal details (generic 4xx/5xx) <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Failed webhook deliveries are logged with full context <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Alerting is configured for sustained webhook failures <span class="severity severity-low">Low</span></span>
+      </label>
+
+      <label class="checklist-item">
+        <input type="checkbox" onchange="updateScore()" data-weight="1">
+        <span class="checklist-label">Dead letter queue captures events that exhaust all retries <span class="severity severity-medium">Medium</span></span>
+      </label>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>Why Webhook Security Matters</h2>
+
+  <p>Webhook endpoints are inherently dangerous because they accept external input and trigger internal actions. A payment webhook might credit a user's account. A deployment webhook might trigger a production release. A notification webhook might send emails or SMS messages. If an attacker can forge a valid webhook request, they can trigger any of these actions without authorization.</p>
+
+  <p>The attack surface is wide. Webhook URLs are often discoverable through configuration leaks, error messages, or brute force. Once an attacker knows the URL, they can send arbitrary POST requests with crafted payloads. Without signature verification, the endpoint has no way to distinguish a legitimate webhook from a forged one. Without timestamp validation, an attacker who intercepts a valid signed request can replay it indefinitely. Without rate limiting, an attacker can flood the endpoint with requests to cause denial of service or trigger resource exhaustion.</p>
+
+  <p>The security measures in this checklist are not optional best practices &mdash; they are the minimum requirements for operating a webhook endpoint in production. Skipping any of the critical items creates a direct path to exploitation.</p>
+
+  <h3>HMAC Signature Verification in Detail</h3>
+
+  <p>HMAC (Hash-based Message Authentication Code) provides two guarantees: authenticity (the message was sent by someone who knows the secret) and integrity (the message was not modified in transit). Both guarantees are achieved through a single cryptographic operation &mdash; hashing the message with the shared secret key.</p>
+
+  <p>The verification process works as follows. The webhook provider computes <code>HMAC-SHA256(secret, raw_body)</code> and includes the result in a request header. Your endpoint performs the same computation on the received body using the same secret. If the two values match, the payload is authentic and unmodified. If they differ, the payload was either sent by someone who does not know the secret or was modified after signing.</p>
+
+  <p>The critical implementation detail is using the <strong>raw request body</strong> for the HMAC computation. When a web framework parses the JSON body, it may reorder keys, modify whitespace, or change number formatting. Re-serializing the parsed object produces a different byte sequence, which produces a different hash. In Express.js, capture the raw body with <code>express.raw({ type: 'application/json' })</code>. In Python Flask, use <code>request.get_data()</code>. In Go, read from <code>r.Body</code> before any JSON decoding.</p>
+
+  <p>Constant-time comparison is the second critical detail. Standard string comparison (<code>===</code> in JavaScript, <code>==</code> in Python) returns <code>false</code> at the first differing byte, which means the comparison takes less time for strings that differ early. An attacker can exploit this timing difference to discover the correct signature byte by byte. Use <code>crypto.timingSafeEqual()</code> in Node.js, <code>hmac.compare_digest()</code> in Python, or <code>subtle.ConstantTimeCompare()</code> in Go.</p>
+
+  <h3>Timestamp Validation and Replay Prevention</h3>
+
+  <p>Even with valid HMAC signatures, webhook requests can be replayed. If an attacker intercepts a legitimately signed request (through network sniffing, log access, or compromised middleware), they can resend it at any time. The signature is still valid because the payload has not changed. Timestamp validation prevents this attack by including the current time in the signed data and rejecting requests that are too old.</p>
+
+  <p>Stripe implements this elegantly. The <code>Stripe-Signature</code> header contains <code>t=timestamp,v1=signature</code>. The timestamp is included in the HMAC computation: <code>HMAC-SHA256(secret, timestamp + "." + body)</code>. Your endpoint checks that the timestamp is within 5 minutes of the current time. If an attacker replays the request 6 minutes later, it is rejected even though the signature is technically valid.</p>
+
+  <p>For providers that do not include a timestamp in the signature, implement idempotency-based replay prevention instead. Store every processed event ID in a cache (Redis, database, or in-memory store) with a TTL matching the provider's maximum retry window. Before processing any event, check if the ID has already been processed. This approach handles both malicious replays and legitimate retries from the provider.</p>
+
+  <h3>IP Allowlisting as Defense in Depth</h3>
+
+  <p>IP allowlisting restricts your webhook endpoint to accept requests only from known provider IP ranges. GitHub publishes their webhook source IPs via the <code>/meta</code> API endpoint. Stripe publishes a list in their documentation. Shopify provides webhook source IPs per region. By configuring your firewall or application to reject requests from other IPs, you block spoofed requests before they reach your application code.</p>
+
+  <p>IP allowlisting should never be your only security measure. IP addresses can be spoofed (though it is difficult for TCP connections), provider IP ranges change over time, and requests may traverse proxies or load balancers that modify the source IP. Treat IP allowlisting as an additional layer that reduces the attack surface but does not replace signature verification.</p>
+
+  <h3>Rate Limiting and Resource Protection</h3>
+
+  <p>Webhook endpoints must be rate-limited to prevent abuse. Even with signature verification, an attacker who discovers your webhook secret (through a code leak, credential stuffing, or a compromised provider account) could flood your endpoint with valid requests. Rate limiting ensures that even in the worst case, the damage is bounded.</p>
+
+  <p>Set rate limits based on your expected webhook volume plus a reasonable buffer. If you typically receive 100 webhooks per minute from Stripe, a rate limit of 500 per minute per IP gives enough headroom for bursts while preventing unbounded abuse. Return a <code>429 Too Many Requests</code> response when the limit is exceeded &mdash; the provider will retry later.</p>
+
+  <h3>Async Processing and Response Time</h3>
+
+  <p>Webhook endpoints should return a <code>200 OK</code> response as quickly as possible &mdash; ideally within 1-2 seconds, and no more than the provider's timeout (typically 5-30 seconds). If your endpoint takes too long to respond, the provider will consider the delivery failed and schedule a retry, leading to duplicate processing.</p>
+
+  <p>The standard pattern is to validate the request (check signature, verify timestamp, check for duplicates), enqueue the event for async processing, and return 200 immediately. The actual business logic runs asynchronously from a queue (SQS, RabbitMQ, BullMQ, Celery). This separation ensures fast responses and allows retry logic for the processing step to be independent of the webhook delivery retry logic.</p>
+
+  <h3>Error Handling Without Information Leakage</h3>
+
+  <p>Your webhook endpoint should return minimal information in error responses. A <code>401 Unauthorized</code> for invalid signatures, <code>400 Bad Request</code> for malformed payloads, and <code>500 Internal Server Error</code> for processing failures. Never include stack traces, database errors, file paths, or internal identifiers in the response body. An attacker probing your endpoint will use these details to refine their attacks. The provider only needs the status code to determine whether to retry. Teams implementing <a href="https://lochbot.com">comprehensive security monitoring</a> should log full error details internally while returning sanitized responses to callers. Developers working with <a href="https://kappafy.com">webhook payload formats</a> can use the payload builder to test their error handling paths.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>How do I verify a webhook signature with HMAC-SHA256?</summary>
+    <p>Compute HMAC-SHA256 of the raw request body using your webhook secret, then compare the hex digest to the signature header. In Node.js: <code>const sig = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')</code>. Use <code>crypto.timingSafeEqual()</code> for comparison to prevent timing attacks. Always hash the raw bytes, never parsed JSON.</p>
+  </details>
+  <details>
+    <summary>What are the most common webhook security vulnerabilities?</summary>
+    <p>The top vulnerabilities are: missing signature verification (accepting any request), using parsed JSON instead of raw body for HMAC (breaks signatures), string comparison instead of constant-time comparison (enables timing attacks), no timestamp validation (allows replay attacks), missing TLS (payloads visible in transit), and overly permissive IP allowlists.</p>
+  </details>
+  <details>
+    <summary>Should I restrict webhook endpoints by IP address?</summary>
+    <p>IP allowlisting is a defense-in-depth measure but should not be your only protection. Major providers publish their webhook source IPs. IP allowlisting blocks spoofed requests before they reach your application code, but HMAC signature verification is still required because IPs can be spoofed at the network level.</p>
+  </details>
+  <details>
+    <summary>How do I prevent webhook replay attacks?</summary>
+    <p>Include a timestamp in the signed payload and reject requests older than 5 minutes. Store processed event IDs and reject duplicates. Together, timestamp validation and idempotency keys prevent both replay attacks and duplicate processing from legitimate retries.</p>
+  </details>
+  <details>
+    <summary>What should my webhook endpoint return on failure?</summary>
+    <p>Return 200 for successfully processed events, 202 for accepted-but-queued events, 400 for malformed payloads, 401 for invalid signatures, and 500 for internal processing errors. Never return detailed error messages &mdash; they leak implementation details to attackers. The status code alone tells the provider whether to retry.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// HMAC Signature Calculator (Web Crypto API)
+// ============================================================
+let computedSigHex = '';
+
+async function computeSignature() {
+  const secret = document.getElementById('hmacSecret').value;
+  const body = document.getElementById('hmacBody').value;
+  const algo = document.getElementById('hmacAlgo').value;
+  const output = document.getElementById('hmacResult');
+
+  if (!secret) {
+    output.textContent = 'Enter a webhook secret to compute the signature.';
+    output.className = 'hmac-result hmac-neutral';
+    return;
+  }
+  if (!body) {
+    output.textContent = 'Enter the request body to compute the signature.';
+    output.className = 'hmac-result hmac-neutral';
+    return;
+  }
+
+  try {
+    const enc = new TextEncoder();
+    const keyData = enc.encode(secret);
+    const msgData = enc.encode(body);
+
+    const key = await crypto.subtle.importKey(
+      'raw', keyData, { name: 'HMAC', hash: algo }, false, ['sign']
+    );
+
+    const sig = await crypto.subtle.sign('HMAC', key, msgData);
+    const hashArray = Array.from(new Uint8Array(sig));
+    computedSigHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    let prefix = '';
+    if (algo === 'SHA-256') prefix = 'sha256=';
+    else if (algo === 'SHA-1') prefix = 'sha1=';
+    else if (algo === 'SHA-384') prefix = 'sha384=';
+    else if (algo === 'SHA-512') prefix = 'sha512=';
+
+    output.textContent = prefix + computedSigHex;
+    output.className = 'hmac-result hmac-neutral';
+
+    verifySig();
+  } catch (e) {
+    output.textContent = 'Error: ' + e.message;
+    output.className = 'hmac-result hmac-mismatch';
+  }
+}
+
+function verifySig() {
+  const expected = document.getElementById('expectedSig').value.trim();
+  const result = document.getElementById('verifyResult');
+
+  if (!expected) {
+    result.textContent = 'Enter an expected signature above to verify.';
+    result.className = 'hmac-result';
+    result.style.color = 'var(--text-muted)';
+    return;
+  }
+
+  if (!computedSigHex) {
+    result.textContent = 'Click "Compute" first to generate the HMAC signature.';
+    result.className = 'hmac-result';
+    result.style.color = 'var(--text-muted)';
+    return;
+  }
+
+  // Normalize: remove common prefixes for comparison
+  const normalize = (s) => s.replace(/^(sha256=|sha1=|sha384=|sha512=)/i, '').toLowerCase().trim();
+  const normalizedExpected = normalize(expected);
+  const normalizedComputed = normalize(computedSigHex);
+
+  if (normalizedExpected === normalizedComputed) {
+    result.textContent = 'MATCH — Signature is valid. The payload was signed with this secret.';
+    result.className = 'hmac-result hmac-match';
+    result.style.color = '';
+  } else {
+    result.textContent = 'MISMATCH — Signature does not match. Check the secret, body, and algorithm.';
+    result.className = 'hmac-result hmac-mismatch';
+    result.style.color = '';
+  }
+}
+
+function copySignature() {
+  const output = document.getElementById('hmacResult').textContent;
+  navigator.clipboard.writeText(output).then(() => {
+    const btns = document.querySelectorAll('.btn.btn-sm');
+    btns.forEach(btn => {
+      if (btn.textContent === 'Copy') {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      }
+    });
+  });
+}
+
+// ============================================================
+// Security Audit Checklist Scoring
+// ============================================================
+function updateScore() {
+  const checkboxes = document.querySelectorAll('#checklistSection input[type="checkbox"]');
+  let totalWeight = 0;
+  let checkedWeight = 0;
+  let checkedCount = 0;
+
+  checkboxes.forEach(cb => {
+    const weight = parseInt(cb.getAttribute('data-weight')) || 1;
+    totalWeight += weight;
+    if (cb.checked) {
+      checkedWeight += weight;
+      checkedCount++;
+    }
+  });
+
+  const totalItems = checkboxes.length;
+  const percent = totalWeight > 0 ? Math.round((checkedWeight / totalWeight) * 100) : 0;
+
+  // Update ring
+  const circumference = 2 * Math.PI * 42; // 264
+  const offset = circumference - (percent / 100) * circumference;
+  const arc = document.getElementById('scoreArc');
+  arc.setAttribute('stroke-dashoffset', offset);
+
+  // Color based on grade
+  let grade, gradeClass, label;
+  if (percent >= 90) { grade = 'A'; gradeClass = 'grade-a'; label = 'Excellent — production ready'; }
+  else if (percent >= 75) { grade = 'B'; gradeClass = 'grade-b'; label = 'Good — minor gaps remain'; }
+  else if (percent >= 55) { grade = 'C'; gradeClass = 'grade-c'; label = 'Fair — significant gaps'; }
+  else if (percent >= 35) { grade = 'D'; gradeClass = 'grade-d'; label = 'Poor — critical items missing'; }
+  else { grade = 'F'; gradeClass = 'grade-f'; label = 'Failing — not safe for production'; }
+
+  arc.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f97316');
+  if (percent >= 90) arc.setAttribute('stroke', '#22c55e');
+  else if (percent >= 75) arc.setAttribute('stroke', '#84cc16');
+  else if (percent >= 55) arc.setAttribute('stroke', '#eab308');
+  else if (percent >= 35) arc.setAttribute('stroke', '#f97316');
+  else arc.setAttribute('stroke', '#ef4444');
+
+  document.getElementById('scorePercent').textContent = percent + '%';
+  document.getElementById('scorePercent').style.color = arc.getAttribute('stroke');
+
+  const gradeEl = document.getElementById('scoreGrade');
+  gradeEl.textContent = grade;
+  gradeEl.className = 'grade ' + gradeClass;
+
+  document.getElementById('scoreLabel').textContent = label;
+  document.getElementById('scoreCount').textContent = checkedCount + ' / ' + totalItems + ' items passed';
+}
+
+// Initialize
+computeSignature();
+updateScore();
+</script>
+
+</body>
+</html>

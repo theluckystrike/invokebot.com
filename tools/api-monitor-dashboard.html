@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Monitor Dashboard &mdash; Uptime Simulator with SLA Calculator | InvokeBot</title>
+<meta name="description" content="Simulate API endpoint monitoring with uptime percentage tracking, SLA compliance calculations, incident timeline visualization, and response time distribution analysis. Model downtime impact on your webhook infrastructure.">
+<link rel="canonical" href="https://invokebot.com/tools/api-monitor-dashboard.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/tools/api-monitor-dashboard.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/tools/api-monitor-dashboard.html">
+<meta property="og:title" content="API Monitor Dashboard &mdash; Uptime Simulator with SLA Calculator">
+<meta property="og:description" content="Simulate API monitoring with uptime tracking, SLA compliance, incident timelines, and response time analysis for webhook infrastructure.">
+<meta property="og:url" content="https://invokebot.com/tools/api-monitor-dashboard.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="API Monitor Dashboard &mdash; Uptime Simulator with SLA Calculator">
+<meta name="twitter:description" content="Simulate API monitoring with uptime tracking, SLA compliance, incident timelines, and response time analysis for webhook infrastructure.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "API Monitor Dashboard",
+  "url": "https://invokebot.com/tools/api-monitor-dashboard.html",
+  "description": "Simulate API endpoint monitoring with configurable uptime targets, incident injection, SLA compliance tracking, response time distribution analysis, and downtime cost estimation. Model the impact of API outages on your webhook and automation infrastructure.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "featureList": ["Uptime percentage calculator", "SLA compliance checker", "Incident timeline simulator", "Response time distribution", "Downtime cost estimator", "Multi-endpoint monitoring"]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does 99.9% uptime (three nines) actually mean?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "99.9% uptime (three nines) allows 8 hours, 45 minutes, and 36 seconds of downtime per year, or approximately 43.8 minutes per month. This means your API can be completely unavailable for nearly 44 minutes each month and still meet the SLA. For comparison, 99.99% (four nines) allows only 4.38 minutes per month, 99.95% allows 21.9 minutes, and 99% allows 7.3 hours. Each additional nine represents a 10x reduction in allowable downtime and typically requires significantly more investment in redundancy and monitoring."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I calculate SLA compliance for my API?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "SLA compliance is calculated as: (total_minutes_in_period - downtime_minutes) / total_minutes_in_period * 100. For monthly SLA: a 30-day month has 43,200 minutes. If your API was down for 60 minutes, uptime = (43200 - 60) / 43200 * 100 = 99.861%. To track this accurately, you need continuous monitoring with checks at least every minute, a clear definition of what constitutes 'down' (HTTP 5xx, timeout, latency above threshold), and an incident tracking system that records precise start and end times for each outage."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the cost of API downtime?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "API downtime cost depends on what the API enables. For e-commerce APIs, downtime directly equals lost revenue: if your store processes $10,000/hour and the payment API is down for 30 minutes, the direct cost is $5,000. For webhook-dependent systems, downtime causes missed events that may require manual reconciliation at $50-200/hour of engineering time. For SaaS APIs with SLA commitments, downtime triggers service credits (typically 10-25% of monthly fees per SLA breach). The total cost includes direct revenue loss, engineering recovery time, customer trust erosion, and contractual penalties."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How often should I check API endpoint health?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Check frequency depends on your SLA requirements and acceptable detection latency. For 99.9% SLA (43.8 min/month budget), checking every 1 minute is sufficient — you detect outages within 1 minute, leaving the full downtime budget for actual resolution. For 99.99% SLA (4.38 min/month), check every 10-15 seconds to minimize detection delay. For 99.999% SLA (26 seconds/month), use real-time health checks every 5 seconds from multiple locations. More frequent checks consume more monitoring resources but reduce Mean Time To Detect (MTTD)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What response time percentiles should I monitor?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Monitor p50 (median), p95, p99, and p99.9 percentiles. The median shows typical user experience. p95 reveals the experience of your slowest 5% of requests — often caused by cold starts, cache misses, or database contention. p99 catches rare but impactful slowdowns affecting 1 in 100 requests. p99.9 identifies extreme outliers that might indicate infrastructure issues. For webhook endpoints, p99 is the most critical metric because webhook providers typically use aggressive timeouts (5-30 seconds), and the slowest 1% of requests are the ones most likely to trigger timeout-based retries."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://invokebot.com/tools/"},{"@type":"ListItem","position":3,"name":"API Monitor Dashboard"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .template-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .template-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .template-btn:hover,
+  .template-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .result-box-title {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .result-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .result-value.green { color: #22c55e; }
+  .result-value.red { color: #ef4444; }
+  .result-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .uptime-bar-container {
+    margin: 16px 0;
+  }
+  .uptime-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  .uptime-bar {
+    display: flex;
+    height: 36px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    gap: 1px;
+  }
+  .uptime-block {
+    flex: 1;
+    transition: background 0.2s;
+    position: relative;
+    cursor: pointer;
+  }
+  .uptime-block:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text);
+    white-space: nowrap;
+    z-index: 10;
+  }
+  .resp-chart {
+    display: flex;
+    align-items: flex-end;
+    height: 120px;
+    gap: 2px;
+    padding: 8px 0;
+  }
+  .resp-bar {
+    flex: 1;
+    background: var(--accent);
+    border-radius: 2px 2px 0 0;
+    min-width: 4px;
+    transition: height 0.3s;
+    position: relative;
+  }
+  .resp-bar:hover { opacity: 0.8; }
+  .sla-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 12px 0;
+  }
+  .sla-table th {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .sla-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .sla-pass { color: #22c55e; font-weight: 700; }
+  .sla-fail { color: #ef4444; font-weight: 700; }
+  .incident-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .incident-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .incident-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .incident-dot.major { background: #ef4444; }
+  .incident-dot.minor { background: var(--accent); }
+  .incident-dot.degraded { background: #eab308; }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .template-btns { flex-direction: column; }
+    .result-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span style="color:var(--text-muted);">API Monitor Dashboard</span>
+  </nav>
+
+  <h1>API Monitor Dashboard &mdash; Uptime Simulator with SLA Calculator</h1>
+  <div class="meta">May 25, 2026 &middot; 14 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>API uptime is the foundation of every webhook integration, every automation pipeline, and every real-time data flow. When an API goes down, webhooks stop firing, polling returns errors, automation chains break, and downstream systems lose data. The API Monitor Dashboard simulates endpoint monitoring over a configurable time period, letting you explore how different uptime levels translate to actual minutes of downtime, SLA compliance outcomes, and financial impact. Configure your target SLA, inject simulated incidents, and see exactly how close your uptime budget is to exhaustion.</p>
+
+  <p>Set your monitoring parameters &mdash; check interval, SLA target, response time threshold, and hourly revenue impact &mdash; and the simulator generates a realistic 30-day monitoring timeline with randomized incidents based on your target uptime. The uptime bar shows every day color-coded by health status. Response time distribution reveals latency patterns. The SLA compliance table compares your simulated performance against standard industry tiers. Use this tool to understand the operational realities behind uptime numbers and plan your monitoring strategy accordingly.</p>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">API Uptime Monitor Simulator</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Scenario Presets</label>
+      <div class="template-btns">
+        <button class="template-btn active" onclick="applyPreset('reliable', this)">Reliable API (99.95%)</button>
+        <button class="template-btn" onclick="applyPreset('typical', this)">Typical SaaS (99.9%)</button>
+        <button class="template-btn" onclick="applyPreset('flaky', this)">Flaky Endpoint (99.5%)</button>
+        <button class="template-btn" onclick="applyPreset('critical', this)">Mission Critical (99.99%)</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Target Uptime SLA (%)</label>
+        <input type="number" id="targetSLA" value="99.95" min="90" max="99.999" step="0.001" oninput="simulate()">
+      </div>
+      <div class="tool-field">
+        <label>Check Interval (seconds)</label>
+        <select id="checkInterval" onchange="simulate()">
+          <option value="10">10 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60" selected>1 min</option>
+          <option value="300">5 min</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Response Time Threshold (ms)</label>
+        <input type="number" id="respThreshold" value="2000" min="100" max="30000" step="100" oninput="simulate()">
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Hourly Revenue Impact ($)</label>
+        <input type="number" id="hourlyRevenue" value="500" min="0" max="1000000" step="10" oninput="simulate()">
+      </div>
+      <div class="tool-field">
+        <label>Monitoring Period</label>
+        <select id="period" onchange="simulate()">
+          <option value="7">7 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="90">90 days</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Incident Severity Mix</label>
+        <select id="severityMix" onchange="simulate()">
+          <option value="mostly-minor">Mostly Minor</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="mostly-major">Mostly Major</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="template-btn" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="simulate()">Re-Simulate</button>
+    </div>
+
+    <hr class="section-divider">
+
+    <div class="result-grid">
+      <div class="result-box">
+        <div class="result-box-title">Actual Uptime</div>
+        <div class="result-value" id="rUptime">99.95%</div>
+        <div class="result-sub" id="rUptimeSub">simulated</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-title">Total Downtime</div>
+        <div class="result-value" id="rDowntime">21 min</div>
+        <div class="result-sub" id="rDowntimeSub">across all incidents</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-title">SLA Budget Used</div>
+        <div class="result-value" id="rBudget">48%</div>
+        <div class="result-sub" id="rBudgetSub">of allowed downtime</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-title">Incidents</div>
+        <div class="result-value" id="rIncidents">3</div>
+        <div class="result-sub" id="rIncidentsSub">during period</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-title">Revenue Impact</div>
+        <div class="result-value" id="rRevenue">$175</div>
+        <div class="result-sub">estimated loss</div>
+      </div>
+      <div class="result-box">
+        <div class="result-box-title">Avg Response Time</div>
+        <div class="result-value" id="rAvgResp">145 ms</div>
+        <div class="result-sub" id="rAvgRespSub">p50 median</div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:8px;">Uptime Timeline (each block = 1 day)</label>
+    <div class="uptime-bar" id="uptimeBar"></div>
+    <div class="uptime-bar-label"><span>Day 1</span><span id="dayEndLabel">Day 30</span></div>
+
+    <hr class="section-divider">
+
+    <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:8px;">Response Time Distribution (simulated checks)</label>
+    <div class="resp-chart" id="respChart"></div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);font-family:var(--font-display);">
+      <span>Fast</span><span>Slow</span>
+    </div>
+
+    <hr class="section-divider">
+
+    <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:8px;">SLA Tier Compliance</label>
+    <table class="sla-table" id="slaTable">
+      <thead><tr><th>SLA Tier</th><th>Uptime</th><th>Allowed Downtime/Mo</th><th>Status</th></tr></thead>
+      <tbody id="slaBody"></tbody>
+    </table>
+
+    <hr class="section-divider">
+
+    <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:8px;">Incident Log</label>
+    <div class="incident-list" id="incidentList"></div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>Understanding API Uptime and SLA Compliance</h2>
+
+  <p>Uptime is expressed as a percentage of total time that a system is operational and accessible. The difference between 99% and 99.99% uptime sounds negligible &mdash; less than one percentage point &mdash; but in practice it represents a 100x difference in allowable downtime. At 99% uptime, your API can be down for 7.3 hours per month. At 99.99%, you have only 4.38 minutes. This exponential relationship between nines and downtime is the foundation of SLA engineering and directly determines how much you need to invest in redundancy, monitoring, and incident response.</p>
+
+  <p>Service Level Agreements (SLAs) formalize uptime commitments as contractual obligations with financial penalties for breaches. Most cloud providers offer 99.9% to 99.99% uptime SLAs with service credits (typically 10&ndash;25% of monthly fees) when targets are missed. The SLA itself does not prevent downtime &mdash; it merely defines the consequences. Actual reliability requires engineering investment in redundant infrastructure, automated failover, health monitoring, and rapid incident response. The monitoring dashboard above simulates these dynamics so you can understand the operational realities behind uptime numbers.</p>
+
+  <h3>The Nines Table: Downtime by SLA Tier</h3>
+
+  <p>The standard reference for uptime engineering is the nines table, which converts uptime percentages to concrete downtime budgets. <strong>Two nines (99%)</strong> allows 3.65 days of downtime per year, or about 7.3 hours per month. This is acceptable for internal tools and non-critical batch processing. <strong>Three nines (99.9%)</strong> allows 8 hours 45 minutes per year, or 43.8 minutes per month. This is the standard for most SaaS APIs and webhook endpoints. <strong>Four nines (99.99%)</strong> allows 52.6 minutes per year, or 4.38 minutes per month. This requires redundant infrastructure, automated failover, and sub-minute incident detection. <strong>Five nines (99.999%)</strong> allows 5.26 minutes per year and requires fully automated recovery with no human intervention in the critical path.</p>
+
+  <p>Each additional nine roughly requires a 10x increase in infrastructure investment and operational maturity. Moving from three nines to four nines typically means deploying across multiple availability zones, implementing active-active load balancing, adding automated health checks with sub-second detection, and building self-healing systems that can recover without human intervention. The cost curve is exponential: three nines might cost $500/month in infrastructure, four nines might cost $5,000, and five nines might cost $50,000 or more. Teams managing <a href="https://lochbot.com">production API infrastructure</a> must make explicit decisions about which tier to target based on business impact analysis.</p>
+
+  <h3>Monitoring Strategy and Check Frequency</h3>
+
+  <p>The check frequency of your monitoring system determines how quickly you detect outages, which directly affects your Mean Time To Detect (MTTD). If you check every 60 seconds, your MTTD for a complete outage is at most 60 seconds (one missed check). For a three-nines SLA with a 43.8-minute monthly budget, a 1-minute detection delay consumes only 2.3% of your budget. For a four-nines SLA with a 4.38-minute budget, the same 1-minute delay consumes 22.8% &mdash; nearly a quarter of your entire monthly allowance is spent just detecting the problem.</p>
+
+  <p>Multi-location monitoring adds reliability to detection. A single monitoring probe might report a false positive due to network issues between the probe and your API. Monitoring from 3&ndash;5 geographically distributed locations and requiring at least 2 to report failure before triggering an alert eliminates most false positives while adding minimal detection delay (one additional check interval). This approach also detects regional outages that might not be visible from a single location, which is critical for <a href="https://kappafy.com">globally distributed API infrastructure</a>.</p>
+
+  <h3>Response Time Distribution and Percentiles</h3>
+
+  <p>Uptime measures availability (is the API responding at all?), but response time measures quality (how fast is it responding?). An API that returns 200 OK after 15 seconds is technically "up" but practically unusable for webhook processing, where providers typically time out after 5&ndash;30 seconds. Response time monitoring should track percentiles rather than averages: the average might be 150 ms, but the p99 might be 3,000 ms, meaning 1 in 100 requests takes 20x longer than typical.</p>
+
+  <p>The response time distribution typically follows a log-normal pattern: most requests cluster at the lower end (fast responses), with a long tail of increasingly slow responses. Cold starts, garbage collection pauses, database connection pool exhaustion, and cache misses all contribute to tail latency. The p99 and p99.9 percentiles capture these tail events, which are precisely the requests most likely to cause webhook delivery failures. Monitoring should trigger alerts when p99 latency exceeds your webhook provider's timeout threshold, not just when the average response time increases.</p>
+
+  <h3>Incident Classification and Impact</h3>
+
+  <p><strong>Major incidents</strong> are complete outages where the API returns 5xx errors or does not respond at all. These are immediately visible to all consumers and typically require on-call engineering intervention. Major incidents consume your downtime budget rapidly and often trigger SLA breach notifications.</p>
+
+  <p><strong>Minor incidents</strong> are partial degradations where the API responds but with elevated error rates or increased latency. These might affect only certain endpoints, certain geographic regions, or a percentage of requests. Minor incidents are harder to detect and can persist longer before triggering alerts, making them disproportionately damaging to cumulative uptime numbers.</p>
+
+  <p><strong>Performance degradations</strong> are latency increases without errors. The API returns correct responses but slowly. These do not technically count as downtime in most SLA definitions but can still cause webhook delivery failures if response times exceed provider timeouts. Some SLAs include latency requirements (e.g., p95 response time under 500 ms) alongside availability requirements, creating a more complete quality measurement.</p>
+
+  <h3>Downtime Cost Estimation</h3>
+
+  <p>The financial impact of API downtime has both direct and indirect components. Direct costs include lost revenue (transactions that cannot complete), SLA penalty credits, and engineering time for incident response and recovery. Indirect costs include customer churn, reputational damage, and the operational debt from accumulated data inconsistencies that require manual reconciliation after recovery.</p>
+
+  <p>For webhook-dependent systems, the recovery cost often exceeds the downtime cost. When webhooks fail to deliver during an outage, the events accumulate in the provider's retry queue. When the API recovers, a burst of retried webhooks arrives simultaneously, potentially overwhelming the system and causing a secondary outage. Careful capacity planning for post-recovery traffic spikes is essential, and many teams implement exponential backoff on the consumer side to smooth out the retry storm.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What does 99.9% uptime (three nines) actually mean?</summary>
+    <p>99.9% uptime allows 8 hours, 45 minutes, and 36 seconds of downtime per year, or approximately 43.8 minutes per month. For comparison, 99.99% allows only 4.38 minutes per month, and 99% allows 7.3 hours. Each additional nine represents a 10x reduction in allowable downtime.</p>
+  </details>
+  <details>
+    <summary>How do I calculate SLA compliance for my API?</summary>
+    <p>SLA compliance is calculated as: (total_minutes_in_period - downtime_minutes) / total_minutes_in_period * 100. For monthly SLA with a 30-day month (43,200 minutes), if your API was down for 60 minutes, uptime = 99.861%. Track this with continuous monitoring checks at least every minute.</p>
+  </details>
+  <details>
+    <summary>What is the cost of API downtime?</summary>
+    <p>API downtime cost includes direct revenue loss, engineering recovery time, customer trust erosion, and contractual SLA penalties. For webhook systems, missed events require manual reconciliation. Total cost depends on what the API enables and typically ranges from hundreds to tens of thousands of dollars per hour of downtime.</p>
+  </details>
+  <details>
+    <summary>How often should I check API endpoint health?</summary>
+    <p>For 99.9% SLA, check every 1 minute. For 99.99% SLA, check every 10-15 seconds. For 99.999% SLA, check every 5 seconds from multiple locations. More frequent checks reduce Mean Time To Detect (MTTD) but consume more monitoring resources.</p>
+  </details>
+  <details>
+    <summary>What response time percentiles should I monitor?</summary>
+    <p>Monitor p50, p95, p99, and p99.9. For webhook endpoints, p99 is most critical because webhook providers use aggressive timeouts. The slowest 1% of requests are the ones most likely to trigger timeout-based retries and duplicate processing.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Presets
+// ============================================================
+const presets = {
+  reliable: { targetSLA: 99.95, checkInterval: '60', respThreshold: 2000, hourlyRevenue: 500, period: '30', severityMix: 'mostly-minor' },
+  typical: { targetSLA: 99.9, checkInterval: '60', respThreshold: 3000, hourlyRevenue: 300, period: '30', severityMix: 'balanced' },
+  flaky: { targetSLA: 99.5, checkInterval: '30', respThreshold: 5000, hourlyRevenue: 200, period: '30', severityMix: 'mostly-major' },
+  critical: { targetSLA: 99.99, checkInterval: '10', respThreshold: 1000, hourlyRevenue: 2000, period: '30', severityMix: 'mostly-minor' }
+};
+
+function applyPreset(key, btn) {
+  document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const p = presets[key];
+  document.getElementById('targetSLA').value = p.targetSLA;
+  document.getElementById('checkInterval').value = p.checkInterval;
+  document.getElementById('respThreshold').value = p.respThreshold;
+  document.getElementById('hourlyRevenue').value = p.hourlyRevenue;
+  document.getElementById('period').value = p.period;
+  document.getElementById('severityMix').value = p.severityMix;
+  simulate();
+}
+
+// ============================================================
+// Simulation
+// ============================================================
+function simulate() {
+  const targetSLA = parseFloat(document.getElementById('targetSLA').value) || 99.9;
+  const period = parseInt(document.getElementById('period').value) || 30;
+  const hourlyRev = parseFloat(document.getElementById('hourlyRevenue').value) || 0;
+  const respThreshold = parseInt(document.getElementById('respThreshold').value) || 2000;
+  const mix = document.getElementById('severityMix').value;
+
+  const totalMinutes = period * 24 * 60;
+  const targetDowntimeMin = totalMinutes * (1 - targetSLA / 100);
+
+  // Generate incidents
+  const downtimeFactor = 0.6 + Math.random() * 0.8; // 60-140% of target downtime
+  const totalDownMin = Math.max(1, targetDowntimeMin * downtimeFactor);
+
+  const majorProbability = mix === 'mostly-major' ? 0.6 : mix === 'mostly-minor' ? 0.15 : 0.35;
+  const incidents = [];
+  let remaining = totalDownMin;
+  let attempts = 0;
+
+  while (remaining > 0.5 && attempts < 50) {
+    const isMajor = Math.random() < majorProbability;
+    const isDegraded = !isMajor && Math.random() < 0.3;
+    const severity = isMajor ? 'major' : isDegraded ? 'degraded' : 'minor';
+    const duration = isMajor
+      ? Math.max(5, Math.min(remaining, 10 + Math.random() * 40))
+      : isDegraded
+        ? Math.max(2, Math.min(remaining, 3 + Math.random() * 15))
+        : Math.max(1, Math.min(remaining, 1 + Math.random() * 8));
+
+    const day = Math.floor(Math.random() * period);
+    const hour = Math.floor(Math.random() * 24);
+    const minute = Math.floor(Math.random() * 60);
+
+    incidents.push({ severity, duration: Math.round(duration * 10) / 10, day, hour, minute });
+    remaining -= duration;
+    attempts++;
+  }
+
+  const actualDowntime = incidents.reduce((s, i) => s + i.duration, 0);
+  const actualUptime = ((totalMinutes - actualDowntime) / totalMinutes * 100);
+  const budgetUsed = targetDowntimeMin > 0 ? (actualDowntime / targetDowntimeMin * 100) : 0;
+  const revLoss = (actualDowntime / 60) * hourlyRev;
+
+  // Response time simulation
+  const baseResp = 80 + Math.random() * 120;
+  const respTimes = [];
+  for (let i = 0; i < 50; i++) {
+    const jitter = Math.random() < 0.05 ? (500 + Math.random() * 2000) : (Math.random() * 150);
+    respTimes.push(Math.round(baseResp + jitter));
+  }
+  respTimes.sort((a, b) => a - b);
+  const p50 = respTimes[24];
+  const p95 = respTimes[47];
+  const p99 = respTimes[49];
+
+  // Update results
+  document.getElementById('rUptime').textContent = actualUptime.toFixed(3) + '%';
+  document.getElementById('rUptime').className = 'result-value' + (actualUptime >= targetSLA ? ' green' : ' red');
+  document.getElementById('rUptimeSub').textContent = actualUptime >= targetSLA ? 'SLA MET' : 'SLA BREACHED';
+  document.getElementById('rDowntime').textContent = formatDuration(actualDowntime);
+  document.getElementById('rDowntimeSub').textContent = incidents.length + ' incident' + (incidents.length !== 1 ? 's' : '');
+  document.getElementById('rBudget').textContent = Math.round(budgetUsed) + '%';
+  document.getElementById('rBudget').className = 'result-value' + (budgetUsed <= 100 ? '' : ' red');
+  document.getElementById('rBudgetSub').textContent = formatDuration(targetDowntimeMin) + ' budget';
+  document.getElementById('rIncidents').textContent = incidents.length;
+  document.getElementById('rIncidentsSub').textContent = incidents.filter(i => i.severity === 'major').length + ' major';
+  document.getElementById('rRevenue').textContent = '$' + Math.round(revLoss).toLocaleString();
+  document.getElementById('rAvgResp').textContent = p50 + ' ms';
+  document.getElementById('rAvgRespSub').textContent = 'p95: ' + p95 + 'ms, p99: ' + p99 + 'ms';
+
+  // Uptime bar
+  const dayEndLabel = document.getElementById('dayEndLabel');
+  dayEndLabel.textContent = 'Day ' + period;
+  const bar = document.getElementById('uptimeBar');
+  let barHtml = '';
+  for (let d = 0; d < period; d++) {
+    const dayIncidents = incidents.filter(i => i.day === d);
+    const dayDown = dayIncidents.reduce((s, i) => s + i.duration, 0);
+    let color = '#22c55e';
+    let tip = 'Day ' + (d + 1) + ': 100% up';
+    if (dayDown > 30) { color = '#ef4444'; tip = 'Day ' + (d + 1) + ': ' + Math.round(dayDown) + 'min down (major)'; }
+    else if (dayDown > 5) { color = 'var(--accent)'; tip = 'Day ' + (d + 1) + ': ' + Math.round(dayDown) + 'min down'; }
+    else if (dayDown > 0) { color = '#eab308'; tip = 'Day ' + (d + 1) + ': ' + dayDown.toFixed(1) + 'min down (minor)'; }
+    barHtml += '<div class="uptime-block" style="background:' + color + ';" data-tip="' + tip + '"></div>';
+  }
+  bar.innerHTML = barHtml;
+
+  // Response chart
+  const chart = document.getElementById('respChart');
+  const maxResp = Math.max(...respTimes);
+  chart.innerHTML = respTimes.map(t => {
+    const h = Math.max(4, (t / maxResp) * 110);
+    const color = t > respThreshold ? '#ef4444' : t > respThreshold * 0.7 ? 'var(--accent)' : '#22c55e';
+    return '<div class="resp-bar" style="height:' + h + 'px;background:' + color + ';" title="' + t + 'ms"></div>';
+  }).join('');
+
+  // SLA table
+  const tiers = [
+    { name: 'Two Nines', pct: 99, downMo: 432 },
+    { name: 'Three Nines', pct: 99.9, downMo: 43.2 },
+    { name: '99.95%', pct: 99.95, downMo: 21.6 },
+    { name: 'Four Nines', pct: 99.99, downMo: 4.32 },
+    { name: 'Five Nines', pct: 99.999, downMo: 0.432 }
+  ];
+  const monthlyDown = actualDowntime * (30 / period);
+  document.getElementById('slaBody').innerHTML = tiers.map(t => {
+    const pass = monthlyDown <= t.downMo;
+    return '<tr><td>' + t.name + '</td><td>' + t.pct + '%</td><td>' + formatDuration(t.downMo) + '</td><td class="' + (pass ? 'sla-pass' : 'sla-fail') + '">' + (pass ? 'PASS' : 'FAIL') + '</td></tr>';
+  }).join('');
+
+  // Incident log
+  incidents.sort((a, b) => (a.day * 1440 + a.hour * 60 + a.minute) - (b.day * 1440 + b.hour * 60 + b.minute));
+  document.getElementById('incidentList').innerHTML = incidents.map(i => {
+    const timeStr = 'Day ' + (i.day + 1) + ', ' + String(i.hour).padStart(2, '0') + ':' + String(i.minute).padStart(2, '0');
+    return '<div class="incident-item"><span class="incident-dot ' + i.severity + '"></span><span style="color:var(--text-muted);min-width:120px;">' + timeStr + '</span><span>' + i.severity.charAt(0).toUpperCase() + i.severity.slice(1) + ' &mdash; ' + i.duration + ' min</span></div>';
+  }).join('');
+}
+
+function formatDuration(minutes) {
+  if (minutes < 1) return (minutes * 60).toFixed(0) + ' sec';
+  if (minutes < 60) return minutes.toFixed(1) + ' min';
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return h + 'h ' + m + 'm';
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+simulate();
+</script>
+
+</body>
+</html>

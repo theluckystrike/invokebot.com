@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Idempotency Implementation Guide — Key Generator &amp; Dedup Simulator | InvokeBot</title>
+<meta name="description" content="Generate idempotency keys (UUID v4, hash-based, timestamp-based), simulate duplicate request deduplication, and generate idempotency middleware code for Express, FastAPI, and Spring Boot.">
+<link rel="canonical" href="https://invokebot.com/guides/idempotency-key-generator.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/guides/idempotency-key-generator.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/guides/idempotency-key-generator.html">
+<meta property="og:title" content="Idempotency Implementation Guide — Key Generator & Dedup Simulator">
+<meta property="og:description" content="Generate idempotency keys, simulate duplicate request deduplication, and generate middleware code for Express, FastAPI, and Spring Boot.">
+<meta property="og:url" content="https://invokebot.com/guides/idempotency-key-generator.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Idempotency Implementation Guide — Key Generator & Dedup Simulator">
+<meta name="twitter:description" content="Generate idempotency keys, simulate duplicate request deduplication, and generate middleware code for Express, FastAPI, and Spring Boot.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Idempotency Implementation Guide — Key Generator & Dedup Simulator",
+  "url": "https://invokebot.com/guides/idempotency-key-generator.html",
+  "description": "Complete guide to implementing idempotency in APIs and webhook handlers. Includes an interactive key generator supporting UUID v4, hash-based, and timestamp-based formats, a deduplication simulator, and code generators for Express.js, FastAPI, and Spring Boot.",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "mainEntityOfPage": "https://invokebot.com/guides/idempotency-key-generator.html"
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is an idempotency key?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "An idempotency key is a unique identifier attached to an API request that allows the server to recognize duplicate submissions and return the original response instead of processing the request again. Stripe uses the Idempotency-Key header, AWS uses client tokens, and many APIs accept a custom request ID. The key is typically a UUID v4, a hash of the request body, or a composite of timestamp and client ID. The server stores the key with the response for a TTL period (usually 24-48 hours) and returns the cached response for any duplicate key."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is idempotency important for webhooks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Webhook providers deliver events with at-least-once semantics, meaning the same event may be delivered multiple times due to network timeouts, retries, or provider-side failures. Without idempotency, a payment webhook delivered twice could charge a customer twice. Idempotent webhook handlers check the event ID (provided by the webhook sender) against a processed-events store and skip events that have already been handled. This makes the handler safe regardless of how many times the same event is delivered."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I implement idempotency in a REST API?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Implement idempotency as middleware that intercepts requests before they reach your business logic. The middleware extracts the idempotency key from a header (typically Idempotency-Key or X-Request-ID), checks a key-value store (Redis, database, or in-memory cache) for an existing response, and either returns the cached response or allows the request to proceed and caches the response afterward. Use atomic operations (Redis SETNX or database upserts) to handle concurrent duplicate requests safely."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between UUID v4 and hash-based idempotency keys?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "UUID v4 keys are randomly generated and unique per request attempt. The client generates a new UUID before each request and must store it for potential retries. Hash-based keys are deterministically derived from the request content (method + path + body hash), so identical requests automatically produce the same key without client-side storage. UUID v4 is better when the same logical request body should be allowed multiple times (like placing two identical orders), while hash-based keys are better for true deduplication where identical payloads should always be treated as duplicates."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long should I store idempotency keys?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Most implementations use a TTL of 24 to 48 hours. Stripe uses 24 hours, and AWS recommends similar windows. The TTL should be long enough to cover all retry scenarios (including manual retries after investigating failures) but short enough to avoid unbounded storage growth. For webhook event IDs, store them for at least 7 days since webhook providers may retry failed deliveries over extended periods. Use Redis with TTL-based expiry or a database table with a scheduled cleanup job to manage key storage efficiently."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://invokebot.com/guides/"},{"@type":"ListItem","position":3,"name":"Idempotency Key Generator"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .tool-field textarea {
+    font-family: var(--font-display);
+    font-size: 12px;
+    min-height: 180px;
+    resize: vertical;
+    tab-size: 2;
+  }
+  .template-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .template-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .template-btn:hover,
+  .template-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .key-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    word-break: break-all;
+    min-height: 20px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+  }
+  .key-history {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 11px;
+    line-height: 2;
+    color: var(--text-muted);
+    max-height: 160px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  .key-history .key-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .key-history .key-val { color: var(--text); word-break: break-all; flex: 1; }
+  .key-history .key-type { color: var(--accent); font-weight: 600; margin-left: 12px; white-space: nowrap; }
+  .sim-log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    color: var(--text-muted);
+    min-height: 80px;
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 8px;
+  }
+  .sim-log .sim-new { color: #22c55e; }
+  .sim-log .sim-dup { color: #f59e0b; }
+  .sim-log .sim-reject { color: #ef4444; }
+  .code-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+    margin-top: 8px;
+    tab-size: 2;
+    max-height: 500px;
+    overflow-y: auto;
+  }
+  .strategy-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-display);
+    font-size: 12px;
+    margin-top: 12px;
+  }
+  .strategy-table th {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+  }
+  .strategy-table td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    color: var(--text);
+  }
+  .strategy-table tr:hover td {
+    background: var(--bg);
+  }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .template-btns { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span style="color:var(--text-muted);">Idempotency Key Generator</span>
+  </nav>
+
+  <h1>Idempotency Implementation Guide &mdash; Key Generator &amp; Dedup Simulator</h1>
+  <div class="meta">May 25, 2026 &middot; 15 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Idempotency is the property that ensures an operation produces the same result regardless of how many times it is executed. In distributed systems, network failures, client retries, and webhook redeliveries mean that the same request can arrive multiple times. Without idempotency guarantees, a payment API that processes the same charge request twice will charge the customer twice. A webhook handler that processes the same event twice will create duplicate records. The Idempotency Key Generator gives you tools to generate keys in multiple formats, simulate deduplication logic, and generate production-ready middleware code.</p>
+
+  <p>Choose from UUID v4 (random, universally unique), hash-based (deterministic from request content), or timestamp-based (ordered, collision-resistant) key formats. Use the dedup simulator to send requests with duplicate keys and watch how idempotent processing works in real time. Then generate middleware code for Express.js, FastAPI, or Spring Boot that you can drop directly into your project.</p>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Idempotency Key Generator</div>
+
+    <div class="tool-row">
+      <div class="tool-field" style="max-width:200px;">
+        <label>Key Format</label>
+        <select id="keyFormat" onchange="generateKey()">
+          <option value="uuidv4" selected>UUID v4</option>
+          <option value="hash">Hash-Based (SHA-256)</option>
+          <option value="timestamp">Timestamp + Random</option>
+          <option value="ulid">ULID (Sortable)</option>
+        </select>
+      </div>
+      <div class="tool-field" id="hashInputField">
+        <label>Input for Hash (method + path + body)</label>
+        <input type="text" id="hashInput" placeholder="POST /api/payments {&quot;amount&quot;:100}" value="POST /api/payments {&quot;amount&quot;:100}" oninput="generateKey()">
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Generated Key</label>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm btn-primary" onclick="generateKey()">Generate New</button>
+        <button class="btn btn-sm" onclick="copyKey()">Copy</button>
+      </div>
+    </div>
+    <div class="key-output" id="keyOutput">Click "Generate New" to create a key.</div>
+
+    <div>
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:4px;">Key History</label>
+      <div class="key-history" id="keyHistory">No keys generated yet.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-card-title">Deduplication Simulator</div>
+
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Simulate sending API requests with idempotency keys. Duplicate keys return the cached response instead of re-processing.</p>
+
+    <div class="tool-row">
+      <div class="tool-field" style="max-width:120px;">
+        <label>Method</label>
+        <select id="simMethod">
+          <option value="POST" selected>POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Endpoint</label>
+        <input type="text" id="simEndpoint" value="/api/payments">
+      </div>
+      <div class="tool-field">
+        <label>Idempotency Key</label>
+        <input type="text" id="simKey" placeholder="Leave empty for auto-generate" value="">
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Request Body (JSON)</label>
+        <input type="text" id="simBody" value='{"amount": 100, "currency": "usd", "customer": "cus_123"}'>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-primary" onclick="sendSimRequest()">Send Request</button>
+      <button class="btn btn-sm" onclick="sendSimRequest(true)">Send Duplicate (Same Key)</button>
+      <button class="btn btn-sm" onclick="clearSimLog()">Clear Log</button>
+    </div>
+
+    <div>
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:4px;">Request Log</label>
+      <div class="sim-log" id="simLog">Ready. Send a request to begin simulation.</div>
+    </div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-card-title">Code Generator</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Framework</label>
+      <div class="template-btns">
+        <button class="template-btn active" onclick="generateCode('express', this)">Express.js</button>
+        <button class="template-btn" onclick="generateCode('fastapi', this)">FastAPI</button>
+        <button class="template-btn" onclick="generateCode('spring', this)">Spring Boot</button>
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field" style="max-width:200px;">
+        <label>Storage Backend</label>
+        <select id="codeStorage" onchange="regenerateCode()">
+          <option value="redis" selected>Redis</option>
+          <option value="memory">In-Memory Map</option>
+          <option value="database">Database (SQL)</option>
+        </select>
+      </div>
+      <div class="tool-field" style="max-width:160px;">
+        <label>TTL (hours)</label>
+        <input type="number" id="codeTTL" value="24" min="1" max="168" onchange="regenerateCode()">
+      </div>
+      <div class="tool-field" style="max-width:220px;">
+        <label>Header Name</label>
+        <input type="text" id="codeHeader" value="Idempotency-Key" onchange="regenerateCode()">
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Generated Middleware</label>
+      <button class="btn btn-sm btn-primary" onclick="copyCode()">Copy Code</button>
+    </div>
+    <div class="code-output" id="codeOutput"></div>
+  </div>
+
+  <div class="tool-card">
+    <div class="tool-card-title">Strategy Comparison</div>
+    <table class="strategy-table">
+      <thead>
+        <tr>
+          <th>Strategy</th>
+          <th>Format</th>
+          <th>Deterministic</th>
+          <th>Sortable</th>
+          <th>Best For</th>
+          <th>Risk</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>UUID v4</td>
+          <td><code>550e8400-e29b-41d4-a716-446655440000</code></td>
+          <td>No</td>
+          <td>No</td>
+          <td>General API idempotency</td>
+          <td>Client must store key for retries</td>
+        </tr>
+        <tr>
+          <td>Hash-Based</td>
+          <td><code>sha256(method+path+body)</code></td>
+          <td>Yes</td>
+          <td>No</td>
+          <td>Content deduplication</td>
+          <td>Identical payloads always dedup</td>
+        </tr>
+        <tr>
+          <td>Timestamp + Random</td>
+          <td><code>1716648000000-a3f9b2</code></td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Time-ordered request logs</td>
+          <td>Clock skew in distributed systems</td>
+        </tr>
+        <tr>
+          <td>ULID</td>
+          <td><code>01H5KBWZ7QR...</code> (26 chars)</td>
+          <td>No</td>
+          <td>Yes</td>
+          <td>Database-friendly sorted IDs</td>
+          <td>Larger than UUID, less tooling</td>
+        </tr>
+        <tr>
+          <td>Composite</td>
+          <td><code>clientId:timestamp:nonce</code></td>
+          <td>Partial</td>
+          <td>Yes</td>
+          <td>Multi-tenant systems</td>
+          <td>Requires client identity</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>Why Idempotency Is Non-Negotiable in Distributed Systems</h2>
+
+  <p>Every network request can fail in one of three observable ways: the client receives a success response, the client receives an error response, or the client receives no response at all. The third case &mdash; the timeout &mdash; is the fundamental challenge that makes idempotency necessary. When a payment request times out, the client does not know whether the server processed it. The payment may have succeeded (the server charged the card but the response was lost in transit), or it may have failed (the server never received the request). The only safe action is to retry with the same idempotency key, which guarantees that the server either processes the request for the first time or returns the cached result of the previous execution.</p>
+
+  <p>This pattern is not optional for financial operations, order processing, account creation, or any state-changing operation where duplicates have real-world consequences. Stripe requires idempotency keys for all POST requests. AWS requires client tokens for many write operations. Google Cloud APIs support request deduplication via client-specified request IDs. The pattern is universal because the underlying problem &mdash; unreliable networks &mdash; is universal.</p>
+
+  <h3>Idempotency Key Generation Strategies</h3>
+
+  <p><strong>UUID v4</strong> is the most common format. The client generates a random 128-bit identifier (formatted as 32 hexadecimal characters with hyphens) before each request and includes it in the <code>Idempotency-Key</code> header. If the request fails and needs to be retried, the client reuses the same UUID. If the request succeeds and the client wants to make a new request with the same parameters (like placing a second identical order), it generates a new UUID. The critical requirement is that the client stores the UUID between the initial attempt and any retries.</p>
+
+  <p><strong>Hash-based keys</strong> are deterministically derived from the request content. The client computes SHA-256 of the HTTP method, request path, and request body, then uses the hash as the idempotency key. Identical requests automatically produce the same key without any client-side storage. This is ideal for true deduplication where the same payload should never be processed twice. However, it prevents intentional duplicate operations &mdash; if a customer wants to place two identical orders, hash-based keys would block the second order.</p>
+
+  <p><strong>Timestamp-based keys</strong> combine a Unix timestamp with a random suffix (like <code>1716648000000-a3f9b2</code>). These are naturally sortable, which is useful for debugging and log analysis. The timestamp provides approximate ordering, and the random suffix prevents collisions for requests made within the same millisecond. Timestamp-based keys work well for systems that need ordered request IDs but do not need deterministic deduplication.</p>
+
+  <p><strong>ULID (Universally Unique Lexicographically Sortable Identifier)</strong> combines a 48-bit timestamp with 80 bits of randomness, encoded as a 26-character Crockford Base32 string. ULIDs are monotonically sortable (later IDs sort after earlier ones), which makes them excellent primary keys in databases where UUID v4 causes index fragmentation. ULIDs are gaining adoption as a modern alternative to UUID v4 for systems where sort order matters.</p>
+
+  <h3>Server-Side Idempotency Implementation</h3>
+
+  <p>The server-side implementation follows a consistent pattern regardless of the framework. First, the middleware extracts the idempotency key from the request header. Second, it performs an atomic check-and-set operation: if the key exists in the store, return the cached response; if not, mark the key as &ldquo;in progress&rdquo; and proceed with processing. Third, after the business logic completes, store the response alongside the key with a TTL. Fourth, return the response to the client.</p>
+
+  <p>The &ldquo;in progress&rdquo; state is critical for handling concurrent duplicate requests. Without it, two identical requests arriving simultaneously could both pass the &ldquo;key not found&rdquo; check and both execute the business logic. The atomic set-if-not-exists operation (Redis <code>SETNX</code>, database <code>INSERT ... ON CONFLICT DO NOTHING</code>, or Java <code>ConcurrentHashMap.putIfAbsent</code>) ensures that only one request proceeds while the other waits or receives an immediate &ldquo;request in progress&rdquo; response.</p>
+
+  <h3>Storage Backend Considerations</h3>
+
+  <p><strong>Redis</strong> is the most popular backend for idempotency key storage. It provides atomic <code>SET NX EX</code> (set if not exists with expiry) in a single command, sub-millisecond latency, and automatic key expiration via TTL. The trade-off is that Redis is an additional infrastructure dependency, and keys are lost if Redis restarts without persistence enabled. For production systems, use Redis with AOF persistence or Redis Cluster for durability.</p>
+
+  <p><strong>In-memory storage</strong> (a hash map in the application process) works for single-instance deployments and development environments. It has zero latency and no external dependencies, but keys are lost on application restart and are not shared across multiple application instances. Never use in-memory storage for production systems behind a load balancer, as different instances will have different key sets.</p>
+
+  <p><strong>Database storage</strong> uses a dedicated table with columns for the idempotency key (primary key), the cached response, the creation timestamp, and a status field. This provides durability and works across all application instances that share the database. The trade-off is higher latency (a database query per request) and the need for a cleanup job to delete expired keys. For teams managing <a href="https://lochbot.com">high-throughput webhook processing</a>, database storage adds measurable latency but provides the strongest durability guarantees.</p>
+
+  <h3>Idempotency in Webhook Handlers</h3>
+
+  <p>Webhook handlers are the most critical application of idempotency because the caller (the webhook provider) controls the delivery semantics. Stripe, GitHub, and Slack all use at-least-once delivery, meaning they will retry failed deliveries for hours or days. A webhook handler must be idempotent by design &mdash; the event ID provided by the webhook sender serves as the natural idempotency key.</p>
+
+  <p>The implementation for webhooks differs slightly from API idempotency. Instead of caching the response, the handler checks whether the event ID has been processed. If it has, the handler returns a 200 OK immediately (to acknowledge the delivery and stop retries) without executing any business logic. If it has not, the handler processes the event, records the event ID as processed, and returns 200 OK. The event ID store should have a TTL of at least 7 days, as some providers retry for extended periods.</p>
+
+  <h3>Edge Cases and Common Mistakes</h3>
+
+  <p><strong>Missing idempotency key:</strong> Decide whether to reject requests without an idempotency key (strict mode) or generate one server-side (lenient mode). Stripe rejects POST requests without the key. For internal APIs, generating a key server-side is acceptable but provides no protection against client retries, since each retry generates a new key.</p>
+
+  <p><strong>Key reuse across different operations:</strong> If a client reuses an idempotency key for a different request (different body, different endpoint), the server must detect this and return a 422 Unprocessable Entity error. Stripe stores a fingerprint of the original request alongside the key and compares it against subsequent requests. Silently returning a cached response for a different operation would be a serious bug &mdash; imagine returning a cached $10 payment response for a $1,000 payment request.</p>
+
+  <p><strong>Partial processing failures:</strong> If the business logic partially completes before crashing (e.g., the payment was charged but the order record was not created), the idempotency key may be marked as &ldquo;in progress&rdquo; indefinitely. Implement a timeout for the in-progress state (typically 60 seconds) after which the key can be retried. Alternatively, use the outbox pattern to ensure that state changes and side effects are atomically committed, which is essential for systems building <a href="https://kappafy.com">reliable transaction pipelines</a>.</p>
+
+  <p><strong>Key collision in hash-based strategies:</strong> SHA-256 has a theoretical collision probability of 1 in 2^128 for two different inputs, which is negligible in practice. However, if you truncate the hash (e.g., using only the first 16 characters for storage efficiency), the collision probability increases significantly. Always use the full hash or a sufficiently long prefix (at least 32 characters of hex) to maintain collision resistance.</p>
+
+  <h3>Testing Idempotency Implementations</h3>
+
+  <p>Test idempotency with five scenarios: (1) a single request with a new key should process normally, (2) a duplicate request with the same key should return the cached response without re-processing, (3) concurrent duplicate requests should result in exactly one execution, (4) a request with the same key but different body should be rejected, and (5) a request after the TTL expires should process normally (the key slot is available again). The dedup simulator above demonstrates scenarios 1 and 2 interactively. For scenario 3, you need load testing tools like k6 or Apache Bench sending parallel requests with the same key.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is an idempotency key?</summary>
+    <p>An idempotency key is a unique identifier attached to an API request that allows the server to recognize duplicate submissions and return the original response instead of processing the request again. Stripe uses the Idempotency-Key header, AWS uses client tokens, and many APIs accept a custom request ID. The key is typically a UUID v4, a hash of the request body, or a composite of timestamp and client ID.</p>
+  </details>
+  <details>
+    <summary>Why is idempotency important for webhooks?</summary>
+    <p>Webhook providers deliver events with at-least-once semantics, meaning the same event may be delivered multiple times due to network timeouts, retries, or provider-side failures. Without idempotency, a payment webhook delivered twice could charge a customer twice. Idempotent webhook handlers check the event ID against a processed-events store and skip events that have already been handled.</p>
+  </details>
+  <details>
+    <summary>How do I implement idempotency in a REST API?</summary>
+    <p>Implement idempotency as middleware that intercepts requests before they reach your business logic. The middleware extracts the idempotency key from a header, checks a key-value store for an existing response, and either returns the cached response or allows the request to proceed and caches the response afterward. Use atomic operations (Redis SETNX or database upserts) to handle concurrent duplicates.</p>
+  </details>
+  <details>
+    <summary>What is the difference between UUID v4 and hash-based idempotency keys?</summary>
+    <p>UUID v4 keys are randomly generated and unique per request attempt &mdash; the client must store them for retries. Hash-based keys are deterministically derived from the request content, so identical requests automatically produce the same key. UUID v4 is better when the same payload should be allowed multiple times; hash-based keys are better for true content deduplication.</p>
+  </details>
+  <details>
+    <summary>How long should I store idempotency keys?</summary>
+    <p>Most implementations use a TTL of 24 to 48 hours. Stripe uses 24 hours, and AWS recommends similar windows. For webhook event IDs, store them for at least 7 days since webhook providers may retry failed deliveries over extended periods. Use Redis with TTL-based expiry or a database table with a scheduled cleanup job to manage key storage efficiently.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Key Generation
+// ============================================================
+let keyHistory = [];
+let lastGeneratedKey = '';
+
+function uuidv4() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function ulid() {
+  const ENCODING = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+  const now = Date.now();
+  let str = '';
+  // Timestamp (10 chars)
+  let t = now;
+  for (let i = 9; i >= 0; i--) {
+    str = ENCODING[t % 32] + str;
+    t = Math.floor(t / 32);
+  }
+  // Randomness (16 chars)
+  for (let i = 0; i < 16; i++) {
+    str += ENCODING[Math.floor(Math.random() * 32)];
+  }
+  return str;
+}
+
+async function hashKey(input) {
+  const enc = new TextEncoder();
+  const data = enc.encode(input);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function generateKey() {
+  const format = document.getElementById('keyFormat').value;
+  const hashInputField = document.getElementById('hashInputField');
+  hashInputField.style.display = format === 'hash' ? '' : 'none';
+
+  let key = '';
+  let type = '';
+
+  switch (format) {
+    case 'uuidv4':
+      key = uuidv4();
+      type = 'UUID v4';
+      break;
+    case 'hash':
+      const input = document.getElementById('hashInput').value || 'POST /api/payments {}';
+      key = await hashKey(input);
+      type = 'SHA-256';
+      break;
+    case 'timestamp':
+      key = Date.now() + '-' + Math.random().toString(36).substring(2, 8);
+      type = 'Timestamp';
+      break;
+    case 'ulid':
+      key = ulid();
+      type = 'ULID';
+      break;
+  }
+
+  lastGeneratedKey = key;
+  document.getElementById('keyOutput').textContent = key;
+
+  keyHistory.unshift({ key, type, time: new Date().toLocaleTimeString() });
+  if (keyHistory.length > 20) keyHistory.pop();
+  renderKeyHistory();
+}
+
+function renderKeyHistory() {
+  const el = document.getElementById('keyHistory');
+  if (keyHistory.length === 0) {
+    el.textContent = 'No keys generated yet.';
+    return;
+  }
+  el.innerHTML = keyHistory.map(h =>
+    '<div class="key-entry"><span class="key-val">' + h.time + '  ' + escapeHtml(h.key) + '</span><span class="key-type">' + h.type + '</span></div>'
+  ).join('');
+}
+
+function copyKey() {
+  const key = document.getElementById('keyOutput').textContent;
+  if (!key || key.startsWith('Click')) return;
+  navigator.clipboard.writeText(key).then(() => {
+    const el = document.getElementById('keyOutput');
+    const orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => el.textContent = orig, 1000);
+  });
+}
+
+// ============================================================
+// Dedup Simulator
+// ============================================================
+let simStore = {};
+let simLogEntries = [];
+let lastSimKey = '';
+let simRequestCounter = 0;
+
+function sendSimRequest(duplicate) {
+  const method = document.getElementById('simMethod').value;
+  const endpoint = document.getElementById('simEndpoint').value;
+  const body = document.getElementById('simBody').value;
+  let key = document.getElementById('simKey').value.trim();
+
+  if (duplicate && lastSimKey) {
+    key = lastSimKey;
+  } else if (!key) {
+    key = uuidv4();
+  }
+
+  lastSimKey = key;
+  document.getElementById('simKey').value = key;
+  simRequestCounter++;
+
+  const timestamp = new Date().toLocaleTimeString();
+  const reqId = '#' + simRequestCounter;
+
+  if (simStore[key]) {
+    // Duplicate detected
+    const original = simStore[key];
+    simLogEntries.push(
+      '<span class="sim-dup">[' + timestamp + '] ' + reqId + ' ' + method + ' ' + escapeHtml(endpoint) + '</span>\n' +
+      '<span class="sim-dup">  Key: ' + escapeHtml(key) + '</span>\n' +
+      '<span class="sim-dup">  DUPLICATE DETECTED — returning cached response from request ' + original.reqId + '</span>\n' +
+      '<span class="sim-dup">  Status: 200 OK (cached) | Processed: false | Original: ' + original.time + '</span>\n'
+    );
+  } else {
+    // New request — process and store
+    const responseId = 'resp_' + Math.random().toString(36).substring(2, 10);
+    simStore[key] = { reqId, time: timestamp, responseId, body };
+    simLogEntries.push(
+      '<span class="sim-new">[' + timestamp + '] ' + reqId + ' ' + method + ' ' + escapeHtml(endpoint) + '</span>\n' +
+      '<span class="sim-new">  Key: ' + escapeHtml(key) + '</span>\n' +
+      '<span class="sim-new">  NEW REQUEST — processing business logic...</span>\n' +
+      '<span class="sim-new">  Status: 200 OK | Response ID: ' + responseId + ' | Stored for dedup</span>\n'
+    );
+  }
+
+  renderSimLog();
+}
+
+function renderSimLog() {
+  const el = document.getElementById('simLog');
+  el.innerHTML = simLogEntries.join('\n') || 'Ready. Send a request to begin simulation.';
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearSimLog() {
+  simStore = {};
+  simLogEntries = [];
+  simRequestCounter = 0;
+  lastSimKey = '';
+  document.getElementById('simKey').value = '';
+  renderSimLog();
+}
+
+// ============================================================
+// Code Generator
+// ============================================================
+let currentFramework = 'express';
+
+function generateCode(framework, btn) {
+  currentFramework = framework;
+  document.querySelectorAll('.tool-card-title + * .template-btn, .template-btns .template-btn').forEach(b => {
+    if (b.closest('.tool-card').querySelector('.tool-card-title').textContent.trim() === 'Code Generator') {
+      b.classList.remove('active');
+    }
+  });
+  if (btn) btn.classList.add('active');
+  regenerateCode();
+}
+
+function regenerateCode() {
+  const storage = document.getElementById('codeStorage').value;
+  const ttl = parseInt(document.getElementById('codeTTL').value) || 24;
+  const header = document.getElementById('codeHeader').value || 'Idempotency-Key';
+  const el = document.getElementById('codeOutput');
+
+  let code = '';
+  if (currentFramework === 'express') code = genExpress(storage, ttl, header);
+  else if (currentFramework === 'fastapi') code = genFastAPI(storage, ttl, header);
+  else if (currentFramework === 'spring') code = genSpring(storage, ttl, header);
+
+  el.textContent = code;
+}
+
+function genExpress(storage, ttl, header) {
+  const ttlSec = ttl * 3600;
+  let storeCode = '';
+  if (storage === 'redis') {
+    storeCode = `const Redis = require('ioredis');
+const redis = new Redis(process.env.REDIS_URL);
+
+async function getKey(key) {
+  const data = await redis.get('idem:' + key);
+  return data ? JSON.parse(data) : null;
+}
+
+async function setKey(key, value) {
+  await redis.set('idem:' + key, JSON.stringify(value), 'EX', ${ttlSec});
+}`;
+  } else if (storage === 'memory') {
+    storeCode = `const store = new Map();
+
+async function getKey(key) {
+  const entry = store.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > ${ttlSec * 1000}) {
+    store.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+async function setKey(key, value) {
+  store.set(key, { value, createdAt: Date.now() });
+}`;
+  } else {
+    storeCode = `// Uses a SQL table: idempotency_keys (key TEXT PK, response JSONB, created_at TIMESTAMP)
+const db = require('./db'); // your database client
+
+async function getKey(key) {
+  const row = await db.query(
+    'SELECT response FROM idempotency_keys WHERE key = $1 AND created_at > NOW() - INTERVAL \\'${ttl} hours\\'',
+    [key]
+  );
+  return row.rows[0]?.response || null;
+}
+
+async function setKey(key, value) {
+  await db.query(
+    'INSERT INTO idempotency_keys (key, response, created_at) VALUES ($1, $2, NOW()) ON CONFLICT (key) DO NOTHING',
+    [key, JSON.stringify(value)]
+  );
+}`;
+  }
+
+  return `// Express.js Idempotency Middleware
+// Header: ${header} | TTL: ${ttl}h | Storage: ${storage}
+
+${storeCode}
+
+function idempotency(methods = ['POST', 'PUT', 'PATCH']) {
+  return async (req, res, next) => {
+    if (!methods.includes(req.method)) return next();
+
+    const key = req.headers['${header.toLowerCase()}'];
+    if (!key) {
+      return res.status(400).json({
+        error: 'Missing ${header} header'
+      });
+    }
+
+    // Check for existing response
+    const cached = await getKey(key);
+    if (cached) {
+      res.set('X-Idempotent-Replayed', 'true');
+      return res.status(cached.status).json(cached.body);
+    }
+
+    // Intercept response to cache it
+    const originalJson = res.json.bind(res);
+    res.json = async (body) => {
+      await setKey(key, { status: res.statusCode, body });
+      return originalJson(body);
+    };
+
+    next();
+  };
+}
+
+// Usage:
+// app.use('/api', idempotency());
+module.exports = { idempotency };`;
+}
+
+function genFastAPI(storage, ttl, header) {
+  const ttlSec = ttl * 3600;
+  let storeCode = '';
+  if (storage === 'redis') {
+    storeCode = `import redis.asyncio as redis
+import json
+
+pool = redis.from_url(os.environ["REDIS_URL"])
+
+async def get_key(key: str):
+    data = await pool.get(f"idem:{key}")
+    return json.loads(data) if data else None
+
+async def set_key(key: str, value: dict):
+    await pool.set(f"idem:{key}", json.dumps(value), ex=${ttlSec})`;
+  } else if (storage === 'memory') {
+    storeCode = `import time
+
+_store: dict = {}
+
+async def get_key(key: str):
+    entry = _store.get(key)
+    if not entry:
+        return None
+    if time.time() - entry["created_at"] > ${ttlSec}:
+        del _store[key]
+        return None
+    return entry["value"]
+
+async def set_key(key: str, value: dict):
+    _store[key] = {"value": value, "created_at": time.time()}`;
+  } else {
+    storeCode = `# Uses SQL table: idempotency_keys (key TEXT PK, response JSONB, created_at TIMESTAMPTZ)
+from sqlalchemy import text
+from .database import async_session
+
+async def get_key(key: str):
+    async with async_session() as session:
+        result = await session.execute(
+            text("SELECT response FROM idempotency_keys WHERE key = :key AND created_at > NOW() - INTERVAL '${ttl} hours'"),
+            {"key": key}
+        )
+        row = result.fetchone()
+        return row[0] if row else None
+
+async def set_key(key: str, value: dict):
+    async with async_session() as session:
+        await session.execute(
+            text("INSERT INTO idempotency_keys (key, response, created_at) VALUES (:key, :response, NOW()) ON CONFLICT (key) DO NOTHING"),
+            {"key": key, "response": json.dumps(value)}
+        )
+        await session.commit()`;
+  }
+
+  return `# FastAPI Idempotency Middleware
+# Header: ${header} | TTL: ${ttl}h | Storage: ${storage}
+
+import os
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
+${storeCode}
+
+class IdempotencyMiddleware(BaseHTTPMiddleware):
+    METHODS = {"POST", "PUT", "PATCH"}
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method not in self.METHODS:
+            return await call_next(request)
+
+        key = request.headers.get("${header.toLowerCase()}")
+        if not key:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Missing ${header} header"}
+            )
+
+        # Check cache
+        cached = await get_key(key)
+        if cached:
+            response = JSONResponse(
+                status_code=cached["status"],
+                content=cached["body"]
+            )
+            response.headers["X-Idempotent-Replayed"] = "true"
+            return response
+
+        # Process request
+        response = await call_next(request)
+
+        # Cache response (read body)
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+
+        import json
+        try:
+            body_json = json.loads(body)
+        except Exception:
+            body_json = body.decode()
+
+        await set_key(key, {"status": response.status_code, "body": body_json})
+
+        return Response(
+            content=body,
+            status_code=response.status_code,
+            headers=dict(response.headers),
+            media_type=response.media_type
+        )
+
+# Usage:
+# app.add_middleware(IdempotencyMiddleware)`;
+}
+
+function genSpring(storage, ttl, header) {
+  const ttlSec = ttl * 3600;
+  let storeCode = '';
+  if (storage === 'redis') {
+    storeCode = `    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    private Optional<CachedResponse> getKey(String key) {
+        String data = redisTemplate.opsForValue().get("idem:" + key);
+        if (data == null) return Optional.empty();
+        return Optional.of(objectMapper.readValue(data, CachedResponse.class));
+    }
+
+    private void setKey(String key, CachedResponse value) {
+        redisTemplate.opsForValue().set(
+            "idem:" + key,
+            objectMapper.writeValueAsString(value),
+            Duration.ofSeconds(${ttlSec})
+        );
+    }`;
+  } else if (storage === 'memory') {
+    storeCode = `    private final ConcurrentHashMap<String, CacheEntry> store = new ConcurrentHashMap<>();
+
+    private Optional<CachedResponse> getKey(String key) {
+        CacheEntry entry = store.get(key);
+        if (entry == null) return Optional.empty();
+        if (System.currentTimeMillis() - entry.createdAt > ${ttlSec * 1000}L) {
+            store.remove(key);
+            return Optional.empty();
+        }
+        return Optional.of(entry.response);
+    }
+
+    private void setKey(String key, CachedResponse value) {
+        store.put(key, new CacheEntry(value, System.currentTimeMillis()));
+    }`;
+  } else {
+    storeCode = `    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    private Optional<CachedResponse> getKey(String key) {
+        List<CachedResponse> results = jdbcTemplate.query(
+            "SELECT response FROM idempotency_keys WHERE key = ? AND created_at > NOW() - INTERVAL '${ttl} hours'",
+            (rs, i) -> objectMapper.readValue(rs.getString("response"), CachedResponse.class),
+            key
+        );
+        return results.isEmpty() ? Optional.empty() : Optional.of(results.get(0));
+    }
+
+    private void setKey(String key, CachedResponse value) {
+        jdbcTemplate.update(
+            "INSERT INTO idempotency_keys (key, response, created_at) VALUES (?, ?::jsonb, NOW()) ON CONFLICT (key) DO NOTHING",
+            key, objectMapper.writeValueAsString(value)
+        );
+    }`;
+  }
+
+  return `// Spring Boot Idempotency Filter
+// Header: ${header} | TTL: ${ttl}h | Storage: ${storage}
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.io.IOException;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@Component
+public class IdempotencyFilter extends OncePerRequestFilter {
+
+    private static final Set<String> METHODS = Set.of("POST", "PUT", "PATCH");
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+${storeCode}
+
+    @Override
+    protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain chain
+    ) throws ServletException, IOException {
+
+        if (!METHODS.contains(request.getMethod())) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        String key = request.getHeader("${header}");
+        if (key == null || key.isBlank()) {
+            response.setStatus(400);
+            response.setContentType("application/json");
+            response.getWriter().write("{\\"error\\":\\"Missing ${header} header\\"}");
+            return;
+        }
+
+        Optional<CachedResponse> cached = getKey(key);
+        if (cached.isPresent()) {
+            CachedResponse cr = cached.get();
+            response.setStatus(cr.status);
+            response.setContentType("application/json");
+            response.setHeader("X-Idempotent-Replayed", "true");
+            response.getWriter().write(objectMapper.writeValueAsString(cr.body));
+            return;
+        }
+
+        // Wrap response to capture output
+        ContentCachingResponseWrapper wrapper =
+            new ContentCachingResponseWrapper(response);
+        chain.doFilter(request, wrapper);
+
+        // Cache the response
+        byte[] content = wrapper.getContentAsByteArray();
+        Object body = objectMapper.readValue(content, Object.class);
+        setKey(key, new CachedResponse(wrapper.getStatus(), body));
+
+        wrapper.copyBodyToResponse();
+    }
+
+    record CachedResponse(int status, Object body) {}
+    record CacheEntry(CachedResponse response, long createdAt) {}
+}
+
+// Register in SecurityConfig or WebMvcConfigurer:
+// @Bean FilterRegistrationBean<IdempotencyFilter> idempotencyFilter() { ... }`;
+}
+
+function copyCode() {
+  const text = document.getElementById('codeOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+generateKey();
+generateCode('express', document.querySelector('.tool-card:last-of-type .template-btn'));
+</script>
+
+</body>
+</html>

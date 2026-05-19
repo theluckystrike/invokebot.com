@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event-Driven Architecture Patterns — Event Flow Designer with Pub/Sub Topology | InvokeBot</title>
+<meta name="description" content="Design event-driven architectures with an interactive visual canvas. Create publishers, subscribers, and event channels. Compare fan-out, fan-in, choreography, and orchestration patterns.">
+<link rel="canonical" href="https://invokebot.com/research/event-driven-architecture.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/research/event-driven-architecture.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/research/event-driven-architecture.html">
+<meta property="og:title" content="Event-Driven Architecture Patterns — Event Flow Designer with Pub/Sub Topology">
+<meta property="og:description" content="Design event-driven architectures with an interactive visual canvas. Create publishers, subscribers, and event channels. Compare fan-out, fan-in, choreography, and orchestration patterns.">
+<meta property="og:url" content="https://invokebot.com/research/event-driven-architecture.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Event-Driven Architecture Patterns — Event Flow Designer with Pub/Sub Topology">
+<meta name="twitter:description" content="Design event-driven architectures with an interactive visual canvas. Create publishers, subscribers, and event channels.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Event-Driven Architecture Patterns — Event Flow Designer with Pub/Sub Topology",
+  "url": "https://invokebot.com/research/event-driven-architecture.html",
+  "description": "Comprehensive guide to event-driven architecture patterns with an interactive visual canvas for designing publishers, subscribers, and event channels. Covers fan-out, fan-in, choreography, and orchestration topologies.",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "mainEntityOfPage": "https://invokebot.com/research/event-driven-architecture.html"
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is event-driven architecture?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Event-driven architecture (EDA) is a software design paradigm where the flow of the program is determined by events — significant changes in state that are produced, detected, and consumed by loosely coupled components. Instead of direct request-response calls between services, a publisher emits an event to a channel (message broker, event bus, or stream), and one or more subscribers react to it asynchronously. This decoupling enables independent scaling, fault isolation, and temporal flexibility."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the difference between choreography and orchestration?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "In choreography, each service independently listens for events and decides how to react — there is no central coordinator. An order service emits OrderCreated, and the payment, inventory, and shipping services each react independently. In orchestration, a central orchestrator (saga coordinator) explicitly directs each step by sending commands and waiting for responses. Choreography is simpler for small flows but harder to debug. Orchestration provides clear visibility into the workflow state but introduces a single point of coordination."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "When should I use event-driven architecture vs request-response?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use event-driven architecture when you need asynchronous processing, loose coupling between services, event replay capability, or when multiple consumers need to react to the same event. Use request-response (synchronous) when the caller needs an immediate result, the operation is simple and fast, or strong consistency is required. Many production systems use a hybrid approach — synchronous for queries and reads, event-driven for commands and state changes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the main event-driven topology patterns?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The four main patterns are: Fan-out (one publisher, multiple subscribers receiving the same event), Fan-in (multiple publishers sending events to one subscriber for aggregation), Choreography (decentralized peer-to-peer event reactions with no coordinator), and Orchestration (centralized saga coordinator directing the workflow). Each pattern has different trade-offs in complexity, coupling, observability, and fault tolerance."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I handle failures in event-driven systems?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Handle failures through dead letter queues (DLQ) for messages that fail processing after retry attempts, compensating transactions (sagas) to undo partial work, idempotent consumers that safely handle duplicate events, and circuit breakers to prevent cascade failures. Event sourcing provides natural auditability by storing every state change as an immutable event, enabling replay and recovery. Monitoring event lag and consumer group offsets helps detect processing bottlenecks before they cause visible failures."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Research","item":"https://invokebot.com/research/"},{"@type":"ListItem","position":3,"name":"Event-Driven Architecture Patterns"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 160px;
+  }
+  .tool-field input,
+  .tool-field select,
+  .tool-field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus,
+  .tool-field textarea:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .template-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .template-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .template-btn:hover,
+  .template-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .canvas-container {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    min-height: 400px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .canvas-container svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  .canvas-container svg line {
+    stroke: var(--accent);
+    stroke-width: 2;
+    opacity: 0.6;
+  }
+  .canvas-container svg polygon {
+    fill: var(--accent);
+    opacity: 0.6;
+  }
+  .eda-node {
+    position: absolute;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: grab;
+    user-select: none;
+    min-width: 100px;
+    text-align: center;
+    z-index: 2;
+    transition: border-color 0.15s;
+  }
+  .eda-node:hover { border-color: var(--accent); }
+  .eda-node.publisher { border-color: #22c55e; }
+  .eda-node.subscriber { border-color: #3b82f6; }
+  .eda-node.channel { border-color: var(--accent); background: rgba(249,115,22,0.08); }
+  .eda-node .node-type {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .eda-node.publisher .node-type { color: #22c55e; }
+  .eda-node.subscriber .node-type { color: #3b82f6; }
+  .eda-node.channel .node-type { color: var(--accent); }
+  .eda-node .node-name { color: var(--text); }
+  .eda-node .node-remove {
+    position: absolute;
+    top: -8px; right: -8px;
+    width: 18px; height: 18px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .eda-node:hover .node-remove { opacity: 1; }
+  .eda-node .node-remove:hover { color: #ef4444; border-color: #ef4444; }
+  .add-node-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .add-node-bar input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 6px 12px;
+    outline: none;
+    flex: 1;
+    min-width: 120px;
+  }
+  .add-node-bar input:focus { border-color: var(--accent); }
+  .conn-panel {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .conn-panel select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    padding: 6px 10px;
+    outline: none;
+    cursor: pointer;
+  }
+  .conn-panel select:focus { border-color: var(--accent); }
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-display);
+    font-size: 12px;
+    margin-top: 12px;
+  }
+  .comparison-table th {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    color: var(--accent);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 11px;
+  }
+  .comparison-table td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    color: var(--text);
+  }
+  .comparison-table tr:hover td {
+    background: var(--bg);
+  }
+  .diagram-output {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    color: var(--text);
+    margin-top: 8px;
+    min-height: 60px;
+  }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .template-btns { flex-direction: column; }
+    .add-node-bar { flex-direction: column; }
+    .conn-panel { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/research/">Research</a> &rsaquo; <span style="color:var(--text-muted);">Event-Driven Architecture Patterns</span>
+  </nav>
+
+  <h1>Event-Driven Architecture Patterns &mdash; Event Flow Designer with Pub/Sub Topology</h1>
+  <div class="meta">May 25, 2026 &middot; 16 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Event-driven architecture (EDA) has become the default design paradigm for distributed systems that need to scale independently, tolerate partial failures, and process data in real time. But designing event flows on a whiteboard or in documentation rarely captures the complexity of real-world topologies. The Event Flow Designer below provides an interactive canvas where you can create publishers, subscribers, and event channels, connect them to form topologies, and generate architecture diagrams &mdash; all in your browser.</p>
+
+  <p>Load a preset topology pattern to explore fan-out, fan-in, choreography, or orchestration architectures. Add custom nodes, draw connections between them, and compare synchronous request-response patterns against asynchronous event-driven alternatives. The generated diagram exports a text-based architecture description that you can include in design documents, architecture decision records, or pull request descriptions.</p>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Event Flow Designer</div>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Topology Presets</label>
+      <div class="template-btns">
+        <button class="template-btn active" onclick="loadTopology('fanout', this)">Fan-Out</button>
+        <button class="template-btn" onclick="loadTopology('fanin', this)">Fan-In</button>
+        <button class="template-btn" onclick="loadTopology('choreography', this)">Choreography</button>
+        <button class="template-btn" onclick="loadTopology('orchestration', this)">Orchestration</button>
+        <button class="template-btn" onclick="loadTopology('empty', this)">Empty Canvas</button>
+      </div>
+    </div>
+
+    <div class="add-node-bar">
+      <input type="text" id="newNodeName" placeholder="Node name (e.g., OrderService)" value="">
+      <button class="btn btn-sm" onclick="addNode('publisher')" style="white-space:nowrap;">+ Publisher</button>
+      <button class="btn btn-sm" onclick="addNode('subscriber')" style="white-space:nowrap;">+ Subscriber</button>
+      <button class="btn btn-sm" onclick="addNode('channel')" style="white-space:nowrap;">+ Channel</button>
+    </div>
+
+    <div class="conn-panel">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Connect:</label>
+      <select id="connFrom"><option value="">From...</option></select>
+      <span style="color:var(--text-muted);font-size:14px;">&rarr;</span>
+      <select id="connTo"><option value="">To...</option></select>
+      <button class="btn btn-sm btn-primary" onclick="addConnection()">Link</button>
+      <button class="btn btn-sm" onclick="removeLastConnection()">Undo Link</button>
+    </div>
+
+    <div class="canvas-container" id="canvas">
+      <svg id="canvasSvg"></svg>
+    </div>
+
+    <hr class="section-divider">
+
+    <div style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Generated Architecture Diagram</label>
+        <button class="btn btn-sm btn-primary" onclick="copyDiagram()">Copy Diagram</button>
+      </div>
+      <div class="diagram-output" id="diagramOutput"></div>
+    </div>
+
+    <hr class="section-divider">
+
+    <div>
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;display:block;margin-bottom:8px;">Sync vs Async Comparison</label>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Aspect</th>
+            <th>Synchronous (Request-Response)</th>
+            <th>Asynchronous (Event-Driven)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Coupling</td><td>Tight &mdash; caller knows callee</td><td>Loose &mdash; publisher unaware of subscribers</td></tr>
+          <tr><td>Latency</td><td>Blocking; latency = sum of all calls</td><td>Non-blocking; parallel processing</td></tr>
+          <tr><td>Failure Impact</td><td>Cascading &mdash; one failure blocks chain</td><td>Isolated &mdash; failures contained per consumer</td></tr>
+          <tr><td>Scalability</td><td>Limited by slowest service</td><td>Independent scaling per consumer group</td></tr>
+          <tr><td>Ordering</td><td>Implicit via call sequence</td><td>Explicit via partition keys or sequence numbers</td></tr>
+          <tr><td>Debugging</td><td>Simple stack traces</td><td>Requires distributed tracing (correlation IDs)</td></tr>
+          <tr><td>Data Consistency</td><td>Strong (transactions)</td><td>Eventual (compensating transactions / sagas)</td></tr>
+          <tr><td>Replay</td><td>Not possible</td><td>Event log enables full replay</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2>The Foundations of Event-Driven Architecture</h2>
+
+  <p>Event-driven architecture is built on a simple premise: when something happens in one part of a system, other parts that care about it should be notified asynchronously rather than being called directly. This inversion of control &mdash; from &ldquo;I call you&rdquo; to &ldquo;I announce, you react&rdquo; &mdash; fundamentally changes how distributed systems are designed, scaled, and operated. The publisher does not know who its subscribers are, how many exist, or what they do with the event. This decoupling is the source of both EDA&rsquo;s power and its complexity.</p>
+
+  <p>The three core components of any event-driven system are <strong>producers</strong> (publishers that emit events), <strong>channels</strong> (message brokers, event buses, or streams that transport events), and <strong>consumers</strong> (subscribers that react to events). The channel mediates all communication, providing buffering, routing, persistence, and delivery guarantees. Producers and consumers interact only with the channel, never directly with each other.</p>
+
+  <h3>Fan-Out: One Event, Many Reactions</h3>
+
+  <p>Fan-out is the most common EDA pattern. A single publisher emits an event, and the channel delivers it to multiple independent subscribers. When an e-commerce system processes an order, the OrderCreated event fans out to the payment service (charge the card), the inventory service (reserve stock), the notification service (send confirmation email), and the analytics service (track conversion). Each subscriber processes the event independently, at its own pace, with its own error handling.</p>
+
+  <p>The fan-out pattern excels when the publisher does not need to know the outcome of downstream processing. The order service does not wait for the email to be sent or the analytics to be recorded. If the notification service is down, the email will be delivered when it recovers (assuming the channel persists messages). This temporal decoupling means that adding a new subscriber &mdash; say, a fraud detection service &mdash; requires zero changes to the publisher. You simply subscribe the new service to the same event channel.</p>
+
+  <h3>Fan-In: Aggregation from Multiple Sources</h3>
+
+  <p>Fan-in is the inverse of fan-out. Multiple publishers emit events that converge on a single subscriber for aggregation, correlation, or complex event processing. A monitoring dashboard that collects metrics from dozens of microservices uses fan-in. A fraud detection engine that correlates events from payment, login, and session services uses fan-in. An ETL pipeline that merges data from multiple source databases uses fan-in.</p>
+
+  <p>The challenge with fan-in is event ordering and correlation. Events from different publishers arrive at different times and in unpredictable order. The aggregating subscriber needs to buffer, window, and correlate events &mdash; typically using a correlation ID (like order ID or session ID) to group related events across sources. Time-windowed aggregation (collect all events within a 5-second window) is another approach, but introduces latency and the risk of missed events at window boundaries.</p>
+
+  <h3>Choreography: Decentralized Event Reactions</h3>
+
+  <p>In choreography, there is no central coordinator. Each service listens for events it cares about and emits new events as a result. An order saga implemented as choreography works like this: the order service emits OrderCreated, the payment service hears it and emits PaymentCharged, the inventory service hears PaymentCharged and emits StockReserved, and the shipping service hears StockReserved and emits ShipmentScheduled. Each service knows its own rules but has no visibility into the overall workflow.</p>
+
+  <p>Choreography is elegant for simple linear workflows. But as the number of services and event types grows, the implicit flow becomes difficult to understand, debug, and modify. There is no single place that describes the complete workflow. A failure in the middle of the chain requires compensating events (like PaymentRefunded if stock reservation fails), and the logic for emitting compensating events is distributed across services. For teams managing <a href="https://kappafy.com">complex event pipelines</a>, choreography beyond five services often becomes a maintenance burden.</p>
+
+  <h3>Orchestration: Centralized Workflow Coordination</h3>
+
+  <p>Orchestration uses a central coordinator (the orchestrator or saga manager) that explicitly directs each step of the workflow. The orchestrator sends commands to services and waits for their responses. If the order saga is orchestrated, the orchestrator sends ChargePayment to the payment service, waits for PaymentCharged, then sends ReserveStock to the inventory service, waits for StockReserved, then sends ScheduleShipment to the shipping service. If any step fails, the orchestrator executes compensating actions in reverse order.</p>
+
+  <p>Orchestration provides clear visibility &mdash; the orchestrator&rsquo;s code is a readable description of the entire workflow. It makes failure handling explicit and centralized. The trade-off is that the orchestrator is a single point of coordination (though not a single point of failure if it is stateful and recoverable). It also introduces tighter coupling: the orchestrator must know about every service in the workflow, while in choreography no single service has that knowledge.</p>
+
+  <h3>Event Types: Notifications, State Transfers, and Commands</h3>
+
+  <p><strong>Event notifications</strong> are thin messages that something happened: OrderCreated with just the order ID. The subscriber fetches the full data from the source via API if it needs more context. This keeps events small and reduces the risk of stale data in the event payload.</p>
+
+  <p><strong>Event-carried state transfers</strong> include the full state in the event payload: OrderCreated with the complete order object including items, prices, shipping address, and customer details. Subscribers do not need to call back to the source, which eliminates a synchronous dependency but increases event size and the risk of data staleness if the payload is cached.</p>
+
+  <p><strong>Commands</strong> are not events in the strict sense &mdash; they are instructions to a specific service to do something: ChargePayment, ReserveStock. Commands are used in orchestration patterns where the coordinator directs specific actions. The distinction between events and commands matters: events are facts (something happened, and publishers do not care who reacts), while commands are intentions (do this specific thing, and I expect a response).</p>
+
+  <h3>Message Broker Selection</h3>
+
+  <p><strong>Apache Kafka</strong> is the dominant choice for high-throughput event streaming. Kafka stores events in persistent, ordered, partitioned logs with configurable retention. Consumers track their own position (offset) in the log, enabling replay and parallel consumption. Kafka excels at fan-out (consumer groups), event sourcing, and stream processing, but has operational complexity and is overkill for low-volume use cases.</p>
+
+  <p><strong>RabbitMQ</strong> is a traditional message broker that supports multiple messaging patterns (point-to-point, pub/sub, routing, topics) with strong delivery guarantees. RabbitMQ deletes messages after successful consumption (unlike Kafka, which retains them), making it better for task queues and work distribution but less suitable for event sourcing or replay.</p>
+
+  <p><strong>AWS SNS/SQS</strong> provides a managed pub/sub (SNS) and queue (SQS) combination. SNS fans out events to multiple SQS queues, each serving a different subscriber. This is the simplest operational choice for AWS-based systems but lacks the replay capability of Kafka and the routing flexibility of RabbitMQ.</p>
+
+  <p><strong>Redis Streams</strong> offers a lightweight event streaming capability for systems already using Redis. It supports consumer groups, acknowledgment, and time-based querying, but has durability limitations compared to Kafka or dedicated message brokers. Redis Streams is a good fit for systems building <a href="https://lochbot.com">real-time webhook delivery</a> with moderate throughput requirements.</p>
+
+  <h3>Designing for Failure in Event-Driven Systems</h3>
+
+  <p>Every component in an event-driven system can fail: publishers can crash before emitting events, channels can lose messages, and consumers can fail during processing. Robust EDA design addresses each failure mode explicitly. <strong>Outbox pattern:</strong> Instead of publishing an event directly, the publisher writes the event to a local outbox table in the same database transaction as the state change, and a separate process reads the outbox and publishes to the channel. This guarantees that the event is emitted if and only if the state change is committed.</p>
+
+  <p><strong>Dead letter queues (DLQ):</strong> Messages that fail processing after a configurable number of retries are moved to a DLQ for manual inspection and reprocessing. Without a DLQ, poison messages (events that always fail) block the consumer indefinitely. <strong>Idempotent consumers:</strong> Because channels may deliver the same event more than once (at-least-once delivery), consumers must handle duplicates safely. This typically means checking an event ID against a processed-events table before executing side effects.</p>
+
+  <h3>Event Sourcing and CQRS</h3>
+
+  <p>Event sourcing takes the event-driven concept to its logical conclusion: instead of storing the current state of an entity, you store the sequence of events that produced it. An account balance is not stored as a single number; it is derived by replaying all deposit and withdrawal events. This provides a complete audit trail, enables temporal queries (what was the balance at time T?), and supports event replay for debugging and data recovery.</p>
+
+  <p>CQRS (Command Query Responsibility Segregation) separates the write model (commands that produce events) from the read model (materialized views optimized for queries). Events bridge the two: when a command produces a new event, projections consume the event and update the read model. This separation allows the write side to be optimized for consistency and the read side to be optimized for query performance, which is essential for high-throughput systems processing hundreds of thousands of events per second.</p>
+
+  <h3>Observability in Event-Driven Systems</h3>
+
+  <p>Traditional request-response systems have natural observability through synchronous call chains and stack traces. Event-driven systems require deliberate observability design. Every event should carry a <strong>correlation ID</strong> that links all events belonging to the same workflow. Distributed tracing tools (Jaeger, Zipkin, AWS X-Ray) use correlation IDs to reconstruct the full event flow across services. <strong>Consumer lag</strong> (the difference between the latest event produced and the latest event consumed) is the primary health metric for event-driven systems. High lag indicates that consumers are falling behind, which can lead to stale data and violated SLAs.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is event-driven architecture?</summary>
+    <p>Event-driven architecture (EDA) is a software design paradigm where the flow of the program is determined by events &mdash; significant changes in state that are produced, detected, and consumed by loosely coupled components. Instead of direct request-response calls between services, a publisher emits an event to a channel, and one or more subscribers react to it asynchronously. This decoupling enables independent scaling, fault isolation, and temporal flexibility.</p>
+  </details>
+  <details>
+    <summary>What is the difference between choreography and orchestration?</summary>
+    <p>In choreography, each service independently listens for events and decides how to react &mdash; there is no central coordinator. In orchestration, a central orchestrator explicitly directs each step by sending commands and waiting for responses. Choreography is simpler for small flows but harder to debug. Orchestration provides clear visibility into the workflow state but introduces a single point of coordination.</p>
+  </details>
+  <details>
+    <summary>When should I use event-driven architecture vs request-response?</summary>
+    <p>Use event-driven architecture when you need asynchronous processing, loose coupling between services, event replay capability, or when multiple consumers need to react to the same event. Use request-response when the caller needs an immediate result, the operation is simple and fast, or strong consistency is required. Many production systems use a hybrid approach.</p>
+  </details>
+  <details>
+    <summary>What are the main event-driven topology patterns?</summary>
+    <p>The four main patterns are: Fan-out (one publisher, multiple subscribers receiving the same event), Fan-in (multiple publishers sending events to one subscriber), Choreography (decentralized peer-to-peer event reactions), and Orchestration (centralized saga coordinator directing the workflow). Each has different trade-offs in complexity, coupling, observability, and fault tolerance.</p>
+  </details>
+  <details>
+    <summary>How do I handle failures in event-driven systems?</summary>
+    <p>Handle failures through dead letter queues (DLQ) for messages that fail after retries, compensating transactions (sagas) to undo partial work, idempotent consumers that safely handle duplicates, and circuit breakers to prevent cascades. Event sourcing provides natural auditability by storing every state change as an immutable event, enabling replay and recovery.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// State
+// ============================================================
+let nodes = [];
+let connections = [];
+let dragNode = null;
+let dragOffset = { x: 0, y: 0 };
+let nodeIdCounter = 0;
+
+const TOPOLOGIES = {
+  fanout: {
+    nodes: [
+      { id: 'p1', type: 'publisher', name: 'Order Service', x: 40, y: 170 },
+      { id: 'c1', type: 'channel', name: 'OrderCreated', x: 250, y: 170 },
+      { id: 's1', type: 'subscriber', name: 'Payment Service', x: 480, y: 40 },
+      { id: 's2', type: 'subscriber', name: 'Inventory Service', x: 480, y: 170 },
+      { id: 's3', type: 'subscriber', name: 'Notification Service', x: 480, y: 300 }
+    ],
+    connections: [['p1','c1'],['c1','s1'],['c1','s2'],['c1','s3']]
+  },
+  fanin: {
+    nodes: [
+      { id: 'p1', type: 'publisher', name: 'Payment Events', x: 40, y: 40 },
+      { id: 'p2', type: 'publisher', name: 'Login Events', x: 40, y: 170 },
+      { id: 'p3', type: 'publisher', name: 'Session Events', x: 40, y: 300 },
+      { id: 'c1', type: 'channel', name: 'Event Stream', x: 260, y: 170 },
+      { id: 's1', type: 'subscriber', name: 'Fraud Detection', x: 480, y: 170 }
+    ],
+    connections: [['p1','c1'],['p2','c1'],['p3','c1'],['c1','s1']]
+  },
+  choreography: {
+    nodes: [
+      { id: 'p1', type: 'publisher', name: 'Order Service', x: 30, y: 160 },
+      { id: 'c1', type: 'channel', name: 'OrderCreated', x: 180, y: 160 },
+      { id: 's1', type: 'subscriber', name: 'Payment Service', x: 330, y: 60 },
+      { id: 'c2', type: 'channel', name: 'PaymentCharged', x: 330, y: 160 },
+      { id: 's2', type: 'subscriber', name: 'Inventory Service', x: 330, y: 260 },
+      { id: 'c3', type: 'channel', name: 'StockReserved', x: 510, y: 160 },
+      { id: 's3', type: 'subscriber', name: 'Shipping Service', x: 510, y: 280 }
+    ],
+    connections: [['p1','c1'],['c1','s1'],['s1','c2'],['c2','s2'],['s2','c3'],['c3','s3']]
+  },
+  orchestration: {
+    nodes: [
+      { id: 'o1', type: 'channel', name: 'Saga Orchestrator', x: 240, y: 30 },
+      { id: 's1', type: 'subscriber', name: 'Payment Service', x: 40, y: 200 },
+      { id: 's2', type: 'subscriber', name: 'Inventory Service', x: 240, y: 200 },
+      { id: 's3', type: 'subscriber', name: 'Shipping Service', x: 440, y: 200 },
+      { id: 'c1', type: 'channel', name: 'Commands', x: 40, y: 110 },
+      { id: 'c2', type: 'channel', name: 'Commands', x: 240, y: 110 },
+      { id: 'c3', type: 'channel', name: 'Commands', x: 440, y: 110 }
+    ],
+    connections: [['o1','c1'],['c1','s1'],['o1','c2'],['c2','s2'],['o1','c3'],['c3','s3']]
+  },
+  empty: { nodes: [], connections: [] }
+};
+
+// ============================================================
+// Canvas Rendering
+// ============================================================
+function renderCanvas() {
+  const canvas = document.getElementById('canvas');
+  // Remove old nodes
+  canvas.querySelectorAll('.eda-node').forEach(n => n.remove());
+
+  nodes.forEach(node => {
+    const el = document.createElement('div');
+    el.className = 'eda-node ' + node.type;
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    el.dataset.id = node.id;
+    el.innerHTML = '<div class="node-type">' + node.type + '</div><div class="node-name">' + escapeHtml(node.name) + '</div><div class="node-remove" onclick="removeNode(\'' + node.id + '\')">&times;</div>';
+
+    el.addEventListener('mousedown', function(e) {
+      if (e.target.classList.contains('node-remove')) return;
+      dragNode = node;
+      dragOffset.x = e.clientX - node.x;
+      dragOffset.y = e.clientY - node.y;
+      el.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    canvas.appendChild(el);
+  });
+
+  renderConnections();
+  updateSelects();
+  updateDiagram();
+}
+
+function renderConnections() {
+  const svg = document.getElementById('canvasSvg');
+  svg.innerHTML = '';
+
+  connections.forEach(([fromId, toId]) => {
+    const fromNode = nodes.find(n => n.id === fromId);
+    const toNode = nodes.find(n => n.id === toId);
+    if (!fromNode || !toNode) return;
+
+    const fromEl = document.querySelector('[data-id="' + fromId + '"]');
+    const toEl = document.querySelector('[data-id="' + toId + '"]');
+    if (!fromEl || !toEl) return;
+
+    const x1 = fromNode.x + fromEl.offsetWidth / 2;
+    const y1 = fromNode.y + fromEl.offsetHeight / 2;
+    const x2 = toNode.x + toEl.offsetWidth / 2;
+    const y2 = toNode.y + toEl.offsetHeight / 2;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
+    svg.appendChild(line);
+
+    // Arrowhead
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    const arrowLen = 10;
+    const ax = x2 - arrowLen * Math.cos(angle - 0.3);
+    const ay = y2 - arrowLen * Math.sin(angle - 0.3);
+    const bx = x2 - arrowLen * Math.cos(angle + 0.3);
+    const by = y2 - arrowLen * Math.sin(angle + 0.3);
+    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    poly.setAttribute('points', x2+','+y2+' '+ax+','+ay+' '+bx+','+by);
+    svg.appendChild(poly);
+  });
+}
+
+// ============================================================
+// Drag Handling
+// ============================================================
+document.addEventListener('mousemove', function(e) {
+  if (!dragNode) return;
+  const canvas = document.getElementById('canvas');
+  const rect = canvas.getBoundingClientRect();
+  dragNode.x = Math.max(0, Math.min(rect.width - 120, e.clientX - dragOffset.x));
+  dragNode.y = Math.max(0, Math.min(rect.height - 60, e.clientY - dragOffset.y));
+  const el = document.querySelector('[data-id="' + dragNode.id + '"]');
+  if (el) {
+    el.style.left = dragNode.x + 'px';
+    el.style.top = dragNode.y + 'px';
+  }
+  renderConnections();
+});
+
+document.addEventListener('mouseup', function() {
+  if (dragNode) {
+    const el = document.querySelector('[data-id="' + dragNode.id + '"]');
+    if (el) el.style.cursor = 'grab';
+    dragNode = null;
+    updateDiagram();
+  }
+});
+
+// ============================================================
+// Node & Connection Management
+// ============================================================
+function addNode(type) {
+  const nameInput = document.getElementById('newNodeName');
+  const name = nameInput.value.trim() || (type.charAt(0).toUpperCase() + type.slice(1) + ' ' + (nodeIdCounter + 1));
+  const id = 'n' + (++nodeIdCounter);
+  const canvas = document.getElementById('canvas');
+  const rect = canvas.getBoundingClientRect();
+  nodes.push({ id, type, name, x: 40 + Math.random() * (rect.width - 200), y: 40 + Math.random() * (rect.height - 120) });
+  nameInput.value = '';
+  renderCanvas();
+}
+
+function removeNode(id) {
+  nodes = nodes.filter(n => n.id !== id);
+  connections = connections.filter(([f, t]) => f !== id && t !== id);
+  renderCanvas();
+}
+
+function addConnection() {
+  const from = document.getElementById('connFrom').value;
+  const to = document.getElementById('connTo').value;
+  if (!from || !to || from === to) return;
+  if (connections.some(([f, t]) => f === from && t === to)) return;
+  connections.push([from, to]);
+  renderCanvas();
+}
+
+function removeLastConnection() {
+  connections.pop();
+  renderCanvas();
+}
+
+function updateSelects() {
+  const fromSel = document.getElementById('connFrom');
+  const toSel = document.getElementById('connTo');
+  const fromVal = fromSel.value;
+  const toVal = toSel.value;
+
+  fromSel.innerHTML = '<option value="">From...</option>';
+  toSel.innerHTML = '<option value="">To...</option>';
+  nodes.forEach(n => {
+    const label = n.name + ' (' + n.type + ')';
+    fromSel.innerHTML += '<option value="' + n.id + '"' + (n.id === fromVal ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+    toSel.innerHTML += '<option value="' + n.id + '"' + (n.id === toVal ? ' selected' : '') + '>' + escapeHtml(label) + '</option>';
+  });
+}
+
+// ============================================================
+// Topology Presets
+// ============================================================
+function loadTopology(name, btn) {
+  document.querySelectorAll('.template-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+
+  const topo = TOPOLOGIES[name];
+  nodes = topo.nodes.map(n => ({ ...n }));
+  connections = topo.connections.map(c => [...c]);
+  nodeIdCounter = nodes.length;
+  renderCanvas();
+}
+
+// ============================================================
+// Diagram Generator
+// ============================================================
+function updateDiagram() {
+  const el = document.getElementById('diagramOutput');
+  if (nodes.length === 0) {
+    el.textContent = 'Add nodes and connections to generate a diagram.';
+    return;
+  }
+
+  let lines = [];
+  lines.push('Event-Driven Architecture Topology');
+  lines.push('=' .repeat(40));
+  lines.push('');
+
+  const publishers = nodes.filter(n => n.type === 'publisher');
+  const channels = nodes.filter(n => n.type === 'channel');
+  const subscribers = nodes.filter(n => n.type === 'subscriber');
+
+  if (publishers.length) {
+    lines.push('PUBLISHERS (' + publishers.length + '):');
+    publishers.forEach(p => {
+      const targets = connections.filter(([f]) => f === p.id).map(([,t]) => {
+        const node = nodes.find(n => n.id === t);
+        return node ? node.name : t;
+      });
+      lines.push('  [PUB] ' + p.name + (targets.length ? ' -> ' + targets.join(', ') : ''));
+    });
+    lines.push('');
+  }
+
+  if (channels.length) {
+    lines.push('CHANNELS (' + channels.length + '):');
+    channels.forEach(c => {
+      const inbound = connections.filter(([,t]) => t === c.id).map(([f]) => {
+        const node = nodes.find(n => n.id === f);
+        return node ? node.name : f;
+      });
+      const outbound = connections.filter(([f]) => f === c.id).map(([,t]) => {
+        const node = nodes.find(n => n.id === t);
+        return node ? node.name : t;
+      });
+      lines.push('  [CH]  ' + c.name);
+      if (inbound.length) lines.push('        <- ' + inbound.join(', '));
+      if (outbound.length) lines.push('        -> ' + outbound.join(', '));
+    });
+    lines.push('');
+  }
+
+  if (subscribers.length) {
+    lines.push('SUBSCRIBERS (' + subscribers.length + '):');
+    subscribers.forEach(s => {
+      const sources = connections.filter(([,t]) => t === s.id).map(([f]) => {
+        const node = nodes.find(n => n.id === f);
+        return node ? node.name : f;
+      });
+      const emits = connections.filter(([f]) => f === s.id).map(([,t]) => {
+        const node = nodes.find(n => n.id === t);
+        return node ? node.name : t;
+      });
+      lines.push('  [SUB] ' + s.name + (sources.length ? ' <- ' + sources.join(', ') : ''));
+      if (emits.length) lines.push('        emits -> ' + emits.join(', '));
+    });
+    lines.push('');
+  }
+
+  lines.push('CONNECTIONS (' + connections.length + '):');
+  connections.forEach(([f, t]) => {
+    const fn = nodes.find(n => n.id === f);
+    const tn = nodes.find(n => n.id === t);
+    lines.push('  ' + (fn ? fn.name : f) + '  -->  ' + (tn ? tn.name : t));
+  });
+
+  el.textContent = lines.join('\n');
+}
+
+function copyDiagram() {
+  const text = document.getElementById('diagramOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+// Initialize
+// ============================================================
+loadTopology('fanout', document.querySelector('.template-btn'));
+</script>
+
+</body>
+</html>

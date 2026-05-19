@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exponential Backoff & Retry Strategy Calculator — Simulator with Jitter Visualization | InvokeBot</title>
+<meta name="description" content="Calculate retry timing with exponential backoff, configurable jitter (full, equal, decorrelated), SVG timeline visualization, and success probability curves. Free interactive simulator.">
+<link rel="canonical" href="https://invokebot.com/guides/retry-strategy-calculator.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/guides/retry-strategy-calculator.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/guides/retry-strategy-calculator.html">
+<meta property="og:title" content="Exponential Backoff & Retry Strategy Calculator — Simulator with Jitter Visualization">
+<meta property="og:description" content="Calculate retry timing with exponential backoff, configurable jitter, SVG timeline visualization, and success probability curves.">
+<meta property="og:url" content="https://invokebot.com/guides/retry-strategy-calculator.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Exponential Backoff & Retry Strategy Calculator">
+<meta name="twitter:description" content="Calculate retry timing with exponential backoff, configurable jitter, SVG timeline visualization, and success probability curves.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Exponential Backoff & Retry Strategy Calculator — Simulator with Jitter Visualization",
+  "description": "Calculate retry timing with exponential backoff, configurable jitter (full, equal, decorrelated), SVG timeline visualization, and success probability curves.",
+  "datePublished": "2026-05-25",
+  "dateModified": "2026-05-25",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://invokebot.com/guides/retry-strategy-calculator.html"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is exponential backoff?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Exponential backoff is a retry strategy where the delay between attempts increases exponentially — typically doubling each time. If the base delay is 1 second with a multiplier of 2, retries occur at 1s, 2s, 4s, 8s, 16s, and so on. This prevents overwhelming a failing service by spacing out requests progressively further apart."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is jitter and why is it important for retries?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Jitter adds randomness to retry delays to prevent the thundering herd problem, where many clients retry simultaneously and overload the server again. Full jitter randomizes the delay between 0 and the calculated backoff. Equal jitter uses half the backoff plus a random value up to half. Decorrelated jitter uses the previous delay to calculate a random range, producing the most spread."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I calculate total maximum wait time for retries?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Sum the delays across all retry attempts. For exponential backoff without jitter: total = base_delay * (multiplier^max_retries - 1) / (multiplier - 1). With a 1s base delay, 2x multiplier, and 5 retries, the total is 1 + 2 + 4 + 8 + 16 = 31 seconds. This calculator computes the exact total including any jitter bounds and delay caps."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the thundering herd problem in webhook retries?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "When a service goes down and many webhook deliveries fail simultaneously, all clients schedule retries at the same time. Without jitter, they all retry at exactly the same intervals, creating coordinated traffic spikes that can keep the service down. Adding jitter spreads retries randomly across a time window, allowing the service to recover gradually."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What retry strategy do major webhook providers use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Stripe uses exponential backoff over 72 hours with up to 16 retry attempts. GitHub retries failed webhook deliveries for up to 3 days. Shopify retries 19 times over 48 hours. Slack retries up to 3 times with exponential backoff. Most providers use some form of jitter to prevent thundering herd effects, though the exact implementation varies."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://invokebot.com/guides/"},{"@type":"ListItem","position":3,"name":"Retry Strategy Calculator"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .tool-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-row label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .tool-field {
+    flex: 1;
+    min-width: 120px;
+  }
+  .tool-field input,
+  .tool-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 8px 12px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .tool-field input:focus,
+  .tool-field select:focus {
+    border-color: var(--accent);
+  }
+  .tool-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-unit {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: 2px;
+  }
+  .retry-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .retry-table th,
+  .retry-table td {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .retry-table th {
+    background: var(--bg);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .retry-table td {
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+  }
+  .timeline-container {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .timeline-container svg {
+    display: block;
+  }
+  .toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 24px 0;
+  }
+  .toc-title {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .toc ol { margin: 0 0 0 20px; padding: 0; }
+  .toc li { margin-bottom: 6px; font-size: 14px; }
+  .toc a { color: var(--text); }
+  .toc a:hover { color: var(--accent); }
+  @media (max-width: 768px) {
+    .tool-row { flex-direction: column; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span style="color:var(--text-muted);">Retry Strategy Calculator</span>
+  </nav>
+
+  <h1>Exponential Backoff &amp; Retry Strategy Calculator</h1>
+  <div class="meta">May 25, 2026 &middot; 14 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>When a webhook delivery fails, the question is not whether to retry &mdash; it is <em>how</em> to retry without making the problem worse. Retrying too aggressively can overwhelm a recovering server. Retrying too slowly wastes time and delays event processing. Exponential backoff with jitter is the industry-standard solution, but choosing the right parameters requires understanding the trade-offs between latency, throughput, and server load.</p>
+
+  <p>This calculator lets you configure a complete retry strategy &mdash; base delay, maximum retries, backoff multiplier, delay cap, and jitter type &mdash; then visualizes the retry timeline, computes the total maximum wait time, and plots success probability curves. Use it to design retry policies for webhook handlers, API clients, queue consumers, and any system that needs to handle transient failures gracefully.</p>
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#calculator">Retry Strategy Calculator</a></li>
+      <li><a href="#exponential-backoff">How Exponential Backoff Works</a></li>
+      <li><a href="#jitter-types">Jitter Types Explained</a></li>
+      <li><a href="#thundering-herd">The Thundering Herd Problem</a></li>
+      <li><a href="#provider-strategies">Retry Strategies of Major Webhook Providers</a></li>
+      <li><a href="#implementation">Implementation Patterns</a></li>
+      <li><a href="#advanced">Advanced: Circuit Breakers and Dead Letter Queues</a></li>
+      <li><a href="#faq">Frequently Asked Questions</a></li>
+    </ol>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ======================================================== -->
+
+  <div class="tool-card" id="calculator">
+    <div class="tool-card-title">Retry Strategy Simulator</div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Base Delay (ms)</label>
+        <input type="number" id="baseDelay" value="1000" min="100" max="60000" step="100" oninput="calculate()">
+      </div>
+      <div class="tool-field">
+        <label>Max Retries</label>
+        <input type="number" id="maxRetries" value="5" min="1" max="20" step="1" oninput="calculate()">
+      </div>
+      <div class="tool-field">
+        <label>Backoff Multiplier</label>
+        <input type="number" id="multiplier" value="2" min="1" max="10" step="0.1" oninput="calculate()">
+      </div>
+    </div>
+
+    <div class="tool-row">
+      <div class="tool-field">
+        <label>Max Delay Cap (ms)</label>
+        <input type="number" id="maxDelay" value="30000" min="1000" max="3600000" step="1000" oninput="calculate()">
+      </div>
+      <div class="tool-field">
+        <label>Jitter Type</label>
+        <select id="jitterType" onchange="calculate()">
+          <option value="none">No Jitter</option>
+          <option value="full" selected>Full Jitter</option>
+          <option value="equal">Equal Jitter</option>
+          <option value="decorrelated">Decorrelated Jitter</option>
+        </select>
+      </div>
+      <div class="tool-field">
+        <label>Per-Attempt Success Rate (%)</label>
+        <input type="number" id="successRate" value="70" min="1" max="99" step="1" oninput="calculate()">
+      </div>
+    </div>
+
+    <div style="text-align:right;margin-top:8px;margin-bottom:8px;">
+      <button class="btn btn-sm btn-primary" onclick="calculate()">Recalculate</button>
+      <button class="btn btn-sm" onclick="randomizeJitter()">Re-roll Jitter</button>
+    </div>
+
+    <hr class="section-divider">
+
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box"><div class="stat-label">Total Max Wait</div><div class="stat-value" id="statTotal">--</div></div>
+      <div class="stat-box"><div class="stat-label">Avg Wait (Jitter)</div><div class="stat-value" id="statAvg">--</div></div>
+      <div class="stat-box"><div class="stat-label">Attempts</div><div class="stat-value" id="statAttempts">--</div></div>
+      <div class="stat-box"><div class="stat-label">P(Success)</div><div class="stat-value" id="statSuccess">--</div></div>
+    </div>
+
+    <hr class="section-divider">
+
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Retry Timeline</label>
+    </div>
+    <div class="timeline-container" id="timelineContainer">
+      <svg id="timelineSvg" width="100%" height="200"></svg>
+    </div>
+
+    <hr class="section-divider">
+
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:500;">Retry Schedule</label>
+    </div>
+    <table class="retry-table" id="retryTable">
+      <thead>
+        <tr>
+          <th>Attempt</th>
+          <th>Base Delay</th>
+          <th>With Jitter</th>
+          <th>Cumulative</th>
+          <th>P(Fail All)</th>
+        </tr>
+      </thead>
+      <tbody id="retryTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- EXPERT CONTENT -->
+  <!-- ======================================================== -->
+
+  <h2 id="exponential-backoff">How Exponential Backoff Works</h2>
+
+  <p>Exponential backoff is a retry strategy where the wait time between consecutive attempts increases by a fixed multiplier. The formula is straightforward: <code>delay = base_delay * multiplier^attempt</code>. With a base delay of 1 second and a multiplier of 2, the sequence is 1s, 2s, 4s, 8s, 16s, 32s. Each retry waits twice as long as the previous one, giving the failing service progressively more time to recover.</p>
+
+  <p>The mathematical intuition is that transient failures resolve quickly (within milliseconds to seconds), while persistent failures indicate a deeper problem that will not resolve in the next few seconds regardless. Exponential backoff handles both cases: short delays catch transient failures early, while the exponentially increasing gap prevents wasting resources on persistent failures. The total time grows much slower than the number of attempts &mdash; 10 retries with a 2x multiplier wait a total of about 17 minutes from a 1-second base, covering a long recovery window without sending thousands of requests.</p>
+
+  <p>Without a delay cap, exponential backoff can produce unreasonably long delays. With a 2x multiplier and 1s base, attempt 20 would wait over 145 hours. The delay cap (also called maximum backoff) limits the longest any single retry can wait. Common caps are 30 seconds for interactive systems, 5 minutes for background jobs, and 1 hour for batch processing. Once the calculated delay exceeds the cap, all subsequent retries use the cap value.</p>
+
+  <h2 id="jitter-types">Jitter Types Explained</h2>
+
+  <p>Jitter adds randomness to retry delays, and the specific method of adding randomness has a significant impact on system behavior. The three standard jitter strategies were formalized in the AWS Architecture Blog and have been adopted across the industry.</p>
+
+  <p><strong>Full Jitter</strong> randomizes the delay uniformly between 0 and the calculated backoff value: <code>delay = random(0, base * multiplier^attempt)</code>. This produces the widest spread of retry times, which is optimal for preventing thundering herd effects. The trade-off is that some retries may happen very quickly (near 0), which slightly increases load during the early phase of recovery. Full jitter is the recommended default for most webhook retry implementations.</p>
+
+  <p><strong>Equal Jitter</strong> uses half the calculated backoff as a floor, then adds a random value up to half: <code>delay = (backoff / 2) + random(0, backoff / 2)</code>. This guarantees a minimum delay of half the calculated backoff while still adding randomness. Equal jitter is useful when you want to ensure a minimum spacing between retries while still preventing synchronized bursts.</p>
+
+  <p><strong>Decorrelated Jitter</strong> uses the previous attempt's delay to calculate the next range: <code>delay = random(base, previous_delay * 3)</code>. This produces the most variable behavior &mdash; delays can occasionally be very short or very long relative to the exponential baseline. Decorrelated jitter tends to produce the best aggregate throughput in simulations because it creates the most temporal dispersion among competing clients.</p>
+
+  <h2 id="thundering-herd">The Thundering Herd Problem</h2>
+
+  <p>The thundering herd problem occurs when a large number of clients experience a failure simultaneously and all retry at the same time. Consider a webhook endpoint that goes down for 30 seconds. During that window, a thousand webhook deliveries fail. Without jitter, every client retries at exactly the same intervals: all 1,000 retry at second 1, then at second 2, then at second 4. Each coordinated burst can re-crash the recovering server, creating a feedback loop that extends the outage far beyond the original failure.</p>
+
+  <p>Jitter breaks this coordination. With full jitter, the 1,000 clients spread their first retries across 0 to 1 second, their second retries across 0 to 2 seconds, and so on. The server receives a manageable trickle of requests instead of synchronized bursts. This is the fundamental reason why every production retry implementation should include jitter &mdash; without it, exponential backoff alone is insufficient.</p>
+
+  <p>The thundering herd is not a theoretical concern. It is one of the most common causes of cascading failures in distributed systems. AWS, Google Cloud, and Stripe have all published post-mortems where thundering herd retries contributed to prolonged outages. The visualization in this calculator shows exactly how jitter spreads retry attempts across the timeline, making the effect intuitive.</p>
+
+  <h2 id="provider-strategies">Retry Strategies of Major Webhook Providers</h2>
+
+  <p><strong>Stripe</strong> retries failed webhook deliveries up to 16 times over approximately 72 hours. The retry schedule uses exponential backoff starting at about 1 minute, increasing to several hours between later attempts. Stripe considers a delivery failed if the endpoint does not return a 2xx status code within 20 seconds. After all retries are exhausted, the event is marked as failed in the dashboard and can be manually retried.</p>
+
+  <p><strong>GitHub</strong> retries webhook deliveries for up to 3 days. The initial retry occurs within minutes, and subsequent retries are spaced exponentially. GitHub's timeout is 10 seconds for the initial connection and 30 seconds for the response. Failed deliveries are visible in the repository's webhook settings, where they can be redelivered manually. GitHub also provides a <code>X-GitHub-Delivery</code> header for idempotency.</p>
+
+  <p><strong>Shopify</strong> retries failed webhooks 19 times over 48 hours. The backoff schedule increases from 10 seconds to several hours. After 19 failures, Shopify automatically unsubscribes the webhook endpoint and sends an email notification to the app developer. This automatic unsubscription is a defensive measure to prevent permanent load on Shopify's delivery infrastructure from permanently-dead endpoints.</p>
+
+  <p><strong>Slack</strong> retries webhook deliveries up to 3 times with exponential backoff. The timeout is 3 seconds for outgoing webhooks and 30 seconds for slash commands. Slack includes a <code>X-Slack-Retry-Num</code> header indicating which retry attempt it is and a <code>X-Slack-Retry-Reason</code> header explaining why the retry occurred (usually <code>http_timeout</code>). Handlers should check these headers to distinguish retries from original deliveries.</p>
+
+  <h2 id="implementation">Implementation Patterns</h2>
+
+  <p>The retry calculator produces parameters that translate directly into code. In Node.js, the standard pattern uses an async function with a for-loop and a sleep between attempts. The key details are: compute the delay using the backoff formula, apply jitter, cap the delay, and await a timeout before the next attempt. Always include a try/catch that distinguishes retryable errors (5xx, timeouts, network errors) from non-retryable errors (4xx client errors, validation failures).</p>
+
+  <p>For webhook handlers specifically, the retry logic lives on the sender side, not the receiver side. Your handler should respond quickly with a 200 status code, then process the event asynchronously. If processing fails, use a queue with retry semantics (like SQS, RabbitMQ, or BullMQ) rather than holding the HTTP response open. This separation ensures the webhook provider does not trigger redundant retries while your handler is still processing.</p>
+
+  <p>Idempotency is the companion requirement to retries. Every retry delivers the same event, so your handler must produce the same result regardless of how many times it processes a given event ID. Use the event ID as a deduplication key: check if you have already processed it before taking any action. Store processed event IDs in a database or cache with a TTL matching your provider's maximum retry window.</p>
+
+  <h2 id="advanced">Advanced: Circuit Breakers and Dead Letter Queues</h2>
+
+  <p>Retries alone are not sufficient for building resilient webhook infrastructure. A circuit breaker monitors the failure rate and stops sending requests entirely when it exceeds a threshold. The three states are closed (normal operation), open (all requests fail immediately), and half-open (a single test request determines whether to close the circuit). Circuit breakers prevent wasted retries against a service that is clearly down, and they give the service time to recover without additional load.</p>
+
+  <p>Dead letter queues (DLQs) capture events that have exhausted all retry attempts. Instead of dropping the event, move it to a DLQ where it can be inspected, debugged, and reprocessed manually or automatically after the underlying issue is resolved. Every production webhook system should have a DLQ &mdash; losing events silently is one of the most dangerous failure modes in event-driven architectures because it creates invisible data inconsistencies.</p>
+
+  <p>Combining exponential backoff with jitter, circuit breakers, and dead letter queues produces a four-layer resilience strategy. Layer 1 (immediate retry) catches transient network blips. Layer 2 (exponential backoff with jitter) handles short-lived service degradation. Layer 3 (circuit breaker) prevents futile retries during extended outages. Layer 4 (DLQ) ensures no event is permanently lost. Teams building <a href="https://lochbot.com">secure webhook infrastructure</a> should implement all four layers, and developers working with <a href="https://kappafy.com">complex JSON event payloads</a> should validate payloads at each layer to catch corruption early.</p>
+
+  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;" id="faq">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is exponential backoff?</summary>
+    <p>Exponential backoff is a retry strategy where the delay between attempts increases exponentially &mdash; typically doubling each time. If the base delay is 1 second with a multiplier of 2, retries occur at 1s, 2s, 4s, 8s, 16s, and so on. This prevents overwhelming a failing service by spacing out requests progressively further apart.</p>
+  </details>
+  <details>
+    <summary>What is jitter and why is it important for retries?</summary>
+    <p>Jitter adds randomness to retry delays to prevent the thundering herd problem, where many clients retry simultaneously and overload the server again. Full jitter randomizes the delay between 0 and the calculated backoff. Equal jitter uses half the backoff plus a random value up to half. Decorrelated jitter uses the previous delay to calculate a random range, producing the most spread.</p>
+  </details>
+  <details>
+    <summary>How do I calculate total maximum wait time for retries?</summary>
+    <p>Sum the delays across all retry attempts. For exponential backoff without jitter: <code>total = base_delay * (multiplier^max_retries - 1) / (multiplier - 1)</code>. With a 1s base delay, 2x multiplier, and 5 retries, the total is 1 + 2 + 4 + 8 + 16 = 31 seconds. This calculator computes the exact total including any jitter bounds and delay caps.</p>
+  </details>
+  <details>
+    <summary>What is the thundering herd problem in webhook retries?</summary>
+    <p>When a service goes down and many webhook deliveries fail simultaneously, all clients schedule retries at the same time. Without jitter, they all retry at exactly the same intervals, creating coordinated traffic spikes that can keep the service down. Adding jitter spreads retries randomly across a time window, allowing the service to recover gradually.</p>
+  </details>
+  <details>
+    <summary>What retry strategy do major webhook providers use?</summary>
+    <p>Stripe uses exponential backoff over 72 hours with up to 16 attempts. GitHub retries for up to 3 days. Shopify retries 19 times over 48 hours. Slack retries up to 3 times. Most providers use some form of jitter to prevent thundering herd effects, though the exact parameters vary by provider.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Retry Strategy Calculator
+// ============================================================
+
+function formatDuration(ms) {
+  if (ms < 1000) return ms.toFixed(0) + 'ms';
+  if (ms < 60000) return (ms / 1000).toFixed(1) + 's';
+  if (ms < 3600000) return (ms / 60000).toFixed(1) + 'm';
+  return (ms / 3600000).toFixed(1) + 'h';
+}
+
+function calculate() {
+  const baseDelay = parseFloat(document.getElementById('baseDelay').value) || 1000;
+  const maxRetries = parseInt(document.getElementById('maxRetries').value) || 5;
+  const multiplier = parseFloat(document.getElementById('multiplier').value) || 2;
+  const maxDelayCap = parseFloat(document.getElementById('maxDelay').value) || 30000;
+  const jitterType = document.getElementById('jitterType').value;
+  const successRate = (parseFloat(document.getElementById('successRate').value) || 70) / 100;
+
+  const retries = [];
+  let prevDelay = baseDelay;
+  let cumulativeBase = 0;
+  let cumulativeJitter = 0;
+
+  for (let i = 0; i < maxRetries; i++) {
+    let rawDelay = baseDelay * Math.pow(multiplier, i);
+    let cappedDelay = Math.min(rawDelay, maxDelayCap);
+    let jitterDelay;
+
+    switch (jitterType) {
+      case 'full':
+        jitterDelay = Math.random() * cappedDelay;
+        break;
+      case 'equal':
+        jitterDelay = (cappedDelay / 2) + Math.random() * (cappedDelay / 2);
+        break;
+      case 'decorrelated':
+        jitterDelay = Math.min(maxDelayCap, Math.random() * (prevDelay * 3 - baseDelay) + baseDelay);
+        break;
+      default:
+        jitterDelay = cappedDelay;
+    }
+
+    cumulativeBase += cappedDelay;
+    cumulativeJitter += jitterDelay;
+    prevDelay = jitterDelay;
+
+    const pFailAll = Math.pow(1 - successRate, i + 2); // +2 because initial attempt + retries
+
+    retries.push({
+      attempt: i + 1,
+      baseDelay: cappedDelay,
+      jitterDelay: jitterDelay,
+      cumulativeBase: cumulativeBase,
+      cumulativeJitter: cumulativeJitter,
+      pFailAll: pFailAll
+    });
+  }
+
+  // Update stats
+  const totalAttempts = maxRetries + 1;
+  const pSuccess = 1 - Math.pow(1 - successRate, totalAttempts);
+  document.getElementById('statTotal').innerHTML = formatDuration(cumulativeBase);
+  document.getElementById('statAvg').innerHTML = formatDuration(cumulativeJitter);
+  document.getElementById('statAttempts').innerHTML = totalAttempts;
+  document.getElementById('statSuccess').innerHTML = (pSuccess * 100).toFixed(1) + '%';
+
+  // Update table
+  const tbody = document.getElementById('retryTableBody');
+  tbody.innerHTML = '';
+  retries.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>#${r.attempt}</td>
+      <td>${formatDuration(r.baseDelay)}</td>
+      <td>${formatDuration(r.jitterDelay)}</td>
+      <td>${formatDuration(r.cumulativeJitter)}</td>
+      <td>${(r.pFailAll * 100).toFixed(2)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Draw timeline
+  drawTimeline(retries, cumulativeBase, cumulativeJitter);
+}
+
+function drawTimeline(retries, maxBase, maxJitter) {
+  const svg = document.getElementById('timelineSvg');
+  const width = svg.parentElement.clientWidth - 32;
+  const height = 180;
+  svg.setAttribute('width', width);
+  svg.setAttribute('height', height);
+
+  const padding = { top: 30, right: 20, bottom: 40, left: 20 };
+  const plotW = width - padding.left - padding.right;
+  const plotH = height - padding.top - padding.bottom;
+
+  const totalTime = Math.max(maxBase, maxJitter) || 1;
+
+  // Build SVG content
+  let svgContent = '';
+
+  // Background grid lines
+  const gridLines = 5;
+  for (let i = 0; i <= gridLines; i++) {
+    const x = padding.left + (plotW / gridLines) * i;
+    const t = (totalTime / gridLines) * i;
+    svgContent += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}" stroke="var(--border, #333)" stroke-dasharray="2,4"/>`;
+    svgContent += `<text x="${x}" y="${height - padding.bottom + 16}" fill="var(--text-muted, #888)" font-size="10" text-anchor="middle" font-family="monospace">${formatDuration(t)}</text>`;
+  }
+
+  // Axis labels
+  svgContent += `<text x="${width / 2}" y="${height - 4}" fill="var(--text-muted, #888)" font-size="11" text-anchor="middle">Time from initial failure</text>`;
+
+  // Base delay line (top row)
+  const baseY = padding.top + plotH * 0.25;
+  svgContent += `<text x="${padding.left}" y="${baseY - 10}" fill="var(--text-muted, #888)" font-size="10">No Jitter</text>`;
+  svgContent += `<line x1="${padding.left}" y1="${baseY}" x2="${padding.left + plotW}" y2="${baseY}" stroke="var(--border, #333)" stroke-width="1"/>`;
+
+  let cumBase = 0;
+  // Initial attempt marker
+  svgContent += `<circle cx="${padding.left}" cy="${baseY}" r="5" fill="var(--accent, #f97316)"/>`;
+  retries.forEach((r, i) => {
+    cumBase += r.baseDelay;
+    const x = padding.left + (cumBase / totalTime) * plotW;
+    svgContent += `<circle cx="${x}" cy="${baseY}" r="5" fill="var(--accent, #f97316)" opacity="0.8"/>`;
+    svgContent += `<text x="${x}" y="${baseY - 10}" fill="var(--accent, #f97316)" font-size="9" text-anchor="middle">#${i + 1}</text>`;
+  });
+
+  // Jitter delay line (bottom row)
+  const jitterY = padding.top + plotH * 0.7;
+  svgContent += `<text x="${padding.left}" y="${jitterY - 10}" fill="var(--text-muted, #888)" font-size="10">With Jitter</text>`;
+  svgContent += `<line x1="${padding.left}" y1="${jitterY}" x2="${padding.left + plotW}" y2="${jitterY}" stroke="var(--border, #333)" stroke-width="1"/>`;
+
+  let cumJitter = 0;
+  svgContent += `<circle cx="${padding.left}" cy="${jitterY}" r="5" fill="#22c55e"/>`;
+  retries.forEach((r, i) => {
+    // Draw jitter range
+    const rangeStart = padding.left + (cumJitter / totalTime) * plotW;
+    cumJitter += r.jitterDelay;
+    const x = padding.left + (cumJitter / totalTime) * plotW;
+
+    // Range bar showing possible jitter window
+    const jitterMaxX = padding.left + ((cumJitter - r.jitterDelay + r.baseDelay) / totalTime) * plotW;
+    svgContent += `<rect x="${rangeStart}" y="${jitterY - 3}" width="${Math.max(1, jitterMaxX - rangeStart)}" height="6" fill="#22c55e" opacity="0.15" rx="2"/>`;
+
+    svgContent += `<circle cx="${x}" cy="${jitterY}" r="5" fill="#22c55e" opacity="0.8"/>`;
+    svgContent += `<text x="${x}" y="${jitterY - 10}" fill="#22c55e" font-size="9" text-anchor="middle">#${i + 1}</text>`;
+  });
+
+  svg.innerHTML = svgContent;
+}
+
+function randomizeJitter() {
+  calculate();
+}
+
+// Initialize
+calculate();
+
+// Recalculate on window resize for responsive SVG
+let resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(calculate, 150);
+});
+</script>
+
+</body>
+</html>

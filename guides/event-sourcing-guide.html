@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Sourcing Guide &mdash; Build Reliable Event-Driven Systems | InvokeBot</title>
+<meta name="description" content="Learn event sourcing with an interactive event store simulator. Create events, watch state projections update in real-time, replay history, rewind state, and understand how event-driven systems achieve reliability and auditability.">
+<link rel="canonical" href="https://invokebot.com/guides/event-sourcing-guide.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/guides/event-sourcing-guide.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/guides/event-sourcing-guide.html">
+<meta property="og:title" content="Event Sourcing Guide &mdash; Build Reliable Event-Driven Systems">
+<meta property="og:description" content="Interactive event store simulator: create events, watch state project in real-time, replay and rewind event history, and learn how event sourcing enables reliable and auditable systems.">
+<meta property="og:url" content="https://invokebot.com/guides/event-sourcing-guide.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Event Sourcing Guide &mdash; Build Reliable Event-Driven Systems">
+<meta name="twitter:description" content="Interactive event store simulator with real-time state projection, replay controls, and event log visualization.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Event Sourcing Guide — Build Reliable Event-Driven Systems",
+  "description": "A comprehensive guide to event sourcing with an interactive event store simulator. Covers event log structure, state projection, aggregate design, replay, and practical integration with webhook and async systems.",
+  "url": "https://invokebot.com/guides/event-sourcing-guide.html",
+  "datePublished": "2026-05-28",
+  "dateModified": "2026-05-28",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "keywords": ["event sourcing", "event-driven architecture", "CQRS", "event store", "state projection", "aggregate", "webhook events"]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Event Store Simulator",
+  "url": "https://invokebot.com/guides/event-sourcing-guide.html",
+  "description": "Interactive event sourcing simulator. Append events to an event store, watch state projections update in real-time, replay from any position, and inspect individual events.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-28",
+  "dateModified": "2026-05-28",
+  "featureList": ["Append events (OrderCreated, PaymentReceived, etc.)", "Real-time state projection", "Replay from any event position", "Rewind / step-back controls", "Event log with sequence numbers", "Side-by-side: log, current state, projected state"]
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Guides","item":"https://invokebot.com/guides/"},{"@type":"ListItem","position":3,"name":"Event Sourcing Guide"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  /* Simulator layout */
+  .sim-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .sim-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    min-height: 280px;
+  }
+  .sim-panel-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .sim-panel-title .seq-badge {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-radius: 3px;
+    padding: 1px 7px;
+    font-size: 10px;
+  }
+  /* Event form */
+  .evt-form-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    margin-bottom: 12px;
+  }
+  .evt-form-field {
+    flex: 1;
+    min-width: 130px;
+  }
+  .evt-form-field label {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+  .evt-form-field select,
+  .evt-form-field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 7px 10px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .evt-form-field select:focus,
+  .evt-form-field input:focus { border-color: var(--accent); }
+  .evt-form-field select {
+    font-family: var(--font-display);
+    font-weight: 700;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  /* Buttons */
+  .evt-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .evt-btn:hover { opacity: 0.88; }
+  .evt-btn.secondary {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .evt-btn.secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .evt-btn:disabled { opacity: 0.35; cursor: default; }
+  /* Event log */
+  .event-log {
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .log-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 6px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.1s;
+  }
+  .log-entry:hover { background: var(--bg-hover); }
+  .log-entry.dimmed { opacity: 0.35; }
+  .log-entry.highlighted { background: rgba(249,115,22,0.08); border-left: 2px solid var(--accent); }
+  .log-seq {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-muted);
+    min-width: 26px;
+    padding-top: 2px;
+  }
+  .log-event-type {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .log-event-data {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .log-ts {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-top: 2px;
+  }
+  /* State display */
+  .state-kv {
+    display: grid;
+    gap: 6px;
+  }
+  .state-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 3px;
+    background: var(--bg-card);
+    font-size: 12px;
+  }
+  .state-key {
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+  }
+  .state-val {
+    color: var(--accent);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .state-val.green { color: #22c55e; }
+  .state-val.red { color: #ef4444; }
+  .state-val.yellow { color: #eab308; }
+  /* Replay controls */
+  .replay-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .replay-slider {
+    flex: 1;
+    min-width: 120px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .replay-pos {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--text-muted);
+    min-width: 80px;
+  }
+  /* Summary bar */
+  .summary-bar {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    margin-bottom: 12px;
+  }
+  .summary-item {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .summary-item strong { color: var(--text); font-family: var(--font-display); }
+  /* Preset event chips */
+  .preset-chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+  @media (max-width: 700px) {
+    .sim-grid { grid-template-columns: 1fr; }
+    .evt-form-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span style="color:var(--text-muted);">Event Sourcing Guide</span>
+  </nav>
+
+  <h1>Event Sourcing Guide &mdash; Build Reliable Event-Driven Systems</h1>
+  <div class="meta">May 28, 2026 &middot; 16 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Event sourcing is an architectural pattern where the state of a system is derived entirely from a sequence of immutable events rather than stored as a mutable record. Instead of writing <code>UPDATE orders SET status = 'paid' WHERE id = 123</code>, you append an event <code>{"type":"PaymentReceived","orderId":123,"amount":4900}</code> to an event log. The current state is computed by replaying all events from the beginning of time. This approach gives you a complete, auditable history of every state transition, the ability to reconstruct state at any point in the past, and a natural integration point for event-driven webhooks and message queues.</p>
+
+  <p>The simulator below lets you build an event store interactively. Select an event type and data, append it to the log, and watch the projected state update in real-time. Use the replay slider or step controls to travel backwards through history and see the state at any previous point. This is exactly how event sourcing works in production: the state panel reflects <em>which events have been applied</em>, not what is stored in a database.</p>
+
+  <!-- ============================================================ -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ============================================================ -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Event Store Simulator &mdash; Order Aggregate</div>
+
+    <!-- Append form -->
+    <div class="tool-card-title" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;letter-spacing:0;">Quick-append presets</div>
+    <div class="preset-chips" id="presetChips"></div>
+
+    <div class="evt-form-row">
+      <div class="evt-form-field">
+        <label>Event Type</label>
+        <select id="evtType" onchange="onEvtTypeChange()">
+          <option value="OrderCreated">OrderCreated</option>
+          <option value="ItemAdded">ItemAdded</option>
+          <option value="ItemRemoved">ItemRemoved</option>
+          <option value="PaymentReceived">PaymentReceived</option>
+          <option value="PaymentFailed">PaymentFailed</option>
+          <option value="OrderConfirmed">OrderConfirmed</option>
+          <option value="OrderShipped">OrderShipped</option>
+          <option value="OrderDelivered">OrderDelivered</option>
+          <option value="OrderCanceled">OrderCanceled</option>
+          <option value="RefundIssued">RefundIssued</option>
+        </select>
+      </div>
+      <div class="evt-form-field" id="fieldA-wrap">
+        <label id="fieldA-label">Customer ID</label>
+        <input type="text" id="fieldA" value="cust_001" placeholder="value">
+      </div>
+      <div class="evt-form-field" id="fieldB-wrap">
+        <label id="fieldB-label">Amount ($)</label>
+        <input type="number" id="fieldB" value="49" min="1" max="9999">
+      </div>
+      <button class="evt-btn" onclick="appendEvent()">Append Event</button>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-bar" id="summaryBar">
+      <div class="summary-item">Events: <strong id="sumTotal">0</strong></div>
+      <div class="summary-item">Viewing: <strong id="sumPos">—</strong></div>
+      <div class="summary-item">Aggregate ID: <strong id="sumAggId">—</strong></div>
+      <div class="summary-item">Version: <strong id="sumVersion">—</strong></div>
+    </div>
+
+    <!-- Replay controls -->
+    <div class="replay-row">
+      <button class="evt-btn secondary" id="btnFirst" onclick="replayTo(0)" disabled>|&lt;</button>
+      <button class="evt-btn secondary" id="btnPrev" onclick="replayStep(-1)" disabled>&lt; Back</button>
+      <input type="range" class="replay-slider" id="replaySlider" min="0" max="0" value="0" oninput="replayTo(parseInt(this.value))">
+      <button class="evt-btn secondary" id="btnNext" onclick="replayStep(1)" disabled>Next &gt;</button>
+      <button class="evt-btn secondary" id="btnLast" onclick="replayTo(eventStore.length)" disabled>&gt;|</button>
+      <span class="replay-pos" id="replayPos">0 / 0</span>
+      <button class="evt-btn secondary" onclick="clearStore()" style="color:#ef4444;border-color:#ef4444;">Clear</button>
+    </div>
+
+    <!-- Two-column: log + state -->
+    <div class="sim-grid">
+      <div class="sim-panel">
+        <div class="sim-panel-title">
+          <span>Event Log</span>
+          <span class="seq-badge" id="logBadge">0 events</span>
+        </div>
+        <div class="event-log" id="eventLog">
+          <div class="empty-state">No events yet. Append an event to begin.</div>
+        </div>
+      </div>
+      <div class="sim-panel">
+        <div class="sim-panel-title">
+          <span>Projected State</span>
+          <span class="seq-badge" id="stateBadge">at seq 0</span>
+        </div>
+        <div class="state-kv" id="stateKv">
+          <div class="empty-state">State will appear here as you append events.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- EXPERT CONTENT -->
+  <!-- ============================================================ -->
+
+  <h2>What is Event Sourcing?</h2>
+
+  <p>In a traditional CRUD system, the database stores the current state of each entity. When state changes, you overwrite the previous state with the new state. The history of how you got to the current state is lost unless you implement separate audit logging. Event sourcing inverts this relationship: the event log is the source of truth, and current state is a derived view computed by replaying the log from the beginning.</p>
+
+  <p>Consider an order management system. In a CRUD approach, the orders table has a row per order with columns for status, total, and customer. When the order is paid, you run <code>UPDATE orders SET status = 'paid', paid_at = NOW()</code>. The previous status (pending) is gone. You cannot know when it transitioned, why, or what other fields changed simultaneously without an external audit trail. In an event sourcing approach, you append a <code>PaymentReceived</code> event with the amount, timestamp, and payment method. The "paid" status is a derived fact: the order is paid because a <code>PaymentReceived</code> event exists in its log. The full payment history, including failed attempts and retries, is preserved as immutable events.</p>
+
+  <h3>Core Concepts: Event Log, Aggregate, and Projection</h3>
+
+  <p>The <strong>event log</strong> (or event store) is an append-only sequence of events. Events are immutable once written. Each event has a sequence number, a timestamp, an aggregate ID (the entity it belongs to), and a payload describing the state change. Writing to the event store is always an append &mdash; you never update or delete an event.</p>
+
+  <p>An <strong>aggregate</strong> is the consistency boundary for a group of related events. In the simulator above, the aggregate is a single order identified by an aggregate ID. All events in the aggregate's stream are causally related: the order progresses from Created to Confirmed to Shipped to Delivered. The aggregate enforces business rules about which state transitions are valid. You cannot append a <code>PaymentReceived</code> event to an order that has already been <code>OrderCanceled</code> &mdash; the aggregate's current state, derived by replaying its event stream, determines whether a new event is valid.</p>
+
+  <p>A <strong>projection</strong> (or read model) is derived state computed by applying events in sequence. The simplest projection applies every event in order and updates an in-memory state object using an event handler function. The result is the current state of the aggregate. The simulator above shows this in real time: each time you move the replay slider, the projection function replays all events up to that sequence number and computes the resulting state from scratch. This is the core insight of event sourcing: <em>state is always computable from events; events are the ground truth.</em></p>
+
+  <h3>Why Event Sourcing Works Well with Webhooks</h3>
+
+  <p>Webhooks and event sourcing are natural complements. Webhooks deliver the same kind of information that event sourcing stores internally: discrete, immutable records of things that happened. When Stripe fires a <code>payment_intent.succeeded</code> webhook, that is a domain event in Stripe's event store. Your system receives it and can either process it immediately or append it to your own event store as a received external event. This creates a fully traceable audit trail where every state change in your system is attributable to a specific received webhook event.</p>
+
+  <p>The idempotency requirement of webhook processing aligns directly with event sourcing semantics. In event sourcing, each event has a globally unique ID. If you receive the same event twice (a common occurrence when webhooks are retried), you check whether an event with that ID already exists in your event store before appending. If it exists, you discard the duplicate. This deduplication is structurally enforced by the event store rather than requiring ad hoc idempotency logic in every handler. The event ID from the webhook provider becomes the event ID in your event store.</p>
+
+  <h3>Replaying Events: The Superpower of Event Sourcing</h3>
+
+  <p>The ability to replay the entire event history and recompute state from scratch is the most powerful operational capability that event sourcing provides. In a traditional database, if a bug corrupts data, you need a database backup from before the bug was introduced and then must manually re-apply every transaction that occurred after the backup. With event sourcing, you fix the projection function (the bug) and replay all events through the corrected function. The state recomputes correctly from the same immutable event log.</p>
+
+  <p>Replay also enables temporal queries: "What was the state of this order at 3 PM yesterday?" is trivially answered by replaying all events with timestamps before 3 PM yesterday. No time-travel queries, no point-in-time recovery operations, no reconstructing state from change data capture logs &mdash; just replay the event log up to the target timestamp.</p>
+
+  <p>New projections can be built from existing event history without requiring historical data migration. If you need a new read model &mdash; for example, a per-customer lifetime value view that aggregates all orders &mdash; you create the new projection function and replay all historical events through it. The event history already contains all the data needed to populate the new view, regardless of when you decided to build it.</p>
+
+  <h3>CQRS: Command Query Responsibility Segregation</h3>
+
+  <p>Event sourcing is commonly paired with CQRS, which separates the write model (handling commands that produce events) from the read model (projections that serve queries). The write side validates commands against the current aggregate state, generates events, and appends them to the event store. The read side subscribes to events, updates materialized views, and serves queries. These two sides can scale independently: the write side is optimized for consistency and validation, while the read side is optimized for query performance and can maintain denormalized, cache-friendly views.</p>
+
+  <p>For webhook-driven systems, CQRS means your webhook handler is a command handler: it receives an external event, validates it, transforms it into internal domain events, and appends those to the event store. Downstream projections (materialized views, search indexes, notification queues) are updated asynchronously by subscribing to the event store's output. This decouples the webhook receipt (which must be fast to avoid timeouts) from the processing (which can be slow and retried independently).</p>
+
+  <h3>Event Versioning and Schema Evolution</h3>
+
+  <p>Because events are immutable and stored permanently, schema changes are more complex than in CRUD systems. When you change the structure of a <code>PaymentReceived</code> event, all existing events in the store still have the old schema. The two standard approaches are <strong>upcasting</strong> (transforming old event formats to the current format at read time) and <strong>copy-and-transform</strong> (rewriting the event store with transformed events to the new schema). Most systems use upcasting for non-breaking changes and copy-and-transform for major schema overhauls.</p>
+
+  <p>Designing events for longevity from the start reduces versioning pain: use explicit version fields in event payloads, prefer additive changes (adding new optional fields), avoid renaming or removing fields, and treat event schemas as public API contracts. Every event you write today will be replayed by future versions of your projection code, so the event schema is part of your long-term compatibility surface.</p>
+
+  <div class="last-updated"><time datetime="2026-05-28">Last updated: May 28, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>What is the difference between event sourcing and event-driven architecture?</summary>
+    <p>Event-driven architecture (EDA) is a broad pattern where components communicate by producing and consuming events. Event sourcing is a specific storage pattern where an entity's state is derived from its event history. You can use EDA without event sourcing (storing state in a regular database and using events only for inter-service communication), or you can use event sourcing internally while also publishing events externally as part of an EDA. Most mature event-driven systems use both: event sourcing for internal state management and event publishing for cross-service communication.</p>
+  </details>
+  <details>
+    <summary>How large does the event log grow, and is performance a problem?</summary>
+    <p>Event logs grow indefinitely, which is by design. For write performance, appending to an event store is extremely fast (sequential I/O). For read performance, replaying all events from the beginning of time becomes slow as the log grows. The standard solution is snapshotting: periodically save a snapshot of the aggregate's current state. When loading an aggregate, start from the latest snapshot rather than from event 0, then replay only the events that occurred after the snapshot. This bounds replay cost regardless of total event history length.</p>
+  </details>
+  <details>
+    <summary>How do you handle deletion in event sourcing?</summary>
+    <p>Because events are immutable, you cannot delete data in the traditional sense. For GDPR right-to-erasure requirements, common approaches include: (1) storing sensitive data encrypted with a per-user key and "deleting" by destroying the key; (2) separating PII into a separate store that references event IDs, deleting the PII without touching the events; or (3) using tombstone events that mark data as deleted and ensuring projections honor these tombstones. Design your event schema upfront with compliance requirements in mind, as retrofitting deletion support into an existing event-sourced system is substantially harder.</p>
+  </details>
+  <details>
+    <summary>Can event sourcing work with existing relational databases?</summary>
+    <p>Yes. An event store is conceptually simple: a table with columns for aggregate_id, sequence_number, event_type, payload (JSON), and created_at, with a unique constraint on (aggregate_id, sequence_number). PostgreSQL, MySQL, and SQLite can all serve as event stores for moderate volumes. Dedicated event store databases (EventStoreDB, Axon Server) provide additional features like optimistic concurrency control, built-in projections, and stream subscriptions, but are not required for getting started with event sourcing.</p>
+  </details>
+  <details>
+    <summary>What are the downsides of event sourcing?</summary>
+    <p>Event sourcing adds complexity: projections must be maintained and kept consistent, queries require materialized views rather than direct database queries, and event schema versioning requires ongoing discipline. It is overkill for simple CRUD applications where auditability and replay are not valuable. The best fit is systems with complex business logic, strong auditability requirements, multiple consumers of state changes, and the need to rebuild read models retroactively — patterns common in financial systems, e-commerce order management, and any system that processes webhooks as the primary data input.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Event definitions & field schemas
+// ============================================================
+const EVT_FIELDS = {
+  OrderCreated:   [{ label: 'Customer ID', id: 'fieldA', def: 'cust_001', type: 'text' }, { label: 'Total ($)', id: 'fieldB', def: '149', type: 'number' }],
+  ItemAdded:      [{ label: 'SKU', id: 'fieldA', def: 'SKU-A42', type: 'text' }, { label: 'Price ($)', id: 'fieldB', def: '49', type: 'number' }],
+  ItemRemoved:    [{ label: 'SKU', id: 'fieldA', def: 'SKU-A42', type: 'text' }, { label: 'Qty', id: 'fieldB', def: '1', type: 'number' }],
+  PaymentReceived:[{ label: 'Amount ($)', id: 'fieldA', def: '149', type: 'number' }, { label: 'Method', id: 'fieldB', def: 'card', type: 'text' }],
+  PaymentFailed:  [{ label: 'Amount ($)', id: 'fieldA', def: '149', type: 'number' }, { label: 'Reason', id: 'fieldB', def: 'insufficient_funds', type: 'text' }],
+  OrderConfirmed: [{ label: 'Confirmed By', id: 'fieldA', def: 'system', type: 'text' }, { label: 'Notes', id: 'fieldB', def: '', type: 'text' }],
+  OrderShipped:   [{ label: 'Carrier', id: 'fieldA', def: 'UPS', type: 'text' }, { label: 'Tracking #', id: 'fieldB', def: '1Z999AA1', type: 'text' }],
+  OrderDelivered: [{ label: 'Delivered To', id: 'fieldA', def: 'front door', type: 'text' }, { label: 'Signed By', id: 'fieldB', def: 'K. Smith', type: 'text' }],
+  OrderCanceled:  [{ label: 'Reason', id: 'fieldA', def: 'customer_request', type: 'text' }, { label: 'Refund ($)', id: 'fieldB', def: '0', type: 'number' }],
+  RefundIssued:   [{ label: 'Amount ($)', id: 'fieldA', def: '149', type: 'number' }, { label: 'Reason', id: 'fieldB', def: 'defective_item', type: 'text' }]
+};
+
+const PRESET_SEQUENCES = [
+  { label: 'Order flow', events: [
+    { type: 'OrderCreated', a: 'cust_007', b: '89' },
+    { type: 'ItemAdded', a: 'SKU-B12', b: '89' },
+    { type: 'PaymentReceived', a: '89', b: 'card' },
+    { type: 'OrderConfirmed', a: 'system', b: '' },
+    { type: 'OrderShipped', a: 'FedEx', b: '7489201' },
+    { type: 'OrderDelivered', a: 'mailbox', b: 'A. Jones' }
+  ]},
+  { label: 'Payment retry', events: [
+    { type: 'OrderCreated', a: 'cust_022', b: '220' },
+    { type: 'ItemAdded', a: 'SKU-C99', b: '220' },
+    { type: 'PaymentFailed', a: '220', b: 'insufficient_funds' },
+    { type: 'PaymentFailed', a: '220', b: 'card_expired' },
+    { type: 'PaymentReceived', a: '220', b: 'paypal' },
+    { type: 'OrderConfirmed', a: 'system', b: '' }
+  ]},
+  { label: 'Canceled + refund', events: [
+    { type: 'OrderCreated', a: 'cust_003', b: '55' },
+    { type: 'PaymentReceived', a: '55', b: 'card' },
+    { type: 'OrderConfirmed', a: 'system', b: '' },
+    { type: 'OrderCanceled', a: 'customer_request', b: '55' },
+    { type: 'RefundIssued', a: '55', b: 'customer_request' }
+  ]}
+];
+
+// ============================================================
+// State
+// ============================================================
+let eventStore = [];
+let replayPosition = 0; // number of events applied (0 = initial, N = all)
+let aggregateId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+// ============================================================
+// Projection function
+// ============================================================
+function projectState(events) {
+  const state = {
+    status: 'empty',
+    customerId: null,
+    total: 0,
+    amountPaid: 0,
+    balance: 0,
+    items: 0,
+    paymentAttempts: 0,
+    paymentFailures: 0,
+    carrier: null,
+    trackingNumber: null,
+    refunded: 0,
+    version: events.length
+  };
+  events.forEach(ev => {
+    switch (ev.type) {
+      case 'OrderCreated':
+        state.status = 'created';
+        state.customerId = ev.data.customerId;
+        state.total = parseFloat(ev.data.total) || 0;
+        state.balance = state.total;
+        break;
+      case 'ItemAdded':
+        state.items++;
+        break;
+      case 'ItemRemoved':
+        state.items = Math.max(0, state.items - 1);
+        break;
+      case 'PaymentReceived':
+        state.amountPaid += parseFloat(ev.data.amount) || 0;
+        state.balance = Math.max(0, state.total - state.amountPaid);
+        state.paymentAttempts++;
+        if (state.amountPaid >= state.total && state.status !== 'canceled') state.status = 'paid';
+        break;
+      case 'PaymentFailed':
+        state.paymentAttempts++;
+        state.paymentFailures++;
+        break;
+      case 'OrderConfirmed':
+        if (state.status === 'paid') state.status = 'confirmed';
+        break;
+      case 'OrderShipped':
+        state.status = 'shipped';
+        state.carrier = ev.data.carrier;
+        state.trackingNumber = ev.data.tracking;
+        break;
+      case 'OrderDelivered':
+        state.status = 'delivered';
+        break;
+      case 'OrderCanceled':
+        state.status = 'canceled';
+        break;
+      case 'RefundIssued':
+        state.refunded += parseFloat(ev.data.amount) || 0;
+        if (state.status === 'canceled') state.status = 'refunded';
+        break;
+    }
+  });
+  return state;
+}
+
+// ============================================================
+// Render
+// ============================================================
+const STATUS_COLORS = {
+  empty: '', created: 'yellow', paid: 'green', confirmed: 'green',
+  shipped: 'green', delivered: 'green', canceled: 'red', refunded: 'yellow'
+};
+
+function renderAll() {
+  const n = eventStore.length;
+  const pos = replayPosition;
+
+  // Summary bar
+  document.getElementById('sumTotal').textContent = n;
+  document.getElementById('sumPos').textContent = pos + ' / ' + n;
+  document.getElementById('sumAggId').textContent = n > 0 ? aggregateId : '—';
+  document.getElementById('sumVersion').textContent = pos > 0 ? String(pos) : '—';
+
+  // Slider
+  const slider = document.getElementById('replaySlider');
+  slider.max = n;
+  slider.value = pos;
+  document.getElementById('replayPos').textContent = pos + ' / ' + n;
+
+  // Buttons
+  document.getElementById('btnFirst').disabled = pos === 0 || n === 0;
+  document.getElementById('btnPrev').disabled = pos === 0 || n === 0;
+  document.getElementById('btnNext').disabled = pos >= n || n === 0;
+  document.getElementById('btnLast').disabled = pos >= n || n === 0;
+
+  // Log badge
+  document.getElementById('logBadge').textContent = n + ' event' + (n !== 1 ? 's' : '');
+  document.getElementById('stateBadge').textContent = 'at seq ' + pos;
+
+  // Event log
+  const logEl = document.getElementById('eventLog');
+  if (n === 0) {
+    logEl.innerHTML = '<div class="empty-state">No events yet. Append an event to begin.</div>';
+  } else {
+    logEl.innerHTML = eventStore.map((ev, i) => {
+      const seq = i + 1;
+      const isDimmed = seq > pos;
+      const isHighlighted = seq === pos;
+      const d = new Date(ev.ts);
+      const ts = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dataStr = Object.entries(ev.data).filter(([, v]) => v !== '' && v !== null).map(([k, v]) => k + ': ' + v).join(', ');
+      return '<div class="log-entry' + (isDimmed ? ' dimmed' : '') + (isHighlighted ? ' highlighted' : '') + '" onclick="replayTo(' + seq + ')">' +
+        '<span class="log-seq">#' + seq + '</span>' +
+        '<div>' +
+          '<div class="log-event-type">' + ev.type + '</div>' +
+          '<div class="log-event-data">' + (dataStr || '(no data)') + '</div>' +
+        '</div>' +
+        '<span class="log-ts">' + ts + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // State panel
+  const state = projectState(eventStore.slice(0, pos));
+  const kvEl = document.getElementById('stateKv');
+  if (pos === 0) {
+    kvEl.innerHTML = '<div class="empty-state">State will appear here as you replay events.</div>';
+  } else {
+    const rows = [
+      { key: 'Status', val: state.status.toUpperCase(), cls: STATUS_COLORS[state.status] || '' },
+      { key: 'Customer ID', val: state.customerId || '—', cls: '' },
+      { key: 'Order Total', val: state.total > 0 ? '$' + state.total.toFixed(2) : '—', cls: '' },
+      { key: 'Amount Paid', val: state.amountPaid > 0 ? '$' + state.amountPaid.toFixed(2) : '$0.00', cls: state.amountPaid >= state.total && state.total > 0 ? 'green' : '' },
+      { key: 'Balance Due', val: '$' + state.balance.toFixed(2), cls: state.balance > 0 ? 'yellow' : 'green' },
+      { key: 'Items', val: String(state.items), cls: '' },
+      { key: 'Payment Attempts', val: String(state.paymentAttempts), cls: '' },
+      { key: 'Payment Failures', val: String(state.paymentFailures), cls: state.paymentFailures > 0 ? 'red' : '' },
+      { key: 'Carrier', val: state.carrier || '—', cls: '' },
+      { key: 'Tracking #', val: state.trackingNumber || '—', cls: '' },
+      { key: 'Refunded', val: state.refunded > 0 ? '$' + state.refunded.toFixed(2) : '—', cls: '' },
+      { key: 'Aggregate Version', val: String(pos), cls: '' }
+    ];
+    kvEl.innerHTML = rows.map(r =>
+      '<div class="state-row"><span class="state-key">' + r.key + '</span><span class="state-val' + (r.cls ? ' ' + r.cls : '') + '">' + r.val + '</span></div>'
+    ).join('');
+  }
+}
+
+// ============================================================
+// Interactions
+// ============================================================
+function onEvtTypeChange() {
+  const type = document.getElementById('evtType').value;
+  const fields = EVT_FIELDS[type] || [];
+  const fA = fields[0] || { label: 'Field A', def: '', type: 'text' };
+  const fB = fields[1] || { label: 'Field B', def: '', type: 'text' };
+  document.getElementById('fieldA-label').textContent = fA.label;
+  document.getElementById('fieldA').value = fA.def;
+  document.getElementById('fieldA').type = fA.type;
+  document.getElementById('fieldB-label').textContent = fB.label;
+  document.getElementById('fieldB').value = fB.def;
+  document.getElementById('fieldB').type = fB.type;
+}
+
+function appendEvent(typeOverride, a, b) {
+  const type = typeOverride || document.getElementById('evtType').value;
+  const valA = a !== undefined ? a : document.getElementById('fieldA').value;
+  const valB = b !== undefined ? b : document.getElementById('fieldB').value;
+  const fields = EVT_FIELDS[type] || [];
+  const data = {};
+  const keyA = fields[0] ? fields[0].label.toLowerCase().replace(/[^a-z]/g, '') : 'fieldA';
+  const keyB = fields[1] ? fields[1].label.toLowerCase().replace(/[^a-z]/g, '') : 'fieldB';
+
+  // Map label keys to state projection keys
+  const keyMap = {
+    customerid: 'customerId', totalamount: 'total', total: 'total', amount: 'amount',
+    pricetotal: 'total', carrier: 'carrier', trackingnumber: 'tracking', trackingnumber: 'tracking',
+    method: 'method', reason: 'reason', qty: 'qty', sku: 'sku', price: 'price',
+    confirmedby: 'confirmedBy', refundamount: 'amount', amountpaid: 'amount',
+    signedby: 'signedBy', deliveredto: 'deliveredTo'
+  };
+  data[keyMap[keyA] || keyA] = valA;
+  if (valB !== '') data[keyMap[keyB] || keyB] = valB;
+
+  eventStore.push({ id: 'ev_' + Math.random().toString(36).slice(2, 9), type, data, ts: Date.now() });
+  replayPosition = eventStore.length;
+  renderAll();
+  // Scroll log to bottom
+  const log = document.getElementById('eventLog');
+  log.scrollTop = log.scrollHeight;
+}
+
+function appendPresetSequence(seq) {
+  seq.events.forEach(ev => appendEvent(ev.type, ev.a, ev.b));
+}
+
+function replayTo(pos) {
+  replayPosition = Math.max(0, Math.min(pos, eventStore.length));
+  renderAll();
+}
+
+function replayStep(delta) {
+  replayTo(replayPosition + delta);
+}
+
+function clearStore() {
+  eventStore = [];
+  replayPosition = 0;
+  aggregateId = 'ORD-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+  renderAll();
+}
+
+// ============================================================
+// Build preset chips
+// ============================================================
+function buildPresetChips() {
+  const container = document.getElementById('presetChips');
+  PRESET_SEQUENCES.forEach(seq => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = seq.label;
+    btn.onclick = () => { clearStore(); appendPresetSequence(seq); };
+    container.appendChild(btn);
+  });
+  // Also add single-event chips for common events
+  ['OrderCreated', 'PaymentReceived', 'OrderShipped', 'OrderCanceled'].forEach(type => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.textContent = '+ ' + type;
+    btn.onclick = () => {
+      document.getElementById('evtType').value = type;
+      onEvtTypeChange();
+      appendEvent();
+    };
+    container.appendChild(btn);
+  });
+}
+
+// ============================================================
+// Init
+// ============================================================
+onEvtTypeChange();
+buildPresetChips();
+renderAll();
+</script>
+
+<section style="margin-top:48px;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+<h2 style="font-size:18px;margin-bottom:16px;">Related Guides</h2>
+<ul style="list-style:none;padding:0;display:grid;gap:8px;">
+<li><a href="/tools/webhook-monitor-dashboard.html" style="color:#3b82f6;text-decoration:none;">Webhook Monitor Dashboard — Track Deliveries &amp; Debug Failures</a></li>
+<li><a href="/guides/message-queue-comparison.html" style="color:#3b82f6;text-decoration:none;">Message Queue Comparison — Redis vs RabbitMQ vs SQS Decision Tool</a></li>
+<li><a href="/guides/idempotency-key-generator.html" style="color:#3b82f6;text-decoration:none;">Idempotency Implementation Guide — Key Generator &amp; Dedup Simulator</a></li>
+<li><a href="/guides/retry-strategy-calculator.html" style="color:#3b82f6;text-decoration:none;">Exponential Backoff &amp; Retry Strategy Calculator</a></li>
+<li><a href="/research/event-driven-architecture.html" style="color:#3b82f6;text-decoration:none;">Event-Driven Architecture — Patterns &amp; Tradeoffs</a></li>
+</ul>
+</section>
+
+</body>
+</html>

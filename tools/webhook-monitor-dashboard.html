@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Webhook Monitor Dashboard &mdash; Track Deliveries &amp; Debug Failures | InvokeBot</title>
+<meta name="description" content="Simulate a live webhook delivery dashboard. Track success, retry, and failed events on a real-time timeline. Filter by status, search payloads, inspect headers and response bodies, and analyze failure reason breakdowns.">
+<link rel="canonical" href="https://invokebot.com/tools/webhook-monitor-dashboard.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/tools/webhook-monitor-dashboard.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/tools/webhook-monitor-dashboard.html">
+<meta property="og:title" content="Webhook Monitor Dashboard &mdash; Track Deliveries &amp; Debug Failures">
+<meta property="og:description" content="Simulate a live webhook delivery dashboard with delivery timeline, status filters, payload search, and failure analysis.">
+<meta property="og:url" content="https://invokebot.com/tools/webhook-monitor-dashboard.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Webhook Monitor Dashboard &mdash; Track Deliveries &amp; Debug Failures">
+<meta name="twitter:description" content="Simulate a live webhook delivery dashboard with delivery timeline, status filters, payload search, and failure analysis.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Webhook Monitor Dashboard",
+  "url": "https://invokebot.com/tools/webhook-monitor-dashboard.html",
+  "description": "Simulate a live webhook delivery monitoring dashboard. Inspect delivery timelines, filter by status, search payload content, drill into request headers and response bodies, and analyze failure reason distributions.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "datePublished": "2026-05-28",
+  "dateModified": "2026-05-28",
+  "featureList": ["Delivery timeline with status indicators", "Filter by success/retry/failed", "Payload content search", "Request header + body inspector", "Response body viewer", "Stats panel: success rate, avg latency, failure reasons"]
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Webhook Monitor Dashboard — Track Deliveries and Debug Failures",
+  "description": "Learn how webhook delivery monitoring works, what metrics matter, and how to debug failed deliveries using a simulated real-time dashboard.",
+  "url": "https://invokebot.com/tools/webhook-monitor-dashboard.html",
+  "datePublished": "2026-05-28",
+  "dateModified": "2026-05-28",
+  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" }
+}
+</script>
+
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://invokebot.com/"},{"@type":"ListItem","position":2,"name":"Tools","item":"https://invokebot.com/tools/"},{"@type":"ListItem","position":3,"name":"Webhook Monitor Dashboard"}]}</script>
+
+<style>
+  .tool-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 24px 0;
+  }
+  .tool-card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+  }
+  .section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+  }
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .stat-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .stat-box-title {
+    font-family: var(--font-display);
+    font-size: 10px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stat-value.green { color: #22c55e; }
+  .stat-value.red { color: #ef4444; }
+  .stat-value.yellow { color: #eab308; }
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  /* Controls */
+  .ctrl-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .ctrl-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .ctrl-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ctrl-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .ctrl-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .ctrl-btn.primary:hover { opacity: 0.9; }
+  .search-box {
+    flex: 1;
+    min-width: 180px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 7px 12px;
+    outline: none;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  /* Timeline */
+  .timeline {
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  .event-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.12s;
+    border-radius: 4px;
+    padding-left: 6px;
+  }
+  .event-row:hover { background: var(--bg-hover); }
+  .event-row.selected { background: rgba(249,115,22,0.07); border-left: 2px solid var(--accent); }
+  .event-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .dot-success { background: #22c55e; }
+  .dot-retry { background: #eab308; }
+  .dot-failed { background: #ef4444; }
+  .event-meta {
+    flex: 1;
+    min-width: 0;
+  }
+  .event-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .event-type {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .event-status {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-success { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .status-retry { background: rgba(234,179,8,0.15); color: #eab308; }
+  .status-failed { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .event-bottom {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .event-latency {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  /* Detail panel */
+  .detail-panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 12px;
+    display: none;
+  }
+  .detail-panel.visible { display: block; }
+  .detail-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .detail-tab {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    background: none;
+  }
+  .detail-tab.active { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  .detail-tab:hover:not(.active) { color: var(--text); }
+  .detail-body {
+    font-family: var(--font-display);
+    font-size: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+    line-height: 1.8;
+  }
+  .detail-body .key { color: var(--accent); }
+  .detail-body .val { color: #a5f3fc; }
+  .detail-body .str { color: #86efac; }
+  .detail-body .num { color: #fca5a5; }
+  /* Failure reasons */
+  .reason-list {
+    display: grid;
+    gap: 8px;
+  }
+  .reason-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .reason-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    width: 160px;
+    flex-shrink: 0;
+  }
+  .reason-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .reason-bar-fill {
+    height: 100%;
+    background: #ef4444;
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+  .reason-count {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--text-muted);
+    width: 28px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  @media (max-width: 640px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .ctrl-row { flex-direction: column; align-items: stretch; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+  <div class="nav-right">
+    <a href="https://zovo.one/pricing?utm_source=invokebot.com&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+    <a href="https://zovo.one/tools" class="nav-zovo">Zovo Tools</a>
+  </div>
+</nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/tools/">Tools</a> &rsaquo; <span style="color:var(--text-muted);">Webhook Monitor Dashboard</span>
+  </nav>
+
+  <h1>Webhook Monitor Dashboard &mdash; Track Deliveries &amp; Debug Failures</h1>
+  <div class="meta">May 28, 2026 &middot; 12 min read &middot; By <a href="https://zovo.one">Michael Lip</a></div>
+
+  <p>Webhook delivery is a fire-and-forget operation by design, but production systems need visibility into exactly what was sent, what was received, and what failed. This simulated webhook monitor dashboard replicates the core UI of a real delivery monitoring system: a live event timeline with status indicators, filter and search controls, per-event drill-down into request headers and payload body, response status and body, latency measurements, and aggregate statistics including success rate, average latency, and a breakdown of failure reasons.</p>
+
+  <p>Click any event row to inspect the full delivery detail &mdash; headers, request body, HTTP response code, and response body. Use the filter buttons to narrow the view to only failed or retried events. Use the search box to find events by event type or payload content. The stats panel at the top updates dynamically as you filter. Use the Re-Simulate button to generate a fresh batch of 40 simulated deliveries.</p>
+
+  <!-- ============================================================ -->
+  <!-- INTERACTIVE TOOL -->
+  <!-- ============================================================ -->
+
+  <div class="tool-card">
+    <div class="tool-card-title">Webhook Delivery Monitor (Simulated)</div>
+
+    <!-- Stats panel -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-box">
+        <div class="stat-box-title">Success Rate</div>
+        <div class="stat-value green" id="stSuccessRate">--</div>
+        <div class="stat-sub" id="stSuccessSub">of deliveries</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-title">Total Events</div>
+        <div class="stat-value" id="stTotal">--</div>
+        <div class="stat-sub" id="stTotalSub">in window</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-title">Avg Latency</div>
+        <div class="stat-value" id="stLatency">--</div>
+        <div class="stat-sub">ms (successful)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-title">Failed</div>
+        <div class="stat-value red" id="stFailed">--</div>
+        <div class="stat-sub" id="stFailedSub">need attention</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-title">Retrying</div>
+        <div class="stat-value yellow" id="stRetry">--</div>
+        <div class="stat-sub">pending retry</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-box-title">Top Failure</div>
+        <div class="stat-value" id="stTopFailure" style="font-size:13px;">--</div>
+        <div class="stat-sub">primary cause</div>
+      </div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Controls -->
+    <div class="ctrl-row">
+      <button class="ctrl-btn active" id="filterAll" onclick="setFilter('all', this)">All</button>
+      <button class="ctrl-btn" id="filterSuccess" onclick="setFilter('success', this)">Success</button>
+      <button class="ctrl-btn" id="filterRetry" onclick="setFilter('retry', this)">Retry</button>
+      <button class="ctrl-btn" id="filterFailed" onclick="setFilter('failed', this)">Failed</button>
+      <input class="search-box" id="searchBox" type="text" placeholder="Search event type or payload..." oninput="renderTimeline()">
+      <button class="ctrl-btn primary" onclick="simulate()">Re-Simulate</button>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline" id="timeline"></div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel" id="detailPanel">
+      <div class="detail-tabs">
+        <button class="detail-tab active" id="tabHeaders" onclick="showTab('headers')">Request Headers</button>
+        <button class="detail-tab" id="tabBody" onclick="showTab('body')">Request Body</button>
+        <button class="detail-tab" id="tabResponse" onclick="showTab('response')">Response</button>
+      </div>
+      <div class="detail-body" id="detailContent"></div>
+    </div>
+
+    <hr class="section-divider">
+
+    <!-- Failure reasons -->
+    <div class="tool-card-title" style="margin-bottom:12px;">Failure Reason Breakdown</div>
+    <div class="reason-list" id="reasonList"></div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- EXPERT CONTENT -->
+  <!-- ============================================================ -->
+
+  <h2>Understanding Webhook Delivery Monitoring</h2>
+
+  <p>A webhook delivery attempt consists of an HTTP POST from the sending system (provider) to your endpoint (consumer). Monitoring this delivery requires capturing at minimum: the event type, the timestamp of the attempt, the HTTP status code returned by your endpoint, the response time, the request payload, and the response body. These six data points let you reconstruct exactly what happened for every event and diagnose failures without guesswork.</p>
+
+  <p>Most webhook providers expose a delivery log in their dashboard, but the granularity varies significantly. Stripe, for example, shows every delivery attempt with headers, payload, response status, and response body for the last 30 days. GitHub shows the last 250 deliveries per webhook. Custom webhook systems built in-house often have no delivery visibility at all, which makes debugging failures require reconstructing the sequence from application logs &mdash; a slow and error-prone process that an embedded delivery monitor eliminates entirely.</p>
+
+  <h3>Delivery Status States</h3>
+
+  <p><strong>Success</strong> means your endpoint returned a 2xx HTTP status code within the provider's timeout window (typically 5&ndash;30 seconds). The provider considers the event delivered and will not retry it. Any processing you do after returning 200 OK is outside the delivery contract. If that processing fails, the event is lost from the provider's perspective &mdash; which is why queuing webhook events internally before processing is the correct architecture for reliable systems.</p>
+
+  <p><strong>Retry</strong> means the previous delivery attempt failed &mdash; either a non-2xx response, a timeout, or a connection error &mdash; and the provider is scheduling another attempt. Retry schedules vary by provider: Stripe retries on an exponential backoff schedule (1 hour, 2 hours, 4 hours, 8 hours, 16 hours, 24 hours) for up to 3 days. GitHub retries immediately and then gives up. Understanding your provider's retry behavior is essential for planning your incident response: if a Stripe webhook fails at 2 AM, you have up to 3 days before events are permanently lost, while a GitHub webhook failure has no automatic recovery.</p>
+
+  <p><strong>Failed</strong> means all delivery attempts have been exhausted without a successful response. The event is permanently lost from the automatic delivery queue. Recovery requires either manually re-triggering the event in the provider's dashboard (if available) or reprocessing from your own event store. This is why idempotency in webhook handlers is not just a best practice but a recovery requirement: if you receive the same event twice (once from automatic retry, once from manual re-trigger), your system must produce the same result both times without duplicating side effects like charging a customer or sending an email.</p>
+
+  <h3>Common Failure Reasons and How to Debug Them</h3>
+
+  <p><strong>HTTP 500 / Application Error</strong> is the most common failure type in production. Your endpoint received the webhook, began processing it, and threw an unhandled exception before returning a response. The fix is to add a top-level try/catch in your webhook handler that catches all exceptions and returns 200 OK before processing begins, or better, to queue the event immediately on receipt and process asynchronously so exceptions in processing do not affect delivery acknowledgment.</p>
+
+  <p><strong>Timeout</strong> occurs when your endpoint takes longer than the provider's timeout limit to return any HTTP response. Common causes include synchronous database queries, calling external APIs inside the handler, acquiring locks, or cold-start latency in serverless functions. The fix is to return 200 OK immediately (acknowledge receipt) and process the event asynchronously in a background worker or message queue. This pattern decouples delivery reliability from processing reliability.</p>
+
+  <p><strong>HTTP 401 / Signature Validation Failure</strong> indicates your endpoint is rejecting the webhook because signature verification failed. This can happen when the raw request body is parsed before signature verification (many frameworks do this automatically, corrupting the bytes used for HMAC computation), when the secret is rotated without updating the verification logic, or when a proxy modifies headers or body in transit. Always verify signatures against the raw body bytes, not a parsed representation.</p>
+
+  <p><strong>Connection Refused / DNS Failure</strong> means the provider cannot reach your endpoint at all. Causes include your server being down, firewall rules blocking the provider's IP ranges, a misconfigured DNS record, or deploying a configuration change that breaks the webhook URL. Monitoring the connection refused rate separately from the application error rate helps distinguish infrastructure problems from application problems.</p>
+
+  <p><strong>HTTP 429 / Rate Limited</strong> occurs when your endpoint returns a rate limit response to the webhook provider. This is particularly common after outages: when a backlog of retried webhooks arrives simultaneously after recovery, providers often resend them at the original rate, which can overwhelm your processing capacity. Implement a burst-tolerant ingestion layer (a queue in front of your processor) to absorb these traffic spikes without rate limiting the delivery.</p>
+
+  <h3>What to Monitor: Key Metrics</h3>
+
+  <p>The three most important webhook delivery metrics are <strong>success rate</strong> (percentage of delivery attempts returning 2xx), <strong>p99 response latency</strong> (time to return any response, which must stay below the provider's timeout), and <strong>failure reason distribution</strong> (what percentage of failures are each type). Success rate below 99% indicates a systemic problem. p99 latency above 50% of the provider timeout is a warning sign. A spike in a specific failure reason (e.g., suddenly 80% of failures are 500 errors) points directly at the root cause.</p>
+
+  <p>Secondary metrics include <strong>retry depth</strong> (what percentage of successful deliveries required more than one attempt), <strong>time to first retry</strong> (how long events sit in failed state before the provider retries), and <strong>event type distribution</strong> (which event types fail at higher rates, often revealing that certain event shapes trigger handler bugs). A well-instrumented monitoring system captures all of these dimensions and surfaces anomalies in real time.</p>
+
+  <div class="last-updated"><time datetime="2026-05-28">Last updated: May 28, 2026</time></div>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>Why did my webhook fail even though my server was running?</summary>
+    <p>The most common cause is a timeout: your handler took longer than the provider's allowed response window (usually 5&ndash;30 seconds) to return any HTTP response. Fix by acknowledging receipt immediately with 200 OK and processing the event asynchronously. Other causes include signature validation failures, unhandled exceptions returning 500, or a firewall blocking the provider's IP.</p>
+  </details>
+  <details>
+    <summary>How do I recover lost webhook events after an outage?</summary>
+    <p>Recovery options depend on the provider. Stripe offers a "Resend" button in the webhook delivery log and also supports backfilling missed events via the Events API. GitHub lets you redeliver failed webhook deliveries from the settings page. For providers without manual redeliver, you must reconcile by comparing your database state against the provider's API. Build an idempotent reconciliation job that fetches recent events from the provider API and re-applies any that are missing from your system.</p>
+  </details>
+  <details>
+    <summary>What HTTP status code should my webhook endpoint return?</summary>
+    <p>Return HTTP 200 OK as quickly as possible, ideally within 1 second. Any 2xx code (200, 201, 202, 204) signals success to the provider. Return 200 before doing any processing — just acknowledge receipt. If you return 4xx or 5xx, or if you timeout, the provider will retry the delivery. Never return 400 for business logic errors in the payload content, as this will trigger unnecessary retries.</p>
+  </details>
+  <details>
+    <summary>How does webhook signature verification work?</summary>
+    <p>The provider computes an HMAC-SHA256 hash of the raw request body using your shared webhook secret as the key, then includes this hash in a request header (e.g., Stripe-Signature, X-Hub-Signature-256). Your endpoint recomputes the same hash and compares it. Always compute the hash from the raw bytes of the request body before any parsing. If your framework auto-parses JSON before your handler runs, reconstruct the raw body from the parsed object — this often introduces subtle differences that break signature verification.</p>
+  </details>
+  <details>
+    <summary>How many retries do webhook providers attempt?</summary>
+    <p>Retry policies vary significantly by provider. Stripe retries failed webhooks on exponential backoff for up to 3 days (attempts at roughly 1h, 2h, 4h, 8h, 16h, 24h intervals). GitHub makes one delivery attempt and does not retry automatically. Shopify retries up to 19 times over 48 hours. Twilio retries up to 3 times. Always check your provider's documentation for the exact retry policy and design your recovery procedures accordingly.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// Data generation
+// ============================================================
+const EVENT_TYPES = [
+  'payment.succeeded', 'payment.failed', 'checkout.completed',
+  'subscription.created', 'subscription.canceled', 'invoice.paid',
+  'customer.created', 'order.fulfilled', 'refund.created',
+  'push', 'pull_request.opened', 'issues.opened', 'release.published',
+  'message.delivered', 'user.signup', 'user.deleted'
+];
+
+const FAILURE_REASONS = [
+  'HTTP 500 — Application Error',
+  'Timeout (>30s)',
+  'HTTP 401 — Signature Invalid',
+  'HTTP 429 — Rate Limited',
+  'Connection Refused',
+  'HTTP 503 — Service Unavailable',
+  'DNS Failure'
+];
+
+const ENDPOINTS = [
+  '/webhooks/stripe', '/webhooks/github', '/api/events',
+  '/webhooks/shopify', '/hooks/receive', '/api/webhooks/ingest'
+];
+
+function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randChoice(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function randId() { return Math.random().toString(36).slice(2, 10).toUpperCase(); }
+
+function generatePayload(eventType) {
+  const base = { id: 'evt_' + randId(), type: eventType, created: Math.floor(Date.now() / 1000) - randInt(0, 3600) };
+  if (eventType.startsWith('payment')) { base.data = { amount: randInt(100, 99900), currency: 'usd', customer: 'cus_' + randId() }; }
+  else if (eventType.startsWith('subscription')) { base.data = { plan: randChoice(['starter','pro','enterprise']), interval: 'month', status: 'active' }; }
+  else if (eventType === 'push') { base.data = { ref: 'refs/heads/main', commits: randInt(1, 8), repository: 'org/repo-' + randId() }; }
+  else { base.data = { object_id: randId(), source: randChoice(['web','mobile','api']), version: '2026-05-28' }; }
+  return base;
+}
+
+function generateEvents(count) {
+  const now = Date.now();
+  const events = [];
+  for (let i = 0; i < count; i++) {
+    const rand = Math.random();
+    const status = rand < 0.72 ? 'success' : rand < 0.88 ? 'retry' : 'failed';
+    const eventType = randChoice(EVENT_TYPES);
+    const endpoint = randChoice(ENDPOINTS);
+    const latencyMs = status === 'success'
+      ? randInt(45, 1800)
+      : status === 'retry'
+        ? randInt(800, 28000)
+        : randInt(30000, 31000);
+    const payload = generatePayload(eventType);
+    const httpCode = status === 'success' ? randChoice([200, 200, 200, 201, 204]) :
+                     status === 'retry'   ? randChoice([500, 429, 503, 0]) :
+                                            randChoice([500, 401, 0]);
+    const failureReason = status !== 'success'
+      ? (httpCode === 500 ? FAILURE_REASONS[0] :
+         httpCode === 0   ? (Math.random() < 0.5 ? FAILURE_REASONS[1] : FAILURE_REASONS[4]) :
+         httpCode === 401 ? FAILURE_REASONS[2] :
+         httpCode === 429 ? FAILURE_REASONS[3] :
+         httpCode === 503 ? FAILURE_REASONS[5] :
+         FAILURE_REASONS[6])
+      : null;
+    const ts = now - randInt(0, 86400000);
+    events.push({ id: 'wh_' + randId(), eventType, status, latencyMs, payload, httpCode, failureReason, endpoint, ts,
+      retryAttempt: status === 'retry' ? randInt(1, 3) : status === 'failed' ? randInt(3, 5) : 0 });
+  }
+  events.sort((a, b) => b.ts - a.ts);
+  return events;
+}
+
+// ============================================================
+// State
+// ============================================================
+let allEvents = [];
+let activeFilter = 'all';
+let selectedId = null;
+let activeTab = 'headers';
+
+function simulate() {
+  allEvents = generateEvents(40);
+  selectedId = null;
+  document.getElementById('detailPanel').classList.remove('visible');
+  document.getElementById('searchBox').value = '';
+  setFilter('all', document.getElementById('filterAll'));
+}
+
+// ============================================================
+// Render
+// ============================================================
+function renderTimeline() {
+  const q = document.getElementById('searchBox').value.toLowerCase();
+  const filtered = allEvents.filter(e => {
+    if (activeFilter !== 'all' && e.status !== activeFilter) return false;
+    if (q) {
+      const haystack = (e.eventType + ' ' + JSON.stringify(e.payload)).toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  // Stats from filtered set
+  const total = filtered.length;
+  const succ = filtered.filter(e => e.status === 'success').length;
+  const fail = filtered.filter(e => e.status === 'failed').length;
+  const retry = filtered.filter(e => e.status === 'retry').length;
+  const successRate = total > 0 ? ((succ / total) * 100).toFixed(1) : '--';
+  const avgLat = succ > 0 ? Math.round(filtered.filter(e => e.status === 'success').reduce((s, e) => s + e.latencyMs, 0) / succ) : '--';
+
+  // Top failure reason
+  const failCounts = {};
+  filtered.filter(e => e.failureReason).forEach(e => { failCounts[e.failureReason] = (failCounts[e.failureReason] || 0) + 1; });
+  const topFail = Object.keys(failCounts).sort((a, b) => failCounts[b] - failCounts[a])[0];
+
+  document.getElementById('stSuccessRate').textContent = total > 0 ? successRate + '%' : '--';
+  document.getElementById('stSuccessRate').className = 'stat-value' + (parseFloat(successRate) >= 95 ? ' green' : parseFloat(successRate) >= 80 ? ' yellow' : ' red');
+  document.getElementById('stTotal').textContent = total;
+  document.getElementById('stTotalSub').textContent = 'showing ' + total + ' of ' + allEvents.length;
+  document.getElementById('stLatency').textContent = avgLat === '--' ? '--' : avgLat + ' ms';
+  document.getElementById('stFailed').textContent = fail;
+  document.getElementById('stFailedSub').textContent = fail > 0 ? 'need attention' : 'none';
+  document.getElementById('stRetry').textContent = retry;
+  const topFailShort = topFail ? topFail.replace(/HTTP \d+ — /, '').replace('Connection Refused', 'Conn Refused') : 'None';
+  document.getElementById('stTopFailure').textContent = topFailShort;
+
+  // Timeline rows
+  const tl = document.getElementById('timeline');
+  if (filtered.length === 0) {
+    tl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">No events match current filter.</div>';
+  } else {
+    tl.innerHTML = filtered.map(e => {
+      const d = new Date(e.ts);
+      const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const latStr = e.latencyMs >= 30000 ? 'timeout' : e.latencyMs + 'ms';
+      const snippet = JSON.stringify(e.payload.data || {}).slice(0, 60) + '...';
+      const isSelected = e.id === selectedId;
+      return '<div class="event-row' + (isSelected ? ' selected' : '') + '" onclick="selectEvent(\'' + e.id + '\')">' +
+        '<div class="event-dot dot-' + e.status + '"></div>' +
+        '<div class="event-meta">' +
+          '<div class="event-top">' +
+            '<span class="event-type">' + e.eventType + '</span>' +
+            '<span class="event-status status-' + e.status + '">' + e.status + (e.retryAttempt > 0 ? ' #' + e.retryAttempt : '') + '</span>' +
+            (e.failureReason ? '<span style="font-size:10px;color:#ef4444;">' + e.failureReason.split(' — ')[0] + '</span>' : '') +
+          '</div>' +
+          '<div class="event-bottom">' + timeStr + ' &middot; ' + e.endpoint + ' &middot; ' + snippet + '</div>' +
+        '</div>' +
+        '<div class="event-latency">' + latStr + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // Failure reasons breakdown (from ALL events matching filter, not just failed)
+  const allFail = allEvents.filter(e => e.failureReason);
+  const reasons = {};
+  FAILURE_REASONS.forEach(r => reasons[r] = 0);
+  allFail.forEach(e => { if (reasons[e.failureReason] !== undefined) reasons[e.failureReason]++; });
+  const maxCount = Math.max(1, ...Object.values(reasons));
+  document.getElementById('reasonList').innerHTML = FAILURE_REASONS.map(r => {
+    const c = reasons[r];
+    const pct = Math.round((c / maxCount) * 100);
+    return '<div class="reason-row">' +
+      '<span class="reason-label">' + r.replace(/HTTP \d+ — /, '').split(' (')[0] + '</span>' +
+      '<div class="reason-bar-track"><div class="reason-bar-fill" style="width:' + pct + '%"></div></div>' +
+      '<span class="reason-count">' + c + '</span>' +
+    '</div>';
+  }).join('');
+}
+
+// ============================================================
+// Interactions
+// ============================================================
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.ctrl-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderTimeline();
+}
+
+function selectEvent(id) {
+  selectedId = (selectedId === id) ? null : id;
+  renderTimeline();
+  if (!selectedId) {
+    document.getElementById('detailPanel').classList.remove('visible');
+    return;
+  }
+  document.getElementById('detailPanel').classList.add('visible');
+  showTab(activeTab);
+  // Scroll detail into view
+  document.getElementById('detailPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+
+  const ev = allEvents.find(e => e.id === selectedId);
+  if (!ev) return;
+
+  let content = '';
+  if (tab === 'headers') {
+    const h = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Stripe/1.0 (+https://stripe.com/docs/webhooks)',
+      'X-Signature-SHA256': 'sha256=' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2),
+      'X-Event-ID': ev.payload.id,
+      'X-Event-Type': ev.eventType,
+      'X-Delivery-Attempt': String(ev.retryAttempt + 1),
+      'Accept': '*/*',
+      'Connection': 'keep-alive'
+    };
+    content = colorizeJSON(h);
+  } else if (tab === 'body') {
+    content = colorizeJSON(ev.payload);
+  } else {
+    const httpOk = ev.httpCode >= 200 && ev.httpCode < 300;
+    const resBody = httpOk
+      ? { received: true, queued: true, event_id: ev.payload.id }
+      : ev.httpCode === 0
+        ? null
+        : { error: ev.failureReason, code: ev.httpCode, retryable: true };
+    const statusLine = ev.httpCode === 0
+      ? 'STATUS: Connection Timeout\n\n(no HTTP response received)'
+      : 'STATUS: HTTP ' + ev.httpCode + '\nLATENCY: ' + ev.latencyMs + 'ms\n\n' + colorizeJSON(resBody);
+    content = statusLine;
+  }
+  document.getElementById('detailContent').innerHTML = content;
+}
+
+function colorizeJSON(obj) {
+  return JSON.stringify(obj, null, 2)
+    .replace(/"([^"]+)":/g, '<span class="key">"$1"</span>:')
+    .replace(/: "([^"]+)"/g, ': <span class="str">"$1"</span>')
+    .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="num">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span class="val">$1</span>');
+}
+
+// ============================================================
+// Init
+// ============================================================
+simulate();
+</script>
+
+<section style="margin-top:48px;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+<h2 style="font-size:18px;margin-bottom:16px;">Related Tools</h2>
+<ul style="list-style:none;padding:0;display:grid;gap:8px;">
+<li><a href="/tools/api-monitor-dashboard.html" style="color:#3b82f6;text-decoration:none;">API Monitor Dashboard — Uptime Simulator with SLA Calculator</a></li>
+<li><a href="/tools/event-payload-differ.html" style="color:#3b82f6;text-decoration:none;">Event Payload Differ — Webhook Payload Diff Tool for Debugging Changes</a></li>
+<li><a href="/tools/webhook-payload-builder.html" style="color:#3b82f6;text-decoration:none;">Webhook Payload Builder — Construct &amp; Validate Webhook Payloads</a></li>
+<li><a href="/guides/retry-strategy-calculator.html" style="color:#3b82f6;text-decoration:none;">Exponential Backoff &amp; Retry Strategy Calculator</a></li>
+<li><a href="/guides/event-sourcing-guide.html" style="color:#3b82f6;text-decoration:none;">Event Sourcing Guide — Build Reliable Event-Driven Systems</a></li>
+</ul>
+</section>
+
+</body>
+</html>

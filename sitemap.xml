@@ -26,4 +26,10 @@
   <url><loc>https://invokebot.com/tools/cron-expression-builder.html</loc></url>
   <url><loc>https://invokebot.com/tools/event-payload-differ.html</loc></url>
   <url><loc>https://invokebot.com/tools/webhook-payload-builder.html</loc></url>
+  <url>
+    <loc>https://invokebot.com/tools/webhook-debugger-inspect-replay-test-payloads</loc>
+    <lastmod>2026-06-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
 </urlset>

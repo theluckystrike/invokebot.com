@@ -1,0 +1,429 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webhook Debugger — Inspect, Replay & Test Payloads</title>
+  <meta name="description" content="Interactive webhook debugging tool: inspect, replay & test payloads. Unique endpoint, JSON tree, history, code generators, and more.">
+  <link rel="canonical" href="https://invokebot.com/webhook-debugger">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Webhook Debugger",
+    "url": "https://invokebot.com/webhook-debugger",
+    "description": "Interactive webhook debugging tool: inspect, replay & test payloads. Unique endpoint, JSON tree, history, code generators, and more.",
+    "applicationCategory": "Developer Tool",
+    "operatingSystem": "All",
+    "browserRequirements": "Modern JavaScript"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://invokebot.com" },
+      { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://invokebot.com/tools" },
+      { "@type": "ListItem", "position": 3, "name": "Webhook Debugger", "item": "https://invokebot.com/webhook-debugger" }
+    ]
+  }
+  </script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0b0f15; color: #e4e9f0; padding: 2rem 1.5rem; min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+    .container { max-width: 1400px; width: 100%; }
+    header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid #1f2937; padding-bottom: 1rem; }
+    h1 { font-size: 1.8rem; font-weight: 600; letter-spacing: -0.02em; background: linear-gradient(135deg, #f0f9ff 0%, #22c55e 80%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .badge { background: #1e293b; color: #22c55e; padding: 0.25rem 0.9rem; border-radius: 40px; font-size: 0.8rem; border: 1px solid #22c55e33; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.8rem; margin-bottom: 2rem; }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+    .card { background: #131a24; border: 1px solid #1f2937; border-radius: 20px; padding: 1.5rem; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+    .card-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 1rem; color: #b0c4de; display: flex; align-items: center; gap: 0.6rem; }
+    .card-title i { color: #22c55e; }
+    .endpoint-box { background: #0b1119; border: 1px solid #2a3a4a; border-radius: 40px; padding: 0.8rem 1.2rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 1.2rem; }
+    .endpoint-url { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.95rem; word-break: break-all; color: #b9d0e6; }
+    .copy-btn { background: #1e293b; border: none; color: #22c55e; padding: 0.3rem 0.9rem; border-radius: 30px; font-size: 0.75rem; cursor: pointer; border: 1px solid #22c55e33; transition: 0.2s; }
+    .copy-btn:hover { background: #22c55e; color: #0b1119; }
+    .payload-tree { background: #0b1119; border-radius: 14px; padding: 1rem; max-height: 340px; overflow-y: auto; font-family: 'SF Mono', monospace; font-size: 0.8rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word; border: 1px solid #1f2937; }
+    .payload-tree .key { color: #7dd3fc; }
+    .payload-tree .string { color: #86efac; }
+    .payload-tree .number { color: #fbbf24; }
+    .payload-tree .boolean { color: #f472b6; }
+    .payload-tree .null { color: #a1a1aa; }
+    .flex-row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; }
+    .chip-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .chip { background: #1e293b; border-radius: 30px; padding: 0.2rem 0.8rem; font-size: 0.7rem; color: #b9d0e6; border: 1px solid #2a3a4a; cursor: pointer; transition: 0.1s; }
+    .chip.active { border-color: #22c55e; background: #22c55e22; color: #22c55e; }
+    .chip:hover { border-color: #22c55e; }
+    .history-list { max-height: 160px; overflow-y: auto; background: #0b1119; border-radius: 12px; padding: 0.5rem; border: 1px solid #1f2937; }
+    .history-item { display: flex; justify-content: space-between; padding: 0.4rem 0.7rem; border-bottom: 1px solid #1f2937; font-size: 0.7rem; align-items: center; }
+    .history-item:last-child { border-bottom: none; }
+    .history-item button { background: transparent; border: 1px solid #22c55e44; color: #22c55e; border-radius: 20px; padding: 0.1rem 0.6rem; font-size: 0.65rem; cursor: pointer; }
+    .history-item button:hover { background: #22c55e; color: #0b1119; }
+    .code-block { background: #0b1119; border-radius: 12px; padding: 1rem; font-family: 'SF Mono', monospace; font-size: 0.75rem; border: 1px solid #1f2937; overflow-x: auto; white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto; }
+    .param-group { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0.8rem 0; }
+    .param-group label { font-size: 0.75rem; color: #94a3b8; display: flex; flex-direction: column; gap: 0.2rem; }
+    .param-group select, .param-group input { background: #0b1119; border: 1px solid #1f2937; color: #e4e9f0; padding: 0.4rem 0.7rem; border-radius: 30px; font-size: 0.75rem; }
+    .btn-primary { background: #22c55e; border: none; color: #0b1119; font-weight: 600; padding: 0.5rem 1.5rem; border-radius: 40px; cursor: pointer; transition: 0.15s; font-size: 0.8rem; }
+    .btn-primary:hover { background: #16a34a; }
+    .btn-secondary { background: transparent; border: 1px solid #22c55e; color: #22c55e; padding: 0.4rem 1rem; border-radius: 40px; cursor: pointer; font-size: 0.75rem; }
+    .mt-2 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .flex { display: flex; gap: 0.8rem; flex-wrap: wrap; align-items: center; }
+    .json-tree-toggle { cursor: pointer; }
+    footer { margin-top: 3rem; font-size: 0.7rem; color: #4b5a6a; text-align: center; border-top: 1px solid #1f2937; padding-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ Webhook Debugger</h1>
+    <span class="badge">🔌 endpoint active</span>
+  </header>
+
+  <!-- Breadcrumb (visual) -->
+  <div style="font-size:0.75rem; color:#6b7c93; margin-bottom:1.5rem;">🏠 Home / Tools / Webhook Debugger</div>
+
+  <div class="grid-2">
+    <!-- LEFT: Endpoint + incoming payload -->
+    <div class="card">
+      <div class="card-title"><span>📡</span> Your unique endpoint</div>
+      <div class="endpoint-box">
+        <span class="endpoint-url" id="endpointDisplay">https://hook.invokebot.dev/d3bug-9f2a1b</span>
+        <button class="copy-btn" id="copyEndpointBtn">📋 copy</button>
+      </div>
+      <div class="card-title" style="margin-top:1rem;"><span>📦</span> Incoming payload <span style="font-weight:normal;font-size:0.7rem;color:#6b7c93;">(JSON tree)</span></div>
+      <div class="payload-tree" id="payloadTree">{
+  <span class="key">"event"</span>: <span class="string">"webhook.received"</span>,
+  <span class="key">"source"</span>: <span class="string">"invokebot debugger"</span>,
+  <span class="key">"timestamp"</span>: <span class="string">"2025-03-24T12:00:00Z"</span>,
+  <span class="key">"data"</span>: { <span class="key">"demo"</span>: <span class="boolean">true</span> }
+}</div>
+      <div class="flex-row">
+        <div class="chip-group" id="presetChips">
+          <span class="chip active" data-preset="github">🐙 GitHub</span>
+          <span class="chip" data-preset="stripe">💳 Stripe</span>
+          <span class="chip" data-preset="slack">💬 Slack</span>
+          <span class="chip" data-preset="discord">🎮 Discord</span>
+          <span class="chip" data-preset="twilio">📞 Twilio</span>
+        </div>
+        <button class="btn-secondary" id="simulateHookBtn" style="margin-left:auto;">▶ Simulate</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Header inspector + response config -->
+    <div class="card">
+      <div class="card-title"><span>🧾</span> Headers inspector</div>
+      <div class="payload-tree" id="headersTree" style="max-height:130px; margin-bottom:1rem;">{
+  <span class="key">"content-type"</span>: <span class="string">"application/json"</span>,
+  <span class="key">"x-webhook-id"</span>: <span class="string">"wh_9f2a"</span>,
+  <span class="key">"user-agent"</span>: <span class="string">"InvokeBot/1.0"</span>
+}</div>
+      <div class="card-title" style="margin-top:0.5rem;"><span>⚙️</span> Response & delay</div>
+      <div class="param-group">
+        <label>Status code
+          <select id="responseCodeSelect">
+            <option value="200">200 OK</option>
+            <option value="201">201 Created</option>
+            <option value="400">400 Bad Request</option>
+            <option value="401">401 Unauthorized</option>
+            <option value="403">403 Forbidden</option>
+            <option value="404">404 Not Found</option>
+            <option value="500">500 Server Error</option>
+          </select>
+        </label>
+        <label>Delay (ms)
+          <input type="range" id="delaySlider" min="0" max="5000" value="200" step="50">
+          <span id="delayValue">200ms</span>
+        </label>
+      </div>
+      <button class="btn-primary" id="sendResponseBtn" style="width:100%;">↩ Send response & log</button>
+    </div>
+  </div>
+
+  <!-- History + Code generator row -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title"><span>📜</span> Payload history <span style="font-weight:normal;font-size:0.7rem;color:#6b7c93;">(localStorage)</span></div>
+      <div class="history-list" id="historyList">
+        <div class="history-item"><span>🐙 GitHub push event</span> <button class="replay-btn" data-index="0">↻ replay</button></div>
+        <div class="history-item"><span>💳 Stripe invoice</span> <button class="replay-btn" data-index="1">↻ replay</button></div>
+      </div>
+      <button class="btn-secondary" id="clearHistoryBtn" style="margin-top:0.6rem;">🗑 Clear history</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span>🧑‍💻</span> Code generator</div>
+      <div class="flex" style="margin-bottom:0.6rem;">
+        <span class="chip active" id="codeLangCurl">curl</span>
+        <span class="chip" id="codeLangPython">Python</span>
+        <span class="chip" id="codeLangNode">Node.js</span>
+        <span class="chip" id="codeLangGo">Go</span>
+      </div>
+      <div class="code-block" id="codeBlock">curl -X POST https://hook.invokebot.dev/d3bug-9f2a1b \
+  -H "Content-Type: application/json" \
+  -d '{"event":"test","source":"manual"}'</div>
+    </div>
+  </div>
+
+  <!-- Replay button (global) + status -->
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; margin-top:0.5rem;">
+    <button class="btn-primary" id="replayLastBtn">↻ Replay last payload</button>
+    <span id="statusMessage" style="font-size:0.8rem; color:#86efac;">✓ ready</span>
+  </div>
+  <footer>invokebot.com · webhook debugger · all payloads stored locally</footer>
+</div>
+
+<script>
+  (function() {
+    // ----- state -----
+    const STORAGE_KEY = 'invokebot_webhook_history';
+    let payloadHistory = [];
+    let currentPayload = { event: 'webhook.received', source: 'invokebot debugger', timestamp: new Date().toISOString(), data: { demo: true } };
+    let currentHeaders = { 'content-type': 'application/json', 'x-webhook-id': 'wh_9f2a', 'user-agent': 'InvokeBot/1.0' };
+    let selectedPreset = 'github';
+
+    // DOM elements
+    const endpointDisplay = document.getElementById('endpointDisplay');
+    const payloadTree = document.getElementById('payloadTree');
+    const headersTree = document.getElementById('headersTree');
+    const historyList = document.getElementById('historyList');
+    const codeBlock = document.getElementById('codeBlock');
+    const responseCodeSelect = document.getElementById('responseCodeSelect');
+    const delaySlider = document.getElementById('delaySlider');
+    const delayValue = document.getElementById('delayValue');
+    const statusMsg = document.getElementById('statusMessage');
+    const copyBtn = document.getElementById('copyEndpointBtn');
+    const simulateBtn = document.getElementById('simulateHookBtn');
+    const sendResponseBtn = document.getElementById('sendResponseBtn');
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    const replayLastBtn = document.getElementById('replayLastBtn');
+
+    // preset chips
+    const presetChips = document.querySelectorAll('#presetChips .chip');
+    // lang chips
+    const langChips = { curl: document.getElementById('codeLangCurl'), python: document.getElementById('codeLangPython'), node: document.getElementById('codeLangNode'), go: document.getElementById('codeLangGo') };
+
+    // ----- helpers -----
+    function formatJSONTree(obj, indent = 0) {
+      if (obj === null) return '<span class="null">null</span>';
+      if (typeof obj === 'string') return `<span class="string">"${obj}"</span>`;
+      if (typeof obj === 'number') return `<span class="number">${obj}</span>`;
+      if (typeof obj === 'boolean') return `<span class="boolean">${obj}</span>`;
+      if (Array.isArray(obj)) {
+        if (obj.length === 0) return '[]';
+        let items = obj.map(item => formatJSONTree(item, indent + 2));
+        return `[\n${' '.repeat(indent+2)}${items.join(`,\n${' '.repeat(indent+2)}`)}\n${' '.repeat(indent)}]`;
+      }
+      if (typeof obj === 'object') {
+        let keys = Object.keys(obj);
+        if (keys.length === 0) return '{}';
+        let lines = keys.map(k => {
+          let val = formatJSONTree(obj[k], indent + 2);
+          return `${' '.repeat(indent+2)}<span class="key">"${k}"</span>: ${val}`;
+        });
+        return `{\n${lines.join(',\n')}\n${' '.repeat(indent)}}`;
+      }
+      return String(obj);
+    }
+
+    function renderPayloadTree(payload) {
+      payloadTree.innerHTML = formatJSONTree(payload, 0);
+    }
+
+    function renderHeadersTree(headers) {
+      headersTree.innerHTML = formatJSONTree(headers, 0);
+    }
+
+    function renderHistory() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        try { payloadHistory = JSON.parse(stored); } catch(e) { payloadHistory = []; }
+      } else {
+        // seed demo
+        payloadHistory = [
+          { event: 'push', ref: 'refs/heads/main', repository: { name: 'invokebot' }, sender: { login: 'debugger' } },
+          { event: 'invoice.paid', amount: 2500, currency: 'usd', customer: 'cus_abc' }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payloadHistory));
+      }
+      if (!payloadHistory.length) {
+        historyList.innerHTML = '<div style="padding:0.5rem;color:#6b7c93;">No history yet.</div>';
+        return;
+      }
+      let html = '';
+      payloadHistory.forEach((item, idx) => {
+        let label = item.event || item.type || 'payload';
+        if (item.repository) label = '🐙 ' + (item.repository.name || 'push');
+        else if (item.amount) label = '💳 invoice ' + (item.amount || '');
+        else if (item.channel) label = '💬 slack';
+        else if (item.token) label = '🎮 discord';
+        else if (item.From) label = '📞 twilio';
+        else label = '📦 ' + (item.event || 'webhook');
+        html += `<div class="history-item"><span>${label}</span> <button class="replay-btn" data-index="${idx}">↻ replay</button></div>`;
+      });
+      historyList.innerHTML = html;
+      // attach replay events
+      document.querySelectorAll('.replay-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const idx = parseInt(this.dataset.index);
+          if (!isNaN(idx) && payloadHistory[idx]) {
+            currentPayload = JSON.parse(JSON.stringify(payloadHistory[idx]));
+            renderPayloadTree(currentPayload);
+            statusMsg.textContent = `↻ replayed #${idx+1}`;
+            updateCodeGen();
+          }
+        });
+      });
+    }
+
+    function saveHistory() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payloadHistory));
+    }
+
+    function addToHistory(payload) {
+      payloadHistory.push(JSON.parse(JSON.stringify(payload)));
+      if (payloadHistory.length > 20) payloadHistory.shift();
+      saveHistory();
+      renderHistory();
+    }
+
+    // presets
+    function getPresetPayload(name) {
+      switch(name) {
+        case 'github': return { event: 'push', ref: 'refs/heads/main', repository: { name: 'invokebot', full_name: 'invokebot/webhook' }, sender: { login: 'bot', id: 42 }, commits: [{ message: 'fix bug' }] };
+        case 'stripe': return { event: 'invoice.paid', data: { object: { amount: 1500, currency: 'usd', customer: 'cus_Abc123', status: 'paid' } }, created: Math.floor(Date.now()/1000) };
+        case 'slack': return { token: 'xoxb-...', team_id: 'T001', event: { type: 'message', user: 'U001', text: 'Hello from Slack' }, channel: 'C001' };
+        case 'discord': return { type: 0, token: 'mfa...', guild_id: '123', member: { user: { id: '456', username: 'debugger' } }, data: { name: 'test' } };
+        case 'twilio': return { From: '+15551234567', To: '+15559876543', Body: 'Hello from Twilio', MessageSid: 'SM123', AccountSid: 'AC456' };
+        default: return { event: 'webhook', source: name };
+      }
+    }
+
+    function applyPreset(name) {
+      selectedPreset = name;
+      const payload = getPresetPayload(name);
+      currentPayload = payload;
+      renderPayloadTree(payload);
+      // also update headers a bit
+      currentHeaders = { 'content-type': 'application/json', 'x-webhook-id': 'wh_' + Math.random().toString(36).substring(2,6), 'user-agent': 'InvokeBot/1.0', 'x-source': name };
+      renderHeadersTree(currentHeaders);
+      statusMsg.textContent = `📥 preset: ${name}`;
+      updateCodeGen();
+    }
+
+    // code generator
+    function generateCode(lang, payload, endpoint) {
+      const url = endpoint || endpointDisplay.textContent;
+      const body = JSON.stringify(payload, null, 2);
+      switch(lang) {
+        case 'curl': return `curl -X POST ${url} \\\n  -H "Content-Type: application/json" \\\n  -d '${body}'`;
+        case 'python': return `import requests\n\nurl = "${url}"\nheaders = {"Content-Type": "application/json"}\ndata = ${JSON.stringify(payload, null, 2)}\n\nresponse = requests.post(url, json=data, headers=headers)\nprint(response.status_code)`;
+        case 'node': return `const fetch = require('node-fetch');\n\nconst url = "${url}";\nconst data = ${JSON.stringify(payload, null, 2)};\n\nfetch(url, {\n  method: 'POST',\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify(data)\n}).then(res => res.text()).then(console.log);`;
+        case 'go': return `package main\n\nimport (\n\t"bytes"\n\t"encoding/json"\n\t"fmt"\n\t"net/http"\n)\n\nfunc main() {\n\turl := "${url}"\n\tdata := ${JSON.stringify(payload, null, 2)}\n\tb, _ := json.Marshal(data)\n\tresp, _ := http.Post(url, "application/json", bytes.NewBuffer(b))\n\tfmt.Println(resp.StatusCode)\n}`;
+        default: return '';
+      }
+    }
+
+    function updateCodeGen() {
+      const activeLang = document.querySelector('#codeLangCurl.chip.active') ? 'curl' : 
+                         document.querySelector('#codeLangPython.chip.active') ? 'python' :
+                         document.querySelector('#codeLangNode.chip.active') ? 'node' : 'go';
+      const code = generateCode(activeLang, currentPayload, endpointDisplay.textContent);
+      codeBlock.textContent = code;
+    }
+
+    // set active lang
+    function setActiveLang(lang) {
+      Object.keys(langChips).forEach(k => langChips[k].classList.remove('active'));
+      if (langChips[lang]) langChips[lang].classList.add('active');
+      updateCodeGen();
+    }
+
+    // ----- init -----
+    function init() {
+      // load history
+      renderHistory();
+      // set default preset
+      applyPreset('github');
+      // delay slider
+      delaySlider.addEventListener('input', function() {
+        delayValue.textContent = this.value + 'ms';
+      });
+      delayValue.textContent = delaySlider.value + 'ms';
+
+      // preset chips
+      presetChips.forEach(chip => {
+        chip.addEventListener('click', function() {
+          presetChips.forEach(c => c.classList.remove('active'));
+          this.classList.add('active');
+          const preset = this.dataset.preset;
+          applyPreset(preset);
+        });
+      });
+
+      // simulate button
+      simulateBtn.addEventListener('click', function() {
+        const preset = selectedPreset || 'github';
+        applyPreset(preset);
+        statusMsg.textContent = `🎯 simulated ${preset} payload`;
+      });
+
+      // send response & log
+      sendResponseBtn.addEventListener('click', function() {
+        const code = responseCodeSelect.value;
+        const delay = parseInt(delaySlider.value);
+        statusMsg.textContent = `⏳ sending ${code} after ${delay}ms ...`;
+        setTimeout(() => {
+          addToHistory(currentPayload);
+          statusMsg.textContent = `✅ responded ${code} (logged)`;
+        }, delay);
+      });
+
+      // copy endpoint
+      copyBtn.addEventListener('click', function() {
+        navigator.clipboard.writeText(endpointDisplay.textContent).then(() => {
+          statusMsg.textContent = '📋 endpoint copied';
+        }).catch(() => { statusMsg.textContent = '❌ copy failed'; });
+      });
+
+      // clear history
+      clearHistoryBtn.addEventListener('click', function() {
+        payloadHistory = [];
+        localStorage.removeItem(STORAGE_KEY);
+        renderHistory();
+        statusMsg.textContent = '🗑 history cleared';
+      });
+
+      // replay last
+      replayLastBtn.addEventListener('click', function() {
+        if (payloadHistory.length > 0) {
+          const last = payloadHistory[payloadHistory.length-1];
+          currentPayload = JSON.parse(JSON.stringify(last));
+          renderPayloadTree(currentPayload);
+          statusMsg.textContent = '↻ replayed last';
+          updateCodeGen();
+        } else {
+          statusMsg.textContent = '⚠️ no history';
+        }
+      });
+
+      // lang chips
+      Object.keys(langChips).forEach(lang => {
+        langChips[lang].addEventListener('click', function() {
+          setActiveLang(lang);
+        });
+      });
+      setActiveLang('curl');
+
+      // initial code gen
+      updateCodeGen();
+    }
+
+    init();
+  })();
+</script>
+</body>
+</html>

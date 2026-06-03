@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>Webhook vs Polling Cost Comparator — Which is Cheaper?</title>
+  <meta name="description" content="Interactive calculator comparing webhook vs polling costs: API requests, latency, wasted calls, and break-even frequency. Dark theme, mobile-friendly.">
+  <meta name="keywords" content="webhook, polling, cost comparison, API cost, server cost, break-even, latency calculator">
+  <link rel="canonical" href="https://invokebot.com/tools/webhook-vs-polling-calculator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How does the webhook vs polling cost comparator work?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You input expected events per hour, polling interval, API cost per request, webhook server cost per month, and average processing time. The calculator then estimates requests per hour/day/month, total API cost, server compute cost, latency, and wasted requests for both approaches. A break-even chart shows at which event frequency webhook becomes cheaper."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between webhook and polling?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Polling repeatedly checks for new data at fixed intervals, causing latency and wasted requests. Webhooks deliver events in real-time, reducing latency and unnecessary requests, but require a persistent server."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which is cheaper: webhook or polling?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "It depends on event frequency, API cost, and server cost. Polling is often cheaper at low event rates, but webhooks become more cost-efficient as event frequency increases. Use this calculator to find your break-even point."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      font-size: 1.1rem;
+    }
+    .calculator-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+      background: #1e293b;
+      padding: 1.8rem;
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      margin-bottom: 2rem;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .input-group label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.4rem;
+      color: #cbd5e1;
+    }
+    .input-group input {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      padding: 0.75rem 1rem;
+      color: #f1f5f9;
+      font-size: 1rem;
+      transition: border 0.2s, box-shadow 0.2s;
+      outline: none;
+      width: 100%;
+    }
+    .input-group input:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+    }
+    .input-group input[type="number"] {
+      -moz-appearance: textfield;
+    }
+    .input-group input::-webkit-outer-spin-button,
+    .input-group input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    .results-panel {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+    .comparison-table th {
+      text-align: left;
+      padding: 0.8rem 0.5rem;
+      border-bottom: 2px solid #334155;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+    .comparison-table td {
+      padding: 0.7rem 0.5rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    .comparison-table tr:last-child td {
+      border-bottom: none;
+    }
+    .badge {
+      background: #0f172a;
+      padding: 0.2rem 0.8rem;
+      border-radius: 40px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      display: inline-block;
+    }
+    .badge-webhook {
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+    }
+    .badge-polling {
+      color: #fbbf24;
+      border: 1px solid #fbbf24;
+    }
+    .cost-positive {
+      color: #4ade80;
+    }
+    .cost-negative {
+      color: #f87171;
+    }
+    .chart-container {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
+    .chart-container h3 {
+      margin-bottom: 1rem;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+    canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 320px;
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 0.5rem;
+    }
+    .footer {
+      text-align: center;
+      padding: 2rem 0 0.5rem;
+      color: #64748b;
+      font-size: 0.9rem;
+      border-top: 1px solid #1e293b;
+      margin-top: 1rem;
+    }
+    .inline-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .highlight {
+      color: #38bdf8;
+      font-weight: 600;
+    }
+    @media (max-width: 600px) {
+      body { padding: 0.8rem; }
+      h1 { font-size: 1.8rem; }
+      .calculator-grid { padding: 1.2rem; gap: 1rem; }
+      .comparison-table { font-size: 0.8rem; }
+    }
+  </style>
+
+    <meta property="og:title" content="Webhook vs Polling Cost Comparator — Which is Cheaper?">
+    <meta property="og:description" content="Interactive calculator comparing webhook vs polling costs: API requests, latency, wasted calls, and break-even frequency. Dark theme, mobile-friendly.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/webhook-vs-polling-calculator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>⚡ Webhook vs Polling Cost Comparator</h1>
+    <div class="subhead">Which is cheaper? Real‑time vs interval — find your break‑even</div>
+  </header>
+
+  <!-- Inputs -->
+  <div class="calculator-grid">
+    <div class="input-group">
+      <label for="eventsPerHour">📨 Events / hour</label>
+      <input type="number" id="eventsPerHour" min="1" max="10000" value="500" step="1">
+    </div>
+    <div class="input-group">
+      <label for="pollInterval">⏱️ Poll interval (seconds)</label>
+      <input type="number" id="pollInterval" min="1" max="3600" value="60" step="1">
+    </div>
+    <div class="input-group">
+      <label for="apiCost">💰 API cost / request ($)</label>
+      <input type="number" id="apiCost" min="0" max="100" value="0.0002" step="0.00001">
+    </div>
+    <div class="input-group">
+      <label for="webhookServerCost">🖥️ Webhook server cost / month ($)</label>
+      <input type="number" id="webhookServerCost" min="0" max="100000" value="25" step="0.1">
+    </div>
+    <div class="input-group">
+      <label for="processingTime">⚙️ Avg processing time (ms)</label>
+      <input type="number" id="processingTime" min="0" max="60000" value="50" step="1">
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div class="results-panel">
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th><span class="badge badge-webhook">Webhook</span></th>
+          <th><span class="badge badge-polling">Polling</span></th>
+        </tr>
+      </thead>
+      <tbody id="resultsBody">
+        <!-- filled by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-container">
+    <h3>📊 Break‑even: Total monthly cost vs Events per hour</h3>
+    <canvas id="breakEvenChart" width="800" height="300"></canvas>
+    <p style="color:#94a3b8; font-size:0.85rem; margin-top:0.8rem;">
+      <span class="inline-badge"><span style="color:#38bdf8;">●</span> Webhook</span> 
+      <span class="inline-badge" style="margin-left:1.5rem;"><span style="color:#fbbf24;">●</span> Polling</span>
+      — intersection is break‑even frequency.
+    </p>
+  </div>
+
+  <div class="footer">
+    © 2025 invokebot.com
+  </div>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const eventsPerHourInput = document.getElementById('eventsPerHour');
+    const pollIntervalInput = document.getElementById('pollInterval');
+    const apiCostInput = document.getElementById('apiCost');
+    const webhookServerCostInput = document.getElementById('webhookServerCost');
+    const processingTimeInput = document.getElementById('processingTime');
+    const tbody = document.getElementById('resultsBody');
+    const canvas = document.getElementById('breakEvenChart');
+    let chartInstance = null;
+
+    // helpers
+    function getValues() {
+      let eventsPerHour = parseFloat(eventsPerHourInput.value) || 500;
+      let pollInterval = parseFloat(pollIntervalInput.value) || 60;
+      let apiCost = parseFloat(apiCostInput.value) || 0.0002;
+      let webhookServerCost = parseFloat(webhookServerCostInput.value) || 25;
+      let processingTime = parseFloat(processingTimeInput.value) || 50;
+
+      // clamp
+      eventsPerHour = Math.min(10000, Math.max(1, eventsPerHour));
+      pollInterval = Math.min(3600, Math.max(1, pollInterval));
+      apiCost = Math.max(0, apiCost);
+      webhookServerCost = Math.max(0, webhookServerCost);
+      processingTime = Math.min(60000, Math.max(0, processingTime));
+
+      return { eventsPerHour, pollInterval, apiCost, webhookServerCost, processingTime };
+    }
+
+    function computeMetrics(vals) {
+      const { eventsPerHour, pollInterval, apiCost, webhookServerCost, processingTime } = vals;
+
+      // Polling
+      const secondsPerHour = 3600;
+      const requestsPerHourPoll = Math.ceil(secondsPerHour / pollInterval);
+      const requestsPerDayPoll = requestsPerHourPoll * 24;
+      const requestsPerMonthPoll = requestsPerDayPoll * 30; // 30-day month
+
+      // wasted requests: polling with no new data = requests - events (if events < requests)
+      const wastedPerHourPoll = Math.max(0, requestsPerHourPoll - eventsPerHour);
+      const wastedPerDayPoll = wastedPerHourPoll * 24;
+      const wastedPerMonthPoll = wastedPerDayPoll * 30;
+
+      // latency: polling avg half interval (ms)
+      const latencyPollMs = (pollInterval * 1000) / 2;
+
+      // API cost polling
+      const monthlyApiCostPoll = requestsPerMonthPoll * apiCost;
+
+      // server compute cost polling: processing time * requests per month (convert ms to hours)
+      const totalProcessingHoursPoll = (requestsPerMonthPoll * processingTime) / (3600 * 1000);
+      // assume server cost per hour = $0.041 (approx 30$/month continuous) but we use a small factor: we treat compute as part of API cost? 
+      // For fair comparison, we add compute cost based on processing time. Use a nominal $0.10 per hour compute (approx 72$/month if full time)
+      // But user can adjust webhook server cost. For polling, we assume same compute unit cost: $0.10 per hour.
+      const computeCostPerHour = 0.10; 
+      const serverComputeCostPoll = totalProcessingHoursPoll * computeCostPerHour;
+
+      // total polling monthly
+      const totalMonthlyPoll = monthlyApiCostPoll + serverComputeCostPoll;
+
+      // Webhook
+      // requests = events (each event triggers one webhook call)
+      const requestsPerHourWebhook = eventsPerHour;
+      const requestsPerDayWebhook = eventsPerHour * 24;
+      const requestsPerMonthWebhook = eventsPerHour * 24 * 30;
+
+      // wasted: 0 (only real events)
+      const wastedPerHourWebhook = 0;
+      const wastedPerDayWebhook = 0;
+      const wastedPerMonthWebhook = 0;
+
+      // latency near-instant: assume processing time + 5ms network
+      const latencyWebhookMs = processingTime + 5;
+
+      // API cost webhook (same per request cost)
+      const monthlyApiCostWebhook = requestsPerMonthWebhook * apiCost;
+
+      // server compute cost webhook: processing time * events, plus server fixed cost
+      const totalProcessingHoursWebhook = (requestsPerMonthWebhook * processingTime) / (3600 * 1000);
+      const serverComputeCostWebhook = totalProcessingHoursWebhook * computeCostPerHour + webhookServerCost;
+
+      const totalMonthlyWebhook = monthlyApiCostWebhook + serverComputeCostWebhook;
+
+      return {
+        requestsPerHourPoll,
+        requestsPerDayPoll,
+        requestsPerMonthPoll,
+        wastedPerHourPoll,
+        wastedPerDayPoll,
+        wastedPerMonthPoll,
+        latencyPollMs,
+        monthlyApiCostPoll,
+        serverComputeCostPoll,
+        totalMonthlyPoll,
+        requestsPerHourWebhook,
+        requestsPerDayWebhook,
+        requestsPerMonthWebhook,
+        wastedPerHourWebhook,
+        wastedPerDayWebhook,
+        wastedPerMonthWebhook,
+        latencyWebhookMs,
+        monthlyApiCostWebhook,
+        serverComputeCostWebhook,
+        totalMonthlyWebhook,
+        eventsPerHour
+      };
+    }
+
+    function renderResults(metrics) {
+      const fmt = (num) => {
+        if (Math.abs(num) > 999999) return num.toExponential(2);
+        return Number(num.toFixed(4)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+      };
+      const fmtInt = (num) => Math.round(num).toLocaleString();
+      const fmtMs = (ms) => ms.toFixed(1) + ' ms';
+
+      const rows = [
+        ['Requests / hour', fmtInt(metrics.requestsPerHourWebhook), fmtInt(metrics.requestsPerHourPoll)],
+        ['Requests / day', fmtInt(metrics.requestsPerDayWebhook), fmtInt(metrics.requestsPerDayPoll)],
+        ['Requests / month', fmtInt(metrics.requestsPerMonthWebhook), fmtInt(metrics.requestsPerMonthPoll)],
+        ['Wasted requests / month', fmtInt(metrics.wastedPerMonthWebhook), fmtInt(metrics.wastedPerMonthPoll)],
+        ['Avg latency', fmtMs(metrics.latencyWebhookMs), fmtMs(metrics.latencyPollMs)],
+        ['Monthly API cost ($)', fmt(metrics.monthlyApiCostWebhook), fmt(metrics.monthlyApiCostPoll)],
+        ['Server compute cost ($)', fmt(metrics.serverComputeCostWebhook), fmt(metrics.serverComputeCostPoll)],
+        ['<strong>Total monthly cost ($)</strong>', `<strong>${fmt(metrics.totalMonthlyWebhook)}</strong>`, `<strong>${fmt(metrics.totalMonthlyPoll)}</strong>`],
+      ];
+
+      tbody.innerHTML = rows.map(([label, webhookVal, pollingVal]) => {
+        return `<tr><td>${label}</td><td>${webhookVal}</td><td>${pollingVal}</td></tr>`;
+      }).join('');
+    }
+
+    function drawChart(vals) {
+      // break-even: vary events per hour from 1 to 10000, compute total cost for both
+      const { pollInterval, apiCost, webhookServerCost, processingTime } = vals;
+      const computeCostPerHour = 0.10;
+      const secondsPerHour = 3600;
+
+      const samplePoints = 40;
+      const maxEvents = 10000;
+      const step = Math.ceil(maxEvents / samplePoints);
+      const eventsArray = [];
+      const webhookCosts = [];
+      const pollingCosts = [];
+
+      for (let e = 1; e <= maxEvents; e += step) {
+        // polling
+        const reqPoll = Math.ceil(secondsPerHour / pollInterval);
+        const reqMonthPoll = reqPoll * 24 * 30;
+        const apiCostPoll = reqMonthPoll * apiCost;
+        const procHoursPoll = (reqMonthPoll * processingTime) / (3600 * 1000);
+        const serverPoll = procHoursPoll * computeCostPerHour;
+        const totalPoll = apiCostPoll + serverPoll;
+
+        // webhook
+        const reqWeb = e * 24 * 30;
+        const apiCostWeb = reqWeb * apiCost;
+        const procHoursWeb = (reqWeb * processingTime) / (3600 * 1000);
+        const serverWeb = procHoursWeb * computeCostPerHour + webhookServerCost;
+        const totalWeb = apiCostWeb + serverWeb;
+
+        eventsArray.push(e);
+        webhookCosts.push(totalWeb);
+        pollingCosts.push(totalPoll);
+      }
+
+      // ensure we include current eventsPerHour
+      const cur = vals.eventsPerHour;
+      if (!eventsArray.includes(cur)) {
+        // insert current
+        const e = cur;
+        const reqPoll = Math.ceil(secondsPerHour / pollInterval);
+        const reqMonthPoll = reqPoll * 24 * 30;
+        const apiCostPoll = reqMonthPoll * apiCost;
+        const procHoursPoll = (reqMonthPoll * processingTime) / (3600 * 1000);
+        const serverPoll = procHoursPoll * computeCostPerHour;
+        const totalPoll = apiCostPoll + serverPoll;
+
+        const reqWeb = e * 24 * 30;
+        const apiCostWeb = reqWeb * apiCost;
+        const procHoursWeb = (reqWeb * processingTime) / (3600 * 1000);
+        const serverWeb = procHoursWeb * computeCostPerHour + webhookServerCost;
+        const totalWeb = apiCostWeb + serverWeb;
+        // insert sorted
+        let idx = eventsArray.findIndex(v => v > e);
+        if (idx === -1) { eventsArray.push(e); webhookCosts.push(totalWeb); pollingCosts.push(totalPoll); }
+        else { eventsArray.splice(idx, 0, e); webhookCosts.splice(idx, 0, totalWeb); pollingCosts.splice(idx, 0, totalPoll); }
+      }
+
+      // draw chart
+      const ctx = canvas.getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      const labels = eventsArray.map(v => v.toString());
+      const data = {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Webhook monthly cost ($)',
+            data: webhookCosts,
+            borderColor: '#38bdf8',
+            backgroundColor: 'rgba(56, 189, 248, 0.05)',
+            pointRadius: 0,
+            borderWidth: 2,
+            tension: 0.2,
+            fill: false,
+          },
+          {
+            label: 'Polling monthly cost ($)',
+            data: pollingCosts,
+            borderColor: '#fbbf24',
+            backgroundColor: 'rgba(251, 191, 36, 0.05)',
+            pointRadius: 0,
+            borderWidth: 2,
+            tension: 0.2,
+            fill: false,
+          }
+        ]
+      };
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(3)}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'Events per hour', color: '#94a3b8' },
+              ticks: { color: '#94a3b8', maxTicksLimit: 10 },
+              grid: { color: '#1e293b' }
+            },
+            y: {
+              title: { display: true, text: 'Monthly cost ($)', color: '#94a3b8' },
+              ticks: { color: '#94a3b8' },
+              grid: { color: '#1e293b' }
+            }
+          }
+        }
+      });
+    }
+
+    function updateAll() {
+      const vals = getValues();
+      const metrics = computeMetrics(vals);
+      renderResults(metrics);
+      drawChart(vals);
+    }
+
+    // attach listeners
+    const inputs = [eventsPerHourInput, pollIntervalInput, apiCostInput, webhookServerCostInput, processingTimeInput];
+    inputs.forEach(inp => inp.addEventListener('input', updateAll));
+
+    // init Chart.js (load from CDN)
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+    script.onload = () => {
+      updateAll();
+    };
+    document.head.appendChild(script);
+  })();
+</script>
+</body>
+</html>

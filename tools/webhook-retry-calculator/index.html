@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+  <title>Webhook Retry Calculator — Exponential Backoff Planner</title>
+  <meta name="description" content="Plan exponential backoff for webhooks: compute delays, cumulative time, jitter, and generate code snippets (Python tenacity, JS, curl). Dark theme...">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://invokebot.com/tools/webhook-retry-calculator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is exponential backoff?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Exponential backoff is a retry strategy where the delay between attempts increases exponentially, often with a multiplier. It helps reduce server load and improves success rates for transient failures."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is jitter?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Jitter adds randomness to the delay (0–50% of the calculated delay) to avoid thundering herd problems where many clients retry simultaneously."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are recommended retry settings for payment webhooks?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Payment webhooks need aggressive retries: low base delay (1–2s), moderate multiplier (2.0), max delay cap (30–60s), jitter enabled, up to 10–15 attempts."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What are recommended settings for notification webhooks?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Notification webhooks can use fewer retries (3–5), higher base delay (5–10s), multiplier 2.0–3.0, cap at 300s, jitter optional."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1200px;
+      width: 100%;
+    }
+    h1, h2, h3 {
+      font-weight: 500;
+      letter-spacing: -0.01em;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+      color: #f8fafc;
+      border-left: 5px solid #38bdf8;
+      padding-left: 1rem;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      font-size: 1rem;
+      padding-left: 1.2rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 20px;
+      padding: 1.8rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+      border: 1px solid #2d3a52;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+    .input-group {
+      margin-bottom: 1.2rem;
+    }
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 0.3rem;
+    }
+    input[type="number"], input[type="range"] {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 0.6rem 0.8rem;
+      border-radius: 40px;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s;
+    }
+    input[type="number"]:focus, input[type="range"]:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+    }
+    input[type="range"] {
+      padding: 0;
+      height: 6px;
+      background: #334155;
+      border-radius: 10px;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      border: 2px solid #0f172a;
+    }
+    .range-value {
+      display: inline-block;
+      background: #0f172a;
+      padding: 0.2rem 1rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      margin-top: 0.3rem;
+      border: 1px solid #334155;
+    }
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1rem 0 0.5rem;
+    }
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: #334155;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.active {
+      background: #38bdf8;
+    }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 20px;
+      height: 20px;
+      background: #e2e8f0;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle.active::after {
+      left: 25px;
+    }
+    .btn {
+      background: #38bdf8;
+      border: none;
+      color: #0f172a;
+      font-weight: 600;
+      padding: 0.7rem 2rem;
+      border-radius: 40px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      box-shadow: 0 4px 12px rgba(56,189,248,0.3);
+    }
+    .btn:hover {
+      background: #7dd3fc;
+      transform: scale(1.02);
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 1.5rem 0;
+    }
+    .stat {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 1rem;
+      text-align: center;
+      border: 1px solid #2d3a52;
+    }
+    .stat .value {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    .stat .label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .timeline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 1.5rem 0;
+      align-items: flex-end;
+    }
+    .timeline-item {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.7rem;
+      text-align: center;
+      min-width: 50px;
+      border: 1px solid #334155;
+      transition: 0.1s;
+    }
+    .timeline-item .delay {
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    .timeline-item .cum {
+      color: #94a3b8;
+      font-size: 0.6rem;
+    }
+    .code-snippets {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .code-block {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 1rem;
+      border: 1px solid #2d3a52;
+      position: relative;
+    }
+    .code-block pre {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #e2e8f0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .code-label {
+      font-size: 0.7rem;
+      color: #38bdf8;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .recommend {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 1.2rem;
+      margin-top: 1rem;
+      border-left: 4px solid #38bdf8;
+    }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #475569;
+      font-size: 0.9rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 2rem;
+    }
+    @media (max-width: 700px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+      h1 { font-size: 1.8rem; }
+      .card { padding: 1.2rem; }
+    }
+  </style>
+
+    <meta property="og:title" content="Webhook Retry Calculator — Exponential Backoff Planner">
+    <meta property="og:description" content="Plan exponential backoff for webhooks: compute delays, cumulative time, jitter, and generate code snippets (Python tenacity, JS, curl). Dark theme...">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/webhook-retry-calculator">
+</head>
+<body>
+<div class="container">
+  <h1>⏱️ Webhook Retry Calculator</h1>
+  <div class="subhead">Exponential backoff planner · invokebot.com</div>
+
+  <!-- Inputs -->
+  <div class="card">
+    <div class="grid-2">
+      <div>
+        <div class="input-group">
+          <label>Max retry attempts (1–20)</label>
+          <input type="number" id="maxRetries" min="1" max="20" value="5">
+        </div>
+        <div class="input-group">
+          <label>Base delay (seconds)</label>
+          <input type="number" id="baseDelay" min="0.1" max="300" step="0.1" value="2">
+        </div>
+        <div class="input-group">
+          <label>Backoff multiplier (1.5 – 4.0)</label>
+          <input type="range" id="multiplier" min="1.5" max="4.0" step="0.1" value="2.0">
+          <div><span class="range-value" id="multiplierDisplay">2.0</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="input-group">
+          <label>Max delay cap (seconds)</label>
+          <input type="number" id="maxCap" min="1" max="3600" value="60">
+        </div>
+        <div class="toggle-group">
+          <span>Jitter (0–50%)</span>
+          <div id="jitterToggle" class="toggle active"></div>
+          <span id="jitterStatus">ON</span>
+        </div>
+        <div style="margin-top: 1.5rem;">
+          <button class="btn" id="calculateBtn">⟳ Calculate & Visualize</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="resultsPanel">
+    <h2 style="margin-bottom: 0.5rem;">📊 Retry Plan</h2>
+    <div class="result-grid" id="statsGrid">
+      <div class="stat"><div class="value" id="totalAttempts">5</div><div class="label">Attempts</div></div>
+      <div class="stat"><div class="value" id="totalWindow">0.0s</div><div class="label">Total window</div></div>
+      <div class="stat"><div class="value" id="avgDelay">0.0s</div><div class="label">Avg delay</div></div>
+      <div class="stat"><div class="value" id="maxDelay">0.0s</div><div class="label">Max delay</div></div>
+    </div>
+    <h3 style="font-weight: 400; font-size: 1rem; margin: 0.5rem 0 0.2rem;">⏳ Timeline (attempt → delay)</h3>
+    <div id="timelineContainer" class="timeline"></div>
+
+    <!-- Recommendations -->
+    <div class="recommend">
+      <strong>💡 Recommendations</strong><br>
+      <span id="recommendationText">Payment webhooks: aggressive (low base, multiplier 2.0, jitter on, up to 10–15 attempts). Notifications: fewer retries (3–5), higher base delay.</span>
+    </div>
+  </div>
+
+  <!-- Code snippets -->
+  <div class="card">
+    <h2 style="margin-bottom: 1rem;">📎 Code snippets</h2>
+    <div class="code-snippets">
+      <div class="code-block"><div class="code-label">Python (tenacity)</div><pre id="pythonSnippet"># install: pip install tenacity</pre></div>
+      <div class="code-block"><div class="code-label">JavaScript (exponential-backoff)</div><pre id="jsSnippet">// npm install exponential-backoff</pre></div>
+      <div class="code-block"><div class="code-label">curl retry loop (bash)</div><pre id="curlSnippet">#!/bin/bash</pre></div>
+    </div>
+  </div>
+
+  <div class="footer">© 2025 invokebot.com</div>
+</div>
+
+<script>
+  (function() {
+    const maxRetriesInput = document.getElementById('maxRetries');
+    const baseDelayInput = document.getElementById('baseDelay');
+    const multiplierInput = document.getElementById('multiplier');
+    const multiplierDisplay = document.getElementById('multiplierDisplay');
+    const maxCapInput = document.getElementById('maxCap');
+    const jitterToggle = document.getElementById('jitterToggle');
+    const jitterStatus = document.getElementById('jitterStatus');
+    const calculateBtn = document.getElementById('calculateBtn');
+
+    // result elements
+    const totalAttemptsEl = document.getElementById('totalAttempts');
+    const totalWindowEl = document.getElementById('totalWindow');
+    const avgDelayEl = document.getElementById('avgDelay');
+    const maxDelayEl = document.getElementById('maxDelay');
+    const timelineContainer = document.getElementById('timelineContainer');
+    const recommendationText = document.getElementById('recommendationText');
+    const pythonSnippet = document.getElementById('pythonSnippet');
+    const jsSnippet = document.getElementById('jsSnippet');
+    const curlSnippet = document.getElementById('curlSnippet');
+
+    let jitterEnabled = true;
+
+    // toggle jitter
+    jitterToggle.addEventListener('click', function() {
+      this.classList.toggle('active');
+      jitterEnabled = this.classList.contains('active');
+      jitterStatus.textContent = jitterEnabled ? 'ON' : 'OFF';
+    });
+
+    // multiplier display sync
+    multiplierInput.addEventListener('input', function() {
+      multiplierDisplay.textContent = parseFloat(this.value).toFixed(1);
+    });
+
+    // main calculation
+    function compute() {
+      let maxRetries = parseInt(maxRetriesInput.value, 10);
+      if (isNaN(maxRetries) || maxRetries < 1) maxRetries = 1;
+      if (maxRetries > 20) maxRetries = 20;
+      maxRetriesInput.value = maxRetries;
+
+      let baseDelay = parseFloat(baseDelayInput.value);
+      if (isNaN(baseDelay) || baseDelay <= 0) baseDelay = 0.1;
+      baseDelayInput.value = baseDelay;
+
+      let multiplier = parseFloat(multiplierInput.value);
+      if (isNaN(multiplier) || multiplier < 1.5) multiplier = 1.5;
+      if (multiplier > 4.0) multiplier = 4.0;
+      multiplierInput.value = multiplier;
+      multiplierDisplay.textContent = multiplier.toFixed(1);
+
+      let maxCap = parseFloat(maxCapInput.value);
+      if (isNaN(maxCap) || maxCap < 1) maxCap = 1;
+      maxCapInput.value = maxCap;
+
+      const jitter = jitterEnabled;
+
+      // compute delays (for each retry attempt, index 0 = first retry after initial failure)
+      const delays = [];
+      let cumulative = 0;
+      let totalWindow = 0;
+      let maxDelayVal = 0;
+
+      for (let i = 0; i < maxRetries; i++) {
+        let delay = baseDelay * Math.pow(multiplier, i);
+        if (delay > maxCap) delay = maxCap;
+        if (jitter) {
+          const jitterRange = delay * 0.5; // 0-50%
+          const jitterAmount = Math.random() * jitterRange;
+          delay = delay + jitterAmount; // add positive jitter
+        }
+        delay = Math.round(delay * 100) / 100;
+        delays.push(delay);
+        if (delay > maxDelayVal) maxDelayVal = delay;
+      }
+
+      // cumulative times (time from first attempt start to each retry start)
+      const cumTimes = [];
+      let running = 0;
+      for (let i = 0; i < delays.length; i++) {
+        if (i === 0) {
+          cumTimes.push(delays[0]); // first retry delay after initial failure
+          running = delays[0];
+        } else {
+          running += delays[i];
+          cumTimes.push(running);
+        }
+      }
+      totalWindow = cumTimes.length > 0 ? cumTimes[cumTimes.length - 1] : 0;
+      const avgDelay = delays.length > 0 ? delays.reduce((a,b)=>a+b,0) / delays.length : 0;
+
+      // update stats
+      totalAttemptsEl.textContent = maxRetries;
+      totalWindowEl.textContent = totalWindow.toFixed(1) + 's';
+      avgDelayEl.textContent = avgDelay.toFixed(1) + 's';
+      maxDelayEl.textContent = maxDelayVal.toFixed(1) + 's';
+
+      // timeline
+      timelineContainer.innerHTML = '';
+      for (let i = 0; i < delays.length; i++) {
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+        item.innerHTML = `<div class="delay">${delays[i].toFixed(1)}s</div><div class="cum">#${i+1}</div>`;
+        timelineContainer.appendChild(item);
+      }
+
+      // recommendations
+      let rec = 'Payment webhooks: aggressive (low base delay 1–2s, multiplier 2.0, jitter on, up to 10–15 attempts). ';
+      rec += 'Notifications: fewer retries (3–5), higher base delay (5–10s), multiplier 2.0–3.0, cap 300s.';
+      recommendationText.textContent = rec;
+
+      // generate code snippets
+      // Python tenacity
+      let pyCode = `from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception\n\n@retry(\n    stop=stop_after_attempt(${maxRetries}),\n    wait=wait_exponential(multiplier=${multiplier.toFixed(1)}, min=${baseDelay}, max=${maxCap})${jitter ? ',\n    jitter=lambda: random.uniform(0, 0.5)' : ''}\n)`;
+      pyCode += `\ndef call_webhook():\n    # your webhook call\n    pass`;
+      pythonSnippet.textContent = pyCode;
+
+      // JS exponential-backoff
+      let jsCode = `const { backOff } = require("exponential-backoff");\n\nconst options = {\n  numOfAttempts: ${maxRetries},\n  startingDelay: ${baseDelay * 1000}, // ms\n  timeMultiple: ${multiplier.toFixed(1)},\n  maxDelay: ${maxCap * 1000}, // ms${jitter ? ',\n  jitter: "full"' : ''}\n};\n\nbackOff(() => {\n  // your fetch/axios call\n}, options);`;
+      jsSnippet.textContent = jsCode;
+
+      // curl retry loop (bash)
+      let curlCode = `#!/bin/bash\n\nmax_retries=${maxRetries}\nbase_delay=${baseDelay}\nmultiplier=${multiplier.toFixed(1)}\nmax_cap=${maxCap}\n\nfor ((i=0; i<max_retries; i++)); do\n  delay=$(echo "scale=2; $base_delay * ($multiplier ^ $i)" | bc)\n  if (( $(echo "$delay > $max_cap" | bc -l) )); then delay=$max_cap; fi\n  # optional jitter (0-50%)\n  if [ "$jitter" = true ]; then\n    jitter_amt=$(echo "scale=2; $delay * 0.5 * (RANDOM/32767)" | bc)\n    delay=$(echo "scale=2; $delay + $jitter_amt" | bc)\n  fi\n  echo "Attempt $((i+1)): waiting ${delay}s"\n  sleep $delay\n  curl -s -o /dev/null -w "%{http_code}" https://webhook.example.com\n  if [ $? -eq 0 ]; then break; fi\ndone`;
+      curlSnippet.textContent = curlCode;
+    }
+
+    // initial compute
+    compute();
+
+    calculateBtn.addEventListener('click', compute);
+    // also recompute on enter key? we just use button.
+    // but also recompute on change for range inputs? keep button for clarity.
+    // but we can auto compute on change for better UX? we'll bind to input changes.
+    [maxRetriesInput, baseDelayInput, multiplierInput, maxCapInput].forEach(el => {
+      el.addEventListener('change', compute);
+    });
+    // jitter toggle recompute
+    jitterToggle.addEventListener('click', function() {
+      setTimeout(compute, 20);
+    });
+  })();
+</script>
+</body>
+</html>

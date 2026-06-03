@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webhook Signature Generator — HMAC Authentication Builder</title>
+  <meta name="description" content="Interactive HMAC signature generator for webhooks. Supports SHA256, SHA1, SHA512, MD5. Includes verification tester, code snippets (Python, Node.js...">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://invokebot.com/tools/webhook-signature-generator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is HMAC webhook signature?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "HMAC (Hash-based Message Authentication Code) uses a secret key and a hash function to sign webhook payloads. Recipients verify authenticity and integrity by recomputing the signature with the shared secret."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why timing-safe comparison?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Timing-safe comparison (constant-time) prevents attackers from inferring the correct signature byte-by-byte via response time. Standard string comparison may leak timing information."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which providers use HMAC signatures?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Stripe uses HMAC-SHA256 with hex encoding. GitHub uses HMAC-SHA256 (hex) with header 'X-Hub-Signature-256'. Shopify uses HMAC-SHA256 with base64 encoding."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+    h1, h2, h3 {
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+      color: #f1f5f9;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      border-left: 4px solid #38bdf8;
+      padding-left: 1rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 1.25rem;
+      padding: 1.5rem 1.8rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.8rem;
+    }
+    @media (max-width: 800px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+      h1 { font-size: 1.8rem; }
+      .card { padding: 1.2rem; }
+    }
+    label {
+      display: block;
+      font-weight: 500;
+      margin-top: 1rem;
+      margin-bottom: 0.3rem;
+      color: #cbd5e1;
+    }
+    label:first-of-type {
+      margin-top: 0;
+    }
+    input, textarea, select {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.75rem;
+      padding: 0.7rem 1rem;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      transition: border 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.25);
+    }
+    textarea {
+      min-height: 120px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+    }
+    .btn {
+      background: #38bdf8;
+      color: #0f172a;
+      border: none;
+      font-weight: 600;
+      padding: 0.7rem 1.8rem;
+      border-radius: 2rem;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.2s;
+      margin-top: 1rem;
+    }
+    .btn:hover {
+      background: #7dd3fc;
+      transform: scale(1.02);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+    }
+    .btn-outline:hover {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    .result-box {
+      background: #0f172a;
+      border-radius: 0.75rem;
+      padding: 1rem 1.2rem;
+      margin-top: 1rem;
+      border: 1px solid #2d3a52;
+      word-break: break-all;
+    }
+    .result-label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+    }
+    .signature-hash {
+      font-family: 'SF Mono', monospace;
+      font-size: 1.1rem;
+      color: #bae6fd;
+    }
+    .code-snippet {
+      background: #0b1322;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      border-left: 4px solid #38bdf8;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 0.5rem 0;
+    }
+    .chip {
+      background: #2d3a52;
+      padding: 0.2rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      display: inline-block;
+      margin-right: 0.5rem;
+      color: #bae6fd;
+    }
+    .provider-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+    .provider-card {
+      background: #0f172a;
+      border-radius: 1rem;
+      padding: 0.8rem 1.2rem;
+      flex: 1 0 140px;
+      border: 1px solid #2d3a52;
+    }
+    .provider-card strong {
+      color: #38bdf8;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 1.5rem 0 0.5rem;
+      border-top: 1px solid #1e293b;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+    .inline-code {
+      background: #1e293b;
+      padding: 0.2rem 0.4rem;
+      border-radius: 6px;
+      font-family: monospace;
+    }
+    .success { color: #4ade80; }
+    .fail { color: #f87171; }
+    .mt-2 { margin-top: 1rem; }
+    .mb-1 { margin-bottom: 0.5rem; }
+  </style>
+
+    <meta property="og:title" content="Webhook Signature Generator — HMAC Authentication Builder">
+    <meta property="og:description" content="Interactive HMAC signature generator for webhooks. Supports SHA256, SHA1, SHA512, MD5. Includes verification tester, code snippets (Python, Node.js...">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/webhook-signature-generator">
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔐 Webhook Signature Generator</h1>
+    <div class="subhead">HMAC Authentication Builder — verify &amp; compare</div>
+  </header>
+
+  <!-- Main tool -->
+  <div class="card">
+    <div class="grid-2">
+      <!-- left: inputs -->
+      <div>
+        <label for="secret">🔑 Secret key</label>
+        <input type="text" id="secret" placeholder="e.g. whsec_abc123..." value="my_webhook_secret_key" />
+
+        <label for="body">📦 Request body (JSON)</label>
+        <textarea id="body" rows="5">{"event":"payment_intent.succeeded","data":{"id":"pi_12345","amount":2000}}</textarea>
+
+        <div class="flex-row" style="margin-top: 1rem;">
+          <div style="flex:1;">
+            <label for="algorithm">Algorithm</label>
+            <select id="algorithm">
+              <option value="sha256">HMAC-SHA256</option>
+              <option value="sha1">HMAC-SHA1</option>
+              <option value="sha512">HMAC-SHA512</option>
+              <option value="md5">HMAC-MD5</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label for="encoding">Encoding</label>
+            <select id="encoding">
+              <option value="hex">hex</option>
+              <option value="base64">base64</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn" id="generateBtn">⚡ Generate Signature</button>
+      </div>
+
+      <!-- right: results -->
+      <div>
+        <div>
+          <div class="result-label">🔐 Signature Hash</div>
+          <div class="result-box signature-hash" id="signatureHash">—</div>
+        </div>
+        <div class="mt-2">
+          <div class="result-label">📋 Full Header (X-Webhook-Signature)</div>
+          <div class="result-box" id="fullHeader" style="font-family: monospace;">—</div>
+        </div>
+        <div class="mt-2">
+          <div class="result-label">🧪 Verification Tester</div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.3rem;">
+            <input type="text" id="testSignature" placeholder="Paste received signature" style="flex:2; min-width:140px;" />
+            <button class="btn btn-outline" id="verifyBtn" style="margin-top:0; padding:0.6rem 1.2rem;">Verify</button>
+          </div>
+          <div id="verifyResult" style="margin-top: 0.5rem; font-weight: 500;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code snippets + provider info -->
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="display: flex; gap: 0.5rem; align-items: center;">📄 Code Snippets</h3>
+      <div id="codeSnippets">
+        <div><strong>Python</strong><div class="code-snippet" id="pythonSnippet"># generate</div></div>
+        <div class="mt-2"><strong>Node.js</strong><div class="code-snippet" id="nodeSnippet">// generate</div></div>
+        <div class="mt-2"><strong>Go</strong><div class="code-snippet" id="goSnippet">// generate</div></div>
+        <div class="mt-2"><strong>PHP</strong><div class="code-snippet" id="phpSnippet">// generate</div></div>
+      </div>
+      <div class="mt-2" style="background: #0f172a; border-radius: 0.75rem; padding: 0.8rem;">
+        <span style="color:#94a3b8;">⏱️ Timing-safe comparison:</span> 
+        <span class="inline-code">hash_equals($known, $user)</span> (PHP), 
+        <span class="inline-code">crypto.timingSafeEqual</span> (Node), 
+        <span class="inline-code">hmac.Equal</span> (Go), 
+        <span class="inline-code">compare_digest</span> (Python).
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🏢 Common provider formats</h3>
+      <div class="provider-grid">
+        <div class="provider-card"><strong>Stripe</strong><br/>HMAC-SHA256<br/>hex<br/><span class="chip">X-Webhook-Signature</span></div>
+        <div class="provider-card"><strong>GitHub</strong><br/>HMAC-SHA256<br/>hex<br/><span class="chip">X-Hub-Signature-256</span></div>
+        <div class="provider-card"><strong>Shopify</strong><br/>HMAC-SHA256<br/>base64<br/><span class="chip">X-Shopify-Hmac-Sha256</span></div>
+      </div>
+      <p style="margin-top: 1rem; font-size:0.9rem; color:#94a3b8;">Most providers use <strong>HMAC-SHA256</strong>. Stripe and GitHub use hex, Shopify uses base64.</p>
+    </div>
+  </div>
+
+  <footer class="footer">
+    © 2025 invokebot.com — Webhook Signature Generator
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const secretInput = document.getElementById('secret');
+    const bodyInput = document.getElementById('body');
+    const algorithmSelect = document.getElementById('algorithm');
+    const encodingSelect = document.getElementById('encoding');
+    const generateBtn = document.getElementById('generateBtn');
+    const signatureHashDiv = document.getElementById('signatureHash');
+    const fullHeaderDiv = document.getElementById('fullHeader');
+    const testSignatureInput = document.getElementById('testSignature');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const verifyResult = document.getElementById('verifyResult');
+    const pythonSnippet = document.getElementById('pythonSnippet');
+    const nodeSnippet = document.getElementById('nodeSnippet');
+    const goSnippet = document.getElementById('goSnippet');
+    const phpSnippet = document.getElementById('phpSnippet');
+
+    // HMAC sign function (browser)
+    function computeHMAC(secret, body, algorithm, encoding) {
+      const algoMap = {
+        'sha256': 'SHA-256',
+        'sha1': 'SHA-1',
+        'sha512': 'SHA-512',
+        'md5': 'MD5'
+      };
+      const algo = algoMap[algorithm];
+      if (!algo) throw new Error('Unsupported algorithm');
+      const encoder = new TextEncoder();
+      const keyData = encoder.encode(secret);
+      const bodyData = encoder.encode(body);
+      return crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: algo }, false, ['sign'])
+        .then(key => crypto.subtle.sign('HMAC', key, bodyData))
+        .then(sig => {
+          const array = new Uint8Array(sig);
+          if (encoding === 'hex') {
+            return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+          } else { // base64
+            return btoa(String.fromCharCode(...array));
+          }
+        });
+    }
+
+    // Update UI
+    async function generateAndUpdate() {
+      const secret = secretInput.value.trim();
+      const body = bodyInput.value;
+      const algorithm = algorithmSelect.value;
+      const encoding = encodingSelect.value;
+
+      if (!secret) { alert('Please enter a secret key.'); return; }
+      if (!body) { alert('Please paste request body.'); return; }
+
+      try {
+        const sig = await computeHMAC(secret, body, algorithm, encoding);
+        const prefix = algorithm === 'sha256' ? 'sha256=' : algorithm === 'sha1' ? 'sha1=' : algorithm === 'sha512' ? 'sha512=' : 'md5=';
+        const fullHeader = `X-Webhook-Signature: ${prefix}${sig}`;
+        signatureHashDiv.textContent = sig;
+        fullHeaderDiv.textContent = fullHeader;
+
+        // update code snippets
+        const algoUpper = algorithm.toUpperCase();
+        const enc = encoding;
+        const hexOrBase64 = enc === 'hex' ? 'hex' : 'base64';
+        // Python
+        pythonSnippet.textContent = `import hmac, hashlib, base64\nsecret = b"${secret}"\nbody = b"""${body}"""\nsig = hmac.new(secret, body, hashlib.${algorithm}).${enc}()\nprint(sig)`;
+        // Node
+        nodeSnippet.textContent = `const crypto = require('crypto');\nconst secret = '${secret}';\nconst body = \`${body}\`;\nconst sig = crypto.createHmac('${algorithm}', secret).update(body).digest('${enc}');\nconsole.log(sig);`;
+        // Go
+        goSnippet.textContent = `package main\nimport ("crypto/hmac";"crypto/${algorithm}";"encoding/${enc}";"fmt")\nfunc main() {\n  secret := []byte("${secret}")\n  body := []byte(\`${body}\`)\n  mac := hmac.New(${algorithm}.New, secret)\n  mac.Write(body)\n  sig := ${enc === 'hex' ? 'hex' : 'base64'}.EncodeToString(mac.Sum(nil))\n  fmt.Println(sig)\n}`;
+        // PHP
+        phpSnippet.textContent = `<?php\n$secret = '${secret}';\n$body = '${body}';\n$sig = hash_hmac('${algorithm}', $body, $secret, false); // hex\n// base64: base64_encode(hash_hmac('${algorithm}', $body, $secret, true));\necho $sig;`;
+
+        // auto-update verification tester placeholder
+        testSignatureInput.placeholder = sig.slice(0, 16) + '...';
+      } catch (e) {
+        alert('Error generating signature: ' + e.message);
+      }
+    }
+
+    // Verification tester (timing-safe simulated)
+    function verifySignature() {
+      const receivedSig = testSignatureInput.value.trim();
+      const currentSig = signatureHashDiv.textContent;
+      const secret = secretInput.value.trim();
+      const body = bodyInput.value;
+      const algorithm = algorithmSelect.value;
+      const encoding = encodingSelect.value;
+
+      if (!receivedSig) { verifyResult.textContent = '⚠️ Paste a signature to verify.'; verifyResult.className = ''; return; }
+      if (currentSig === '—' || !currentSig) { verifyResult.textContent = '⚠️ Generate a signature first.'; verifyResult.className = ''; return; }
+
+      // timing-safe compare (constant-time) using double-hmac or naive but we simulate
+      // For demo, we use a simple constant-time compare function
+      function timingSafeEqual(a, b) {
+        if (a.length !== b.length) return false;
+        let result = 0;
+        for (let i = 0; i < a.length; i++) {
+          result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+        }
+        return result === 0;
+      }
+
+      const match = timingSafeEqual(receivedSig, currentSig);
+      if (match) {
+        verifyResult.innerHTML = '✅ <strong>Signature MATCH</strong> — payload verified (timing-safe).';
+        verifyResult.className = 'success';
+      } else {
+        verifyResult.innerHTML = '❌ <strong>Signature MISMATCH</strong> — check secret, body, algorithm, encoding.';
+        verifyResult.className = 'fail';
+      }
+    }
+
+    // Event listeners
+    generateBtn.addEventListener('click', generateAndUpdate);
+    verifyBtn.addEventListener('click', verifySignature);
+
+    // initial generation
+    window.addEventListener('DOMContentLoaded', () => {
+      generateAndUpdate();
+    });
+
+    // also update on algorithm/encoding change?
+    algorithmSelect.addEventListener('change', generateAndUpdate);
+    encodingSelect.addEventListener('change', generateAndUpdate);
+    // optional: debounce on body/secret? we keep manual generate
+  })();
+</script>
+</body>
+</html>

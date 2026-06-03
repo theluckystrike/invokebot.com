@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>Idempotency Key Generator — Prevent Duplicate Webhook Processing</title>
+  <meta name="description" content="Generate idempotency keys (UUIDv4, UUIDv7, ULID, nanoid, custom prefix) for webhook idempotency. Prevent duplicate processing with collision-safe keys.">
+  <link rel="canonical" href="https://invokebot.com/tools/idempotency-key-generator">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Idempotency Key Generator — invokebot.com">
+  <meta property="og:description" content="Free tool to generate idempotency keys: UUIDv4, UUIDv7, ULID, nanoid, custom prefix. Includes collision probability, entropy, and code examples.">
+  <meta property="og:url" content="https://invokebot.com/tools/idempotency-key-generator">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What is an idempotency key?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "An idempotency key is a unique identifier sent with a webhook or API request to ensure that processing the same event multiple times results in the same outcome, preventing duplicate side effects."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Which key format is best for idempotency?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "UUIDv7 and ULID are time-sortable, ideal for database indexing. UUIDv4 is universally unique. Nanoid is compact and customizable. Choose based on your storage and sorting needs."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How to store idempotency keys?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Use Redis with TTL (e.g., 24h) for fast lookups, or a database deduplication table with a unique constraint on the key column. Always expire old keys to free space."
+        }
+      }
+    ]
+  }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 1100px;
+      width: 100%;
+    }
+    h1, h2, h3 {
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.25rem;
+      color: #f1f5f9;
+    }
+    .subhead {
+      color: #94a3b8;
+      margin-bottom: 2rem;
+      font-size: 1.05rem;
+      border-left: 4px solid #38bdf8;
+      padding-left: 1rem;
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.2rem 2rem;
+      align-items: flex-end;
+    }
+    .form-group {
+      flex: 1 1 180px;
+      min-width: 140px;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    select, input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 14px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.2);
+    }
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1.5rem;
+    }
+    .btn {
+      background: #1e293b;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      padding: 0.6rem 1.6rem;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .btn-primary {
+      background: #38bdf8;
+      color: #0f172a;
+      border: 1px solid #38bdf8;
+    }
+    .btn-primary:hover {
+      background: #7dd3fc;
+      border-color: #7dd3fc;
+    }
+    .btn:hover {
+      background: #334155;
+    }
+    .btn-copy {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 0.3rem 0.9rem;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn-copy:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: #38bdf8;
+    }
+    .key-list {
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .key-item {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 0.6rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #2d3a4e;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      word-break: break-all;
+    }
+    .key-value {
+      font-size: 0.95rem;
+      letter-spacing: 0.2px;
+      color: #e2e8f0;
+      margin-right: 1rem;
+    }
+    .key-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.5rem;
+      margin: 1rem 0 0.5rem;
+      font-size: 0.9rem;
+      background: #0f172a;
+      padding: 0.8rem 1.2rem;
+      border-radius: 20px;
+      border: 1px solid #2a3a4e;
+    }
+    .key-meta span {
+      color: #94a3b8;
+    }
+    .key-meta strong {
+      color: #e2e8f0;
+      font-weight: 500;
+    }
+    .explain {
+      background: #1e293b;
+      border-radius: 24px;
+      padding: 1.8rem;
+      margin-bottom: 2rem;
+      border: 1px solid #334155;
+    }
+    .explain h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #f1f5f9;
+    }
+    .explain p, .explain li {
+      color: #cbd5e1;
+      margin-bottom: 0.6rem;
+    }
+    .explain ul {
+      padding-left: 1.5rem;
+    }
+    .code-block {
+      background: #0f172a;
+      border-radius: 18px;
+      padding: 1.2rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      font-family: 'SF Mono', monospace;
+      font-size: 0.85rem;
+      border: 1px solid #2d3a4e;
+      color: #a5b4fc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.9rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 2rem;
+    }
+    .badge {
+      background: #1e293b;
+      border-radius: 30px;
+      padding: 0.2rem 0.8rem;
+      font-size: 0.7rem;
+      color: #94a3b8;
+      border: 1px solid #334155;
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.8rem; }
+      .card { padding: 1.2rem; }
+      .key-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>🔑 Idempotency Key Generator</h1>
+    <div class="subhead">Prevent duplicate webhook processing · invokebot.com</div>
+  </header>
+
+  <!-- Generator -->
+  <div class="card">
+    <div class="flex-row">
+      <div class="form-group">
+        <label>Key format</label>
+        <select id="formatSelect">
+          <option value="uuidv4">UUID v4</option>
+          <option value="uuidv7" selected>UUID v7 (time-ordered)</option>
+          <option value="ulid">ULID</option>
+          <option value="nanoid">nanoid</option>
+          <option value="custom">custom prefix + random</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Prefix (optional)</label>
+        <input type="text" id="prefixInput" placeholder="e.g. evt_, wh_" value="wh_">
+      </div>
+      <div class="form-group">
+        <label>Batch size (1–100)</label>
+        <input type="number" id="batchInput" min="1" max="100" value="3">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="generateBtn">⚡ Generate</button>
+      <button class="btn" id="copyAllBtn">📋 Copy all</button>
+    </div>
+
+    <!-- Key display -->
+    <div id="keyContainer" class="key-list"></div>
+    <div id="propertiesArea" class="key-meta" style="display: none;"></div>
+  </div>
+
+  <!-- Explanation & strategies -->
+  <div class="explain">
+    <h2>🧠 Idempotency in webhook processing</h2>
+    <p>Webhooks can be delivered more than once (retries, network issues). An <strong>idempotency key</strong> ensures that processing the same event multiple times has the same effect — no duplicate charges, no double notifications.</p>
+    <ul>
+      <li><strong>Storage strategies:</strong> Redis with TTL (e.g., 24h) for fast lookups, or a database dedup table with a unique constraint on the key column. Always expire old keys.</li>
+      <li><strong>Key properties:</strong> Time-sortable keys (UUIDv7, ULID) improve database index performance. High entropy reduces collision risk.</li>
+    </ul>
+    <h3 style="margin-top:1.2rem; color:#e2e8f0;">📘 Code example: idempotent handler</h3>
+    <div class="code-block">
+// Python (Flask)
+@app.post('/webhook')
+def webhook():
+    key = request.headers.get('Idempotency-Key')
+    if redis.exists(key):
+        return {'status': 'already processed'}, 200
+    # process event ...
+    redis.setex(key, 86400, 'processed')
+    return {'status': 'ok'}, 201
+    </div>
+    <div class="code-block">
+// Node.js (Express)
+app.post('/webhook', async (req, res) => {
+  const key = req.headers['idempotency-key'];
+  const exists = await db.query('SELECT 1 FROM dedup WHERE key = $1', [key]);
+  if (exists.rows.length) return res.status(200).json({ status: 'duplicate' });
+  // process ...
+  await db.query('INSERT INTO dedup (key, created) VALUES ($1, NOW())', [key]);
+  res.status(201).json({ status: 'created' });
+});
+    </div>
+  </div>
+
+  <footer class="footer">
+    © 2025 invokebot.com — Idempotency Key Generator
+  </footer>
+</div>
+
+<script>
+  (function() {
+    // ----- helpers -----
+    function uuidv4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+    }
+
+    function uuidv7() {
+      // time-ordered UUID (RFC 9562) - 48 bit timestamp ms + random
+      const ts = Date.now();
+      const hexTs = ts.toString(16).padStart(12, '0');
+      const randomHex = () => Math.floor(Math.random() * 16).toString(16);
+      let r1 = '', r2 = '', r3 = '';
+      for (let i = 0; i < 4; i++) r1 += randomHex();
+      for (let i = 0; i < 12; i++) r2 += randomHex();
+      // version 7
+      const version = '7';
+      const variant = '8';
+      return `${hexTs.slice(0,8)}-${hexTs.slice(8,12)}-${version}${r1.slice(0,3)}-${variant}${r2.slice(0,3)}-${r2.slice(4)}`;
+    }
+
+    function ulid() {
+      const ts = Date.now().toString(36).toUpperCase().padStart(10, '0');
+      const chars = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+      let random = '';
+      for (let i = 0; i < 16; i++) random += chars[Math.floor(Math.random() * 32)];
+      return ts + random;
+    }
+
+    function nanoid(size = 21) {
+      const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
+      let id = '';
+      for (let i = 0; i < size; i++) id += alphabet[Math.floor(Math.random() * 64)];
+      return id;
+    }
+
+    function customPrefix(prefix) {
+      const random = nanoid(16);
+      return prefix + random;
+    }
+
+    function generateKey(format, prefix) {
+      switch (format) {
+        case 'uuidv4': return uuidv4();
+        case 'uuidv7': return uuidv7();
+        case 'ulid': return ulid();
+        case 'nanoid': return nanoid();
+        case 'custom': return customPrefix(prefix || '');
+        default: return uuidv4();
+      }
+    }
+
+    // properties
+    function getKeyProperties(key, format) {
+      const length = key.length;
+      let entropyBits = 0;
+      // approximate entropy based on character set
+      const chars = new Set(key);
+      let pool = 0;
+      if (/^[0-9a-f-]+$/.test(key) && format.includes('uuid')) pool = 16; // hex + dash
+      else if (format === 'ulid') pool = 32; // base32
+      else if (format === 'nanoid' || format === 'custom') pool = 64; // base64url
+      else pool = 16;
+      // count unique chars used
+      const unique = chars.size;
+      pool = Math.max(pool, unique);
+      entropyBits = length * Math.log2(pool);
+      // collision probability for N=1000 (approx)
+      const collisionProb = (1000 * 999) / (2 * Math.pow(2, Math.min(entropyBits, 128)));
+      const timeSortable = (format === 'uuidv7' || format === 'ulid') ? 'Yes' : 'No';
+      return { length, entropyBits: Math.round(entropyBits), collisionProb: collisionProb.toExponential(2), timeSortable };
+    }
+
+    // render
+    const container = document.getElementById('keyContainer');
+    const propertiesDiv = document.getElementById('propertiesArea');
+    const generateBtn = document.getElementById('generateBtn');
+    const copyAllBtn = document.getElementById('copyAllBtn');
+    const formatSelect = document.getElementById('formatSelect');
+    const prefixInput = document.getElementById('prefixInput');
+    const batchInput = document.getElementById('batchInput');
+
+    function renderKeys() {
+      const format = formatSelect.value;
+      const prefix = prefixInput.value.trim();
+      let batch = parseInt(batchInput.value, 10);
+      if (isNaN(batch) || batch < 1) batch = 1;
+      if (batch > 100) batch = 100;
+
+      const keys = [];
+      for (let i = 0; i < batch; i++) {
+        keys.push(generateKey(format, prefix));
+      }
+
+      // show keys
+      let html = '';
+      keys.forEach((k, idx) => {
+        html += `<div class="key-item">
+          <span class="key-value">${k}</span>
+          <button class="btn-copy" data-key="${k}">📋 Copy</button>
+        </div>`;
+      });
+      container.innerHTML = html;
+
+      // properties for first key
+      if (keys.length > 0) {
+        const props = getKeyProperties(keys[0], format);
+        propertiesDiv.style.display = 'flex';
+        propertiesDiv.innerHTML = `
+          <span><strong>Length</strong> ${props.length}</span>
+          <span><strong>Entropy</strong> ~${props.entropyBits} bits</span>
+          <span><strong>Collision (1K keys)</strong> ${props.collisionProb}</span>
+          <span><strong>Time-sortable</strong> ${props.timeSortable}</span>
+        `;
+      } else {
+        propertiesDiv.style.display = 'none';
+      }
+
+      // attach copy events
+      document.querySelectorAll('.btn-copy').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          const key = this.dataset.key;
+          navigator.clipboard.writeText(key).then(() => {
+            const orig = this.textContent;
+            this.textContent = '✅ Copied';
+            setTimeout(() => { this.textContent = orig; }, 1500);
+          }).catch(() => {
+            // fallback
+            const textarea = document.createElement('textarea');
+            textarea.value = key;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            this.textContent = '✅ Copied';
+            setTimeout(() => { this.textContent = '📋 Copy'; }, 1500);
+          });
+        });
+      });
+    }
+
+    // copy all
+    copyAllBtn.addEventListener('click', function() {
+      const keyElements = container.querySelectorAll('.key-value');
+      const allKeys = Array.from(keyElements).map(el => el.textContent).join('\n');
+      if (!allKeys) return;
+      navigator.clipboard.writeText(allKeys).then(() => {
+        const orig = this.textContent;
+        this.textContent = '✅ Copied all';
+        setTimeout(() => { this.textContent = orig; }, 1800);
+      }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = allKeys;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        this.textContent = '✅ Copied all';
+        setTimeout(() => { this.textContent = '📋 Copy all'; }, 1800);
+      });
+    });
+
+    generateBtn.addEventListener('click', renderKeys);
+    // initial render
+    renderKeys();
+
+    // re-generate on format/prefix change? optional but nice
+    formatSelect.addEventListener('change', renderKeys);
+    prefixInput.addEventListener('input', renderKeys);
+    batchInput.addEventListener('change', renderKeys);
+  })();
+</script>
+</body>
+</html>

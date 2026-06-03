@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>Event Schema Validator — Validate JSON Webhook Payloads | invokebot.com</title>
+  <meta name="description" content="Validate JSON webhook payloads against JSON Schema. Stripe, GitHub, Slack presets. Schema builder, error highlighting, line numbers. Free tool by invokebot.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://invokebot.com/tools/event-schema-validator">
+  <!-- JSON-LD FAQ -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does the Event Schema Validator work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Paste a JSON Schema (or choose a preset), paste a JSON payload, then click Validate. The tool checks required fields, types, and extra properties, and lists errors with JSON paths."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What presets are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Stripe webhook, GitHub webhook, Slack event, and a custom template. Each preset provides a realistic schema for testing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the schema builder generate valid JSON Schema?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Add fields with name, type, required toggle, and description. The builder outputs a JSON Schema draft-07 compatible schema."
+          }
+        }
+      ]
+    }
+  </script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      border-bottom: 1px solid #1e293b;
+      padding-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #38bdf8, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+    }
+    .sub {
+      color: #94a3b8;
+      font-size: 0.9rem;
+      margin-top: 0.2rem;
+    }
+    .tool-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 800px) {
+      .tool-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card {
+      background: #1e293b;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      border: 1px solid #334155;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .card-header h2 {
+      font-size: 1.2rem;
+      font-weight: 500;
+      color: #f1f5f9;
+    }
+    .preset-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .preset-btn {
+      background: #334155;
+      border: none;
+      color: #cbd5e1;
+      padding: 0.3rem 0.8rem;
+      border-radius: 2rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .preset-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+    .preset-btn:active { transform: scale(0.96); }
+    textarea, .json-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 0.6rem;
+      color: #e2e8f0;
+      padding: 0.75rem;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      resize: vertical;
+      min-height: 160px;
+    }
+    textarea:focus {
+      outline: 2px solid #38bdf8;
+      outline-offset: 2px;
+    }
+    .action-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin: 1rem 0 0.8rem;
+      align-items: center;
+    }
+    .btn-primary {
+      background: #38bdf8;
+      border: none;
+      color: #0f172a;
+      font-weight: 600;
+      padding: 0.6rem 1.8rem;
+      border-radius: 2rem;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: 0.15s;
+      box-shadow: 0 2px 8px rgba(56,189,248,0.3);
+    }
+    .btn-primary:hover {
+      background: #7dd3fc;
+      transform: scale(1.02);
+    }
+    .btn-secondary {
+      background: #334155;
+      border: none;
+      color: #e2e8f0;
+      padding: 0.5rem 1.2rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: #475569; }
+    .status-badge {
+      display: inline-block;
+      padding: 0.25rem 1rem;
+      border-radius: 2rem;
+      font-weight: 600;
+      font-size: 0.8rem;
+      margin-left: 0.5rem;
+    }
+    .valid { background: #10b981; color: #0f172a; }
+    .invalid { background: #ef4444; color: #fff; }
+    .error-list {
+      background: #0f172a;
+      border-radius: 0.6rem;
+      padding: 0.8rem;
+      margin-top: 0.8rem;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: 0.8rem;
+      border: 1px solid #334155;
+    }
+    .error-item {
+      padding: 0.3rem 0;
+      border-bottom: 1px solid #1e293b;
+      display: flex;
+      gap: 0.5rem;
+    }
+    .error-path {
+      color: #fca5a5;
+      font-weight: 500;
+    }
+    .error-msg {
+      color: #f1f5f9;
+    }
+    .line-highlight {
+      background: rgba(239, 68, 68, 0.15);
+      display: block;
+      border-left: 3px solid #ef4444;
+      padding-left: 0.5rem;
+    }
+    .schema-builder {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .builder-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      background: #0f172a;
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.5rem;
+    }
+    .builder-row input, .builder-row select {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 0.3rem 0.5rem;
+      border-radius: 0.3rem;
+      font-size: 0.75rem;
+    }
+    .builder-row input[type="text"] { flex: 1 1 100px; }
+    .builder-row input[type="checkbox"] { width: 1rem; height: 1rem; }
+    .builder-row label { font-size: 0.7rem; color: #94a3b8; }
+    .footer {
+      margin-top: 3rem;
+      text-align: center;
+      color: #475569;
+      font-size: 0.85rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 1.5rem;
+    }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+    .mt-1 { margin-top: 0.6rem; }
+    .mb-1 { margin-bottom: 0.6rem; }
+    .generated-schema {
+      background: #0f172a;
+      border-radius: 0.5rem;
+      padding: 0.5rem;
+      font-size: 0.7rem;
+      border: 1px solid #334155;
+      max-height: 120px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-top: 0.5rem;
+    }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <h1>⚡ Event Schema Validator</h1>
+      <div class="sub">Validate JSON webhook payloads against JSON Schema</div>
+    </div>
+    <div style="color:#64748b; font-size:0.8rem;">invokebot.com</div>
+  </header>
+
+  <div class="tool-grid">
+    <!-- LEFT: Schema input + builder -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📐 Schema</h2>
+        <div class="preset-group">
+          <button class="preset-btn" data-preset="stripe">Stripe</button>
+          <button class="preset-btn" data-preset="github">GitHub</button>
+          <button class="preset-btn" data-preset="slack">Slack</button>
+          <button class="preset-btn" data-preset="custom">Custom</button>
+        </div>
+      </div>
+      <textarea id="schemaInput" rows="6" placeholder='Paste JSON Schema here...' spellcheck="false">{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["event", "data"],
+  "properties": {
+    "event": { "type": "string" },
+    "data": { "type": "object", "required": ["id"], "properties": { "id": { "type": "integer" } } }
+  }
+}</textarea>
+      
+      <div class="flex-between mt-1">
+        <span style="color:#94a3b8; font-size:0.75rem;">⬇️ Schema builder</span>
+        <button class="btn-secondary" id="generateSchemaBtn" style="padding:0.2rem 1rem;">Generate from fields</button>
+      </div>
+      <div class="schema-builder" id="schemaBuilder">
+        <div class="builder-row">
+          <input type="text" class="field-name" placeholder="field name" value="event">
+          <select class="field-type">
+            <option value="string">string</option><option value="integer">integer</option><option value="number">number</option><option value="boolean">boolean</option><option value="object">object</option><option value="array">array</option>
+          </select>
+          <label><input type="checkbox" class="field-required" checked> required</label>
+          <input type="text" class="field-desc" placeholder="description (optional)" value="Event type">
+        </div>
+        <div class="builder-row">
+          <input type="text" class="field-name" placeholder="field name" value="data">
+          <select class="field-type"><option value="object">object</option><option value="string">string</option><option value="integer">integer</option></select>
+          <label><input type="checkbox" class="field-required" checked> required</label>
+          <input type="text" class="field-desc" placeholder="description" value="Payload data">
+        </div>
+        <div class="builder-row">
+          <input type="text" class="field-name" placeholder="field name" value="timestamp">
+          <select class="field-type"><option value="string">string</option><option value="integer">integer</option></select>
+          <label><input type="checkbox" class="field-required"> required</label>
+          <input type="text" class="field-desc" placeholder="description" value="ISO timestamp">
+        </div>
+      </div>
+      <div class="generated-schema" id="generatedSchemaPreview">Generated schema will appear here</div>
+    </div>
+
+    <!-- RIGHT: Payload input + validation -->
+    <div class="card">
+      <div class="card-header">
+        <h2>📦 Payload</h2>
+        <span style="font-size:0.75rem; color:#94a3b8;">paste JSON</span>
+      </div>
+      <textarea id="payloadInput" rows="6" placeholder='Paste JSON payload...' spellcheck="false">{
+  "event": "payment_intent.succeeded",
+  "data": { "id": 12345 }
+}</textarea>
+      <div class="action-bar">
+        <button class="btn-primary" id="validateBtn">✅ Validate</button>
+        <button class="btn-secondary" id="clearBtn">Clear</button>
+        <span id="statusBadge" class="status-badge" style="opacity:0;">Ready</span>
+      </div>
+      <div id="errorContainer" class="error-list" style="display:none;"></div>
+      <div id="lineHighlightContainer" style="margin-top:0.5rem; font-size:0.75rem; color:#94a3b8; max-height:150px; overflow-y:auto; background:#0f172a; border-radius:0.5rem; padding:0.4rem; border:1px solid #334155; white-space:pre-wrap; font-family:monospace;"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">© 2025 invokebot.com — Event Schema Validator</div>
+</div>
+
+<script>
+  (function() {
+    // DOM refs
+    const schemaInput = document.getElementById('schemaInput');
+    const payloadInput = document.getElementById('payloadInput');
+    const validateBtn = document.getElementById('validateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusBadge = document.getElementById('statusBadge');
+    const errorContainer = document.getElementById('errorContainer');
+    const lineHighlightContainer = document.getElementById('lineHighlightContainer');
+    const generateSchemaBtn = document.getElementById('generateSchemaBtn');
+    const generatedPreview = document.getElementById('generatedSchemaPreview');
+
+    // Presets
+    const presets = {
+      stripe: {
+        schema: JSON.stringify({ "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "required": ["id", "object", "type"], "properties": { "id": { "type": "string" }, "object": { "type": "string" }, "type": { "type": "string" }, "data": { "type": "object", "properties": { "object": { "type": "object" } } } } }, null, 2),
+        payload: JSON.stringify({ "id": "evt_123", "object": "event", "type": "payment_intent.succeeded", "data": { "object": { "id": "pi_456" } } }, null, 2)
+      },
+      github: {
+        schema: JSON.stringify({ "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "required": ["action", "repository"], "properties": { "action": { "type": "string" }, "repository": { "type": "object", "required": ["id", "name"], "properties": { "id": { "type": "integer" }, "name": { "type": "string" } } } } }, null, 2),
+        payload: JSON.stringify({ "action": "opened", "repository": { "id": 123, "name": "my-repo" } }, null, 2)
+      },
+      slack: {
+        schema: JSON.stringify({ "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "required": ["token", "team_id", "event"], "properties": { "token": { "type": "string" }, "team_id": { "type": "string" }, "event": { "type": "object", "required": ["type"], "properties": { "type": { "type": "string" } } } } }, null, 2),
+        payload: JSON.stringify({ "token": "xxyyzz", "team_id": "T001", "event": { "type": "message" } }, null, 2)
+      },
+      custom: {
+        schema: JSON.stringify({ "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "required": ["event", "data"], "properties": { "event": { "type": "string" }, "data": { "type": "object", "required": ["id"], "properties": { "id": { "type": "integer" } } } } }, null, 2),
+        payload: JSON.stringify({ "event": "test", "data": { "id": 1 } }, null, 2)
+      }
+    };
+
+    // Load preset
+    document.querySelectorAll('[data-preset]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const key = this.dataset.preset;
+        if (presets[key]) {
+          schemaInput.value = presets[key].schema;
+          payloadInput.value = presets[key].payload;
+          clearValidation();
+        }
+      });
+    });
+
+    // Clear
+    clearBtn.addEventListener('click', function() {
+      payloadInput.value = '';
+      schemaInput.value = '';
+      clearValidation();
+    });
+
+    function clearValidation() {
+      statusBadge.style.opacity = '0';
+      statusBadge.className = 'status-badge';
+      errorContainer.style.display = 'none';
+      errorContainer.innerHTML = '';
+      lineHighlightContainer.innerHTML = '';
+    }
+
+    // Generate schema from builder
+    generateSchemaBtn.addEventListener('click', function() {
+      const rows = document.querySelectorAll('#schemaBuilder .builder-row');
+      const properties = {};
+      const required = [];
+      rows.forEach(row => {
+        const name = row.querySelector('.field-name').value.trim();
+        if (!name) return;
+        const type = row.querySelector('.field-type').value;
+        const isRequired = row.querySelector('.field-required').checked;
+        const desc = row.querySelector('.field-desc').value.trim();
+        const prop = { type: type };
+        if (desc) prop.description = desc;
+        properties[name] = prop;
+        if (isRequired) required.push(name);
+      });
+      const schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": required,
+        "properties": properties
+      };
+      const schemaStr = JSON.stringify(schema, null, 2);
+      schemaInput.value = schemaStr;
+      generatedPreview.textContent = '✅ Schema generated. You can edit manually.';
+      clearValidation();
+    });
+
+    // Validation engine (simple draft-07 subset)
+    function validateAgainstSchema(schema, data, path = '$') {
+      const errors = [];
+      if (typeof schema !== 'object' || schema === null) return errors;
+
+      // type check
+      if (schema.type) {
+        const typeMap = { 'string': 'string', 'integer': 'number', 'number': 'number', 'boolean': 'boolean', 'object': 'object', 'array': 'array' };
+        const expectedType = schema.type;
+        let actualType = typeof data;
+        if (actualType === 'number' && schema.type === 'integer') {
+          if (!Number.isInteger(data)) {
+            errors.push({ path, message: `Expected integer, got number (${data})` });
+          }
+        } else if (expectedType === 'array' && !Array.isArray(data)) {
+          errors.push({ path, message: `Expected array, got ${actualType}` });
+        } else if (expectedType !== 'array' && actualType !== expectedType && !(expectedType === 'integer' && actualType === 'number')) {
+          if (expectedType === 'integer' && actualType === 'number') { /* ok */ }
+          else if (expectedType !== actualType) {
+            errors.push({ path, message: `Expected ${expectedType}, got ${actualType}` });
+          }
+        }
+      }
+
+      // required
+      if (schema.required && Array.isArray(schema.required) && typeof data === 'object' && !Array.isArray(data) && data !== null) {
+        for (const req of schema.required) {
+          if (!(req in data)) {
+            errors.push({ path, message: `Missing required field '${req}'` });
+          }
+        }
+      }
+
+      // properties (object)
+      if (schema.properties && typeof data === 'object' && !Array.isArray(data) && data !== null) {
+        for (const [key, propSchema] of Object.entries(schema.properties)) {
+          if (key in data) {
+            const childPath = `${path}.${key}`;
+            errors.push(...validateAgainstSchema(propSchema, data[key], childPath));
+          }
+        }
+        // extra properties (additionalProperties: false by default)
+        if (schema.additionalProperties === false) {
+          const allowed = new Set(Object.keys(schema.properties));
+          for (const key of Object.keys(data)) {
+            if (!allowed.has(key)) {
+              errors.push({ path: `${path}.${key}`, message: `Extra property '${key}' not allowed` });
+            }
+          }
+        }
+      }
+
+      // items (array)
+      if (schema.items && Array.isArray(data)) {
+        data.forEach((item, idx) => {
+          errors.push(...validateAgainstSchema(schema.items, item, `${path}[${idx}]`));
+        });
+      }
+
+      return errors;
+    }
+
+    // Highlight errors in payload with line numbers
+    function highlightErrors(payloadStr, errors) {
+      if (!payloadStr) return '';
+      const lines = payloadStr.split('\n');
+      const errorPaths = new Set(errors.map(e => e.path));
+      // simple line highlighting: mark lines that contain error path (approximate)
+      let result = '';
+      lines.forEach((line, idx) => {
+        const lineNum = idx + 1;
+        let highlight = false;
+        for (const errPath of errorPaths) {
+          // check if line includes the path key (rough)
+          const lastKey = errPath.split('.').pop();
+          if (lastKey && line.includes(lastKey) && (line.includes('"') || line.includes(':'))) {
+            highlight = true;
+            break;
+          }
+        }
+        const prefix = highlight ? '🚫 ' : '   ';
+        const cls = highlight ? 'line-highlight' : '';
+        result += `<span class="${cls}">${prefix}${lineNum.toString().padStart(3, ' ')}: ${line}</span>\n`;
+      });
+      return result;
+    }
+
+    // Main validate
+    validateBtn.addEventListener('click', function() {
+      let schemaStr = schemaInput.value.trim();
+      let payloadStr = payloadInput.value.trim();
+      if (!schemaStr) { alert('Please enter a JSON Schema.'); return; }
+      if (!payloadStr) { alert('Please enter a JSON payload.'); return; }
+
+      let schema, payload;
+      try {
+        schema = JSON.parse(schemaStr);
+      } catch (e) {
+        alert('Invalid JSON Schema: ' + e.message);
+        return;
+      }
+      try {
+        payload = JSON.parse(payloadStr);
+      } catch (e) {
+        alert('Invalid JSON Payload: ' + e.message);
+        return;
+      }
+
+      const errors = validateAgainstSchema(schema, payload);
+      const isValid = errors.length === 0;
+
+      // Status badge
+      statusBadge.style.opacity = '1';
+      statusBadge.className = 'status-badge ' + (isValid ? 'valid' : 'invalid');
+      statusBadge.textContent = isValid ? '✅ VALID' : `❌ INVALID (${errors.length})`;
+
+      // Error list
+      errorContainer.style.display = 'block';
+      if (isValid) {
+        errorContainer.innerHTML = '<div style="color:#10b981;">✔ No validation errors.</div>';
+      } else {
+        let html = '';
+        errors.forEach(err => {
+          html += `<div class="error-item"><span class="error-path">${err.path}</span> <span class="error-msg">${err.message}</span></div>`;
+        });
+        errorContainer.innerHTML = html;
+      }
+
+      // Line highlights
+      const highlighted = highlightErrors(payloadStr, errors);
+      lineHighlightContainer.innerHTML = highlighted || 'No errors to highlight.';
+    });
+
+    // initial preset load (custom)
+    document.querySelector('[data-preset="custom"]').click();
+
+    // update generated preview on builder change
+    function updateGeneratedPreview() {
+      const rows = document.querySelectorAll('#schemaBuilder .builder-row');
+      const properties = {};
+      const required = [];
+      rows.forEach(row => {
+        const name = row.querySelector('.field-name').value.trim();
+        if (!name) return;
+        const type = row.querySelector('.field-type').value;
+        const isRequired = row.querySelector('.field-required').checked;
+        const desc = row.querySelector('.field-desc').value.trim();
+        const prop = { type: type };
+        if (desc) prop.description = desc;
+        properties[name] = prop;
+        if (isRequired) required.push(name);
+      });
+      const schema = { "$schema": "http://json-schema.org/draft-07/schema#", "type": "object", "required": required, "properties": properties };
+      generatedPreview.textContent = JSON.stringify(schema, null, 2);
+    }
+    document.querySelectorAll('#schemaBuilder input, #schemaBuilder select').forEach(el => {
+      el.addEventListener('input', updateGeneratedPreview);
+    });
+    updateGeneratedPreview();
+  })();
+</script>
+</body>
+</html>

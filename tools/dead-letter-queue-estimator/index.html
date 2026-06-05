@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dead Letter Queue Estimator - invokebot.com</title>
+    <meta name="description" content="Size DLQ capacity based on error rates, message volume, and retry strategies. Calculate costs and alert thresholds.">
+    <link rel="canonical" href="https://invokebot.com/tools/dead-letter-queue-estimator">
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="Dead Letter Queue Estimator">
+    <meta property="og:description" content="Plan DLQ capacity from throughput, error rates, and retry amplification.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/dead-letter-queue-estimator">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Dead Letter Queue Estimator",
+        "url": "https://invokebot.com/tools/dead-letter-queue-estimator",
+        "description": "Estimate DLQ capacity and costs based on throughput, error rates, and retry strategies",
+        "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 36px);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+            color: #a855f7;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #a855f7;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #9333ea;
+        }
+
+        .metric {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            color: #a855f7;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-unit {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            margin: 15px 0;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            background-color: #0a0a0a;
+        }
+
+        .scenario-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .scenario-buttons button {
+            padding: 8px;
+            font-size: 12px;
+        }
+
+        .alarm-threshold {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alarm-warning {
+            background-color: rgba(251, 191, 36, 0.1);
+            border-left-color: #fbbf24;
+        }
+
+        .alarm-critical {
+            background-color: rgba(239, 68, 68, 0.1);
+            border-left-color: #ef4444;
+        }
+
+        .cost-breakdown {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .cost-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #333333;
+            font-size: 13px;
+        }
+
+        .cost-row:last-child {
+            border-bottom: none;
+            border-top: 1px solid #a855f7;
+            margin-top: 10px;
+            padding-top: 10px;
+            font-weight: 600;
+            color: #a855f7;
+        }
+
+        .code-block {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+            font-size: 12px;
+            border-top: 1px solid #333333;
+            margin-top: 40px;
+        }
+
+        small {
+            color: #a0a0a0;
+            margin-top: 5px;
+            display: block;
+            font-size: 12px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .scenario-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scenario-box {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .scenario-box-value {
+            color: #a855f7;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Dead Letter Queue Estimator</h1>
+        <p class="subtitle">Size DLQ capacity based on throughput and error patterns</p>
+
+        <div class="grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h2>Configuration</h2>
+
+                <div class="form-group">
+                    <label>Messages Per Second</label>
+                    <input type="number" id="throughput" value="1000" min="1" onchange="calculate()">
+                    <small>Baseline throughput</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Avg Message Size (KB)</label>
+                    <input type="number" id="msgSize" value="1" min="0.1" step="0.1" onchange="calculate()">
+                    <small>For storage estimation</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Error Rate (%)</label>
+                    <input type="number" id="errorRate" value="1" min="0.01" max="100" step="0.01" onchange="calculate()">
+                    <small>Messages that fail</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Max Retry Attempts</label>
+                    <input type="number" id="maxRetries" value="3" min="1" onchange="calculate()">
+                    <small>Before moving to DLQ</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Retry Delay Strategy</label>
+                    <select id="retryStrategy" onchange="calculate()">
+                        <option value="fixed">Fixed 1s</option>
+                        <option value="exponential">Exponential Backoff</option>
+                        <option value="linear">Linear Backoff</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>DLQ Retention (days)</label>
+                    <input type="number" id="retention" value="14" min="1" onchange="calculate()">
+                    <small>How long to keep messages</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Processing Time (ms)</label>
+                    <input type="number" id="processingTime" value="100" min="1" onchange="calculate()">
+                    <small>Per message</small>
+                </div>
+
+                <h3>Scenarios</h3>
+                <div class="scenario-buttons">
+                    <button onclick="setScenario('normal')" style="background-color: #333333;">Normal</button>
+                    <button onclick="setScenario('spike')" style="background-color: #333333;">Spike (5x)</button>
+                    <button onclick="setScenario('degraded')" style="background-color: #333333;">Degraded (10% error)</button>
+                </div>
+
+                <button onclick="calculate()" style="margin-top: 15px;">Calculate</button>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel">
+                <h2>Capacity Estimates</h2>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="metric">
+                        <div class="metric-label">DLQ Messages/Hour</div>
+                        <div class="metric-value" id="dlqPerHour">36<span class="metric-unit">k</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">DLQ Storage/Day</div>
+                        <div class="metric-value" id="storagePerDay">864<span class="metric-unit">MB</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Retry Amplification</div>
+                        <div class="metric-value" id="amplification">4<span class="metric-unit">x</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Time to Fill</div>
+                        <div class="metric-value" id="timeToFill">5<span class="metric-unit">h</span></div>
+                    </div>
+                </div>
+
+                <h3>Alarm Thresholds (at capacity: 100GB)</h3>
+                <div class="alarm-threshold alarm-warning" style="border: 1px solid #fbbf24;">
+                    <div>
+                        <strong>Warning (50% - 50GB)</strong>
+                        <div style="color: #a0a0a0; font-size: 11px; margin-top: 3px;" id="warningTime">in ~24h</div>
+                    </div>
+                </div>
+                <div class="alarm-threshold alarm-critical" style="border: 1px solid #ef4444;">
+                    <div>
+                        <strong>Critical (80% - 80GB)</strong>
+                        <div style="color: #a0a0a0; font-size: 11px; margin-top: 3px;" id="criticalTime">in ~38h</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 25px;">Scenario Comparison</h3>
+                <div class="scenario-grid">
+                    <div class="scenario-box">
+                        <strong>Normal</strong>
+                        <div class="scenario-box-value" id="scenario_normal">864 MB/day</div>
+                    </div>
+                    <div class="scenario-box">
+                        <strong>Spike (5x throughput)</strong>
+                        <div class="scenario-box-value" id="scenario_spike">4,320 MB/day</div>
+                    </div>
+                    <div class="scenario-box">
+                        <strong>Degraded (10% error)</strong>
+                        <div class="scenario-box-value" id="scenario_degraded">8,640 MB/day</div>
+                    </div>
+                </div>
+
+                <h3>DLQ Growth Projection (14 days)</h3>
+                <canvas id="dlqGrowthCanvas" width="600" height="200"></canvas>
+
+                <h3>Retry Cascade Visualization</h3>
+                <canvas id="retryCascadeCanvas" width="600" height="150"></canvas>
+
+                <h3 style="margin-top: 25px;">Cost Estimation</h3>
+                <div class="cost-breakdown">
+                    <div class="cost-row">
+                        <span>AWS SQS (million requests)</span>
+                        <span id="cost_sqs">$0.40</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>Storage (per GB/month)</span>
+                        <span id="cost_storage">$0.10</span>
+                    </div>
+                    <div class="cost-row">
+                        <span>RabbitMQ (disk/month)</span>
+                        <span id="cost_rabbit">$5.00</span>
+                    </div>
+                    <div class="cost-row">
+                        <span style="color: #a855f7;">Total Monthly Estimate</span>
+                        <span id="cost_total" style="color: #a855f7;">$5.50</span>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 25px;">Infrastructure as Code</h3>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">AWS SQS (CloudFormation)</summary>
+                    <div class="code-block">AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  MainQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: main-queue
+      VisibilityTimeout: 300
+      MessageRetentionPeriod: 1209600
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: main-queue-dlq
+      MessageRetentionPeriod: <span id="cf_retention">1209600</span>
+
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!GetAtt MainQueue.Arn]
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn
+        maxReceiveCount: <span id="cf_max_retries">3</span></div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Terraform</summary>
+                    <div class="code-block">resource "aws_sqs_queue" "main" {
+  name                      = "main-queue"
+  visibility_timeout_seconds = 300
+  message_retention_seconds  = <span id="tf_retention">1209600</span>
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = <span id="tf_max_retries">3</span>
+  })
+}
+
+resource "aws_sqs_queue" "dlq" {
+  name                     = "main-queue-dlq"
+  message_retention_seconds = <span id="tf_retention2">1209600</span>
+}</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Docker Compose (RabbitMQ)</summary>
+                    <div class="code-block">services:
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  config-dlq:
+    image: rabbitmq:3.12
+    command: |
+      rabbitmq-plugins enable rabbitmq_management && \
+      rabbitmqctl add_queue main_queue && \
+      rabbitmqctl add_queue main_dlq && \
+      rabbitmqctl set_policy dlx_policy "^main_queue\$" \
+        '{"dead-letter-exchange":"dlx_exchange"}'</div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2026 invokebot.com</footer>
+
+    <script>
+        function calculate() {
+            const throughput = parseInt(document.getElementById('throughput').value);
+            const msgSize = parseFloat(document.getElementById('msgSize').value);
+            const errorRate = parseFloat(document.getElementById('errorRate').value) / 100;
+            const maxRetries = parseInt(document.getElementById('maxRetries').value);
+            const retention = parseInt(document.getElementById('retention').value);
+
+            // Calculate DLQ metrics
+            const messagesPerHour = throughput * 3600;
+            const dlqMessagesPerHour = messagesPerHour * errorRate;
+            const dlqMessagesPerDay = dlqMessagesPerHour * 24;
+            const storagePerDay = (dlqMessagesPerDay * msgSize) / 1024; // Convert to GB
+
+            // Retry amplification
+            const retryAmplification = 1 + maxRetries;
+            const totalMessages = messagesPerHour * retryAmplification;
+
+            // Time to fill 100GB
+            const capacity = 100; // GB
+            const daysToFill = capacity / (storagePerDay / 1024);
+            const hoursToFill = daysToFill * 24;
+
+            // Warning and critical thresholds
+            const warningFillTime = hoursToFill * 0.5;
+            const criticalFillTime = hoursToFill * 0.8;
+
+            // Update metrics
+            document.getElementById('dlqPerHour').innerHTML =
+                (dlqMessagesPerHour / 1000).toFixed(1) + '<span class="metric-unit">k</span>';
+            document.getElementById('storagePerDay').innerHTML =
+                (storagePerDay * 1024).toFixed(0) + '<span class="metric-unit">MB</span>';
+            document.getElementById('amplification').innerHTML =
+                retryAmplification + '<span class="metric-unit">x</span>';
+            document.getElementById('timeToFill').innerHTML =
+                Math.round(hoursToFill) + '<span class="metric-unit">h</span>';
+
+            // Update alarm times
+            document.getElementById('warningTime').textContent = `in ~${Math.round(warningFillTime)}h`;
+            document.getElementById('criticalTime').textContent = `in ~${Math.round(criticalFillTime)}h`;
+
+            // Update scenarios
+            document.getElementById('scenario_normal').textContent =
+                (storagePerDay * 1024).toFixed(0) + ' MB/day';
+            document.getElementById('scenario_spike').textContent =
+                (storagePerDay * 1024 * 5).toFixed(0) + ' MB/day';
+            document.getElementById('scenario_degraded').textContent =
+                (storagePerDay * 1024 * 10).toFixed(0) + ' MB/day';
+
+            // Update cost estimates
+            const sqsMessages = (dlqMessagesPerDay * retention) / 1000000;
+            const sqsCost = sqsMessages * 0.4;
+            const storageCost = (storagePerDay / 1024 * retention) * 0.023;
+            const rabbitCost = (storagePerDay / 1024 * retention) * 0.005;
+            const totalCost = sqsCost + storageCost + rabbitCost;
+
+            document.getElementById('cost_sqs').textContent = '$' + sqsCost.toFixed(2);
+            document.getElementById('cost_storage').textContent = '$' + storageCost.toFixed(2);
+            document.getElementById('cost_rabbit').textContent = '$' + rabbitCost.toFixed(2);
+            document.getElementById('cost_total').textContent = '$' + totalCost.toFixed(2);
+
+            // Update IaC blocks
+            const retentionSeconds = retention * 86400;
+            document.getElementById('cf_retention').textContent = retentionSeconds;
+            document.getElementById('cf_max_retries').textContent = maxRetries;
+            document.getElementById('tf_retention').textContent = retentionSeconds;
+            document.getElementById('tf_retention2').textContent = retentionSeconds;
+            document.getElementById('tf_max_retries').textContent = maxRetries;
+
+            // Draw charts
+            drawDLQGrowth(storagePerDay, retention);
+            drawRetryCascade(maxRetries, errorRate);
+        }
+
+        function drawDLQGrowth(storagePerDay, retention) {
+            const canvas = document.getElementById('dlqGrowthCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw axis
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(50, height - 50);
+            ctx.lineTo(width - 20, height - 50);
+            ctx.moveTo(50, height - 50);
+            ctx.lineTo(50, 20);
+            ctx.stroke();
+
+            // Draw line
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            const maxStorage = storagePerDay * retention / 1024; // GB
+            for (let day = 0; day <= retention; day++) {
+                const x = 50 + (day / retention) * (width - 70);
+                const y = height - 50 - ((day * storagePerDay) / maxStorage) * (height - 70);
+                if (day === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Labels
+            ctx.fillStyle = '#a0a0a0';
+            ctx.font = '11px sans-serif';
+            ctx.fillText('Days', width - 20, height - 20);
+            ctx.save();
+            ctx.translate(20, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Storage (GB)', 0, 0);
+            ctx.restore();
+        }
+
+        function drawRetryCascade(maxRetries, errorRate) {
+            const canvas = document.getElementById('retryCascadeCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw retry steps
+            const stepWidth = width / (maxRetries + 1);
+            const baseHeight = height * 0.6;
+
+            for (let i = 0; i <= maxRetries; i++) {
+                const x = stepWidth * (i + 0.5);
+                const h = baseHeight * Math.pow(1 - errorRate, i);
+
+                // Bar
+                ctx.fillStyle = '#a855f7';
+                ctx.fillRect(x - 20, height - h, 40, h);
+
+                // Label
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Retry ' + i, x, height - 5);
+
+                // Percentage
+                const pct = Math.pow(1 - errorRate, i) * 100;
+                ctx.fillStyle = '#a855f7';
+                ctx.fillText(pct.toFixed(0) + '%', x, height - h - 10);
+            }
+        }
+
+        function setScenario(scenario) {
+            if (scenario === 'normal') {
+                document.getElementById('throughput').value = 1000;
+                document.getElementById('errorRate').value = 1;
+            } else if (scenario === 'spike') {
+                document.getElementById('throughput').value = 5000;
+                document.getElementById('errorRate').value = 1;
+            } else if (scenario === 'degraded') {
+                document.getElementById('throughput').value = 1000;
+                document.getElementById('errorRate').value = 10;
+            }
+            calculate();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            calculate();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rate Limiter Configuration Tool - invokebot.com</title>
+    <meta name="description" content="Configure token bucket, sliding window, and fixed window rate limiters. Simulate requests and see real rejection rates.">
+    <link rel="canonical" href="https://invokebot.com/tools/rate-limiter-tool">
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="Rate Limiter Configuration Tool">
+    <meta property="og:description" content="Design rate limiters with token bucket, sliding window, and leaky bucket algorithms.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/rate-limiter-tool">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Rate Limiter Configuration Tool",
+        "url": "https://invokebot.com/tools/rate-limiter-tool",
+        "description": "Configure and simulate rate limiting algorithms with load testing",
+        "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 36px);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+            color: #a855f7;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #a855f7;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #9333ea;
+        }
+
+        button.secondary {
+            background-color: #333333;
+            margin-top: 10px;
+        }
+
+        button.secondary:hover {
+            background-color: #444444;
+        }
+
+        .info-box {
+            background-color: #0a0a0a;
+            border-left: 3px solid #a855f7;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .metric {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            color: #a855f7;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-unit {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            margin: 15px 0;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            background-color: #0a0a0a;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .comparison-table td {
+            padding: 10px;
+            border: 1px solid #333333;
+        }
+
+        .comparison-table td:first-child {
+            background-color: #0a0a0a;
+            color: #a855f7;
+            font-weight: 600;
+            width: 120px;
+        }
+
+        .code-block {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+
+        .load-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .load-buttons button {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+            font-size: 12px;
+            border-top: 1px solid #333333;
+            margin-top: 40px;
+        }
+
+        .slider-group {
+            margin-bottom: 15px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #333333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            border: none;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Rate Limiter Configuration Tool</h1>
+        <p class="subtitle">Design and simulate rate limiting strategies</p>
+
+        <div class="grid">
+            <!-- Configuration Panel -->
+            <div class="panel">
+                <h2>Configuration</h2>
+
+                <div class="form-group">
+                    <label>Algorithm</label>
+                    <select id="algorithm" onchange="updateMetrics()">
+                        <option value="token-bucket">Token Bucket</option>
+                        <option value="sliding-window-log">Sliding Window Log</option>
+                        <option value="sliding-window-counter">Sliding Window Counter</option>
+                        <option value="fixed-window">Fixed Window</option>
+                        <option value="leaky-bucket">Leaky Bucket</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Rate Limit</label>
+                    <input type="number" id="rateLimit" value="100" min="1" onchange="updateMetrics()">
+                    <small style="color: #a0a0a0; margin-top: 5px; display: block;">requests per second</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Burst Size</label>
+                    <input type="number" id="burstSize" value="200" min="1" onchange="updateMetrics()">
+                    <small style="color: #a0a0a0; margin-top: 5px; display: block;">max tokens/requests</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Window Size</label>
+                    <input type="number" id="windowSize" value="60" min="1" onchange="updateMetrics()">
+                    <small style="color: #a0a0a0; margin-top: 5px; display: block;">seconds</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Load Pattern</label>
+                    <select id="loadPattern" onchange="updateMetrics()">
+                        <option value="uniform">Uniform</option>
+                        <option value="bursty">Bursty</option>
+                        <option value="periodic">Periodic</option>
+                    </select>
+                </div>
+
+                <h3>Load Simulation</h3>
+                <div class="load-buttons">
+                    <button class="secondary" onclick="simulateLoad(1)">1x Load</button>
+                    <button class="secondary" onclick="simulateLoad(2)">2x Load</button>
+                    <button class="secondary" onclick="simulateLoad(5)">5x Load</button>
+                    <button class="secondary" onclick="simulateLoad(10)">10x Load</button>
+                </div>
+
+                <button onclick="resetSimulation()" style="margin-top: 10px;">Reset</button>
+            </div>
+
+            <!-- Metrics & Visualization -->
+            <div class="panel">
+                <h2>Metrics & Performance</h2>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="metric">
+                        <div class="metric-label">Effective Throughput</div>
+                        <div class="metric-value" id="throughput">100<span class="metric-unit">req/s</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Rejection Rate</div>
+                        <div class="metric-value" id="rejectionRate">0<span class="metric-unit">%</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Memory per Client</div>
+                        <div class="metric-value" id="memory">0.5<span class="metric-unit">KB</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Recovery Time</div>
+                        <div class="metric-value" id="recovery">10<span class="metric-unit">s</span></div>
+                    </div>
+                </div>
+
+                <h3>Request Timeline (60s window)</h3>
+                <canvas id="simulationCanvas" width="600" height="200"></canvas>
+
+                <h3>Token Bucket Level</h3>
+                <div style="height: 20px; background-color: #0a0a0a; border: 1px solid #333333; border-radius: 4px; overflow: hidden; margin-bottom: 20px;">
+                    <div id="bucketLevel" style="height: 100%; background-color: #a855f7; width: 100%; transition: width 0.2s;"></div>
+                </div>
+
+                <h3>Algorithm Comparison</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <td>Algorithm</td>
+                        <td>Memory</td>
+                        <td>Precision</td>
+                        <td>Use Case</td>
+                    </tr>
+                    <tr>
+                        <td>Token Bucket</td>
+                        <td>O(1)</td>
+                        <td>High</td>
+                        <td>APIs, microservices</td>
+                    </tr>
+                    <tr>
+                        <td>Sliding Window Log</td>
+                        <td>O(N)</td>
+                        <td>Very High</td>
+                        <td>Exact rate limiting</td>
+                    </tr>
+                    <tr>
+                        <td>Fixed Window</td>
+                        <td>O(1)</td>
+                        <td>Low</td>
+                        <td>Simple limits</td>
+                    </tr>
+                    <tr>
+                        <td>Leaky Bucket</td>
+                        <td>O(N)</td>
+                        <td>High</td>
+                        <td>Smooth output</td>
+                    </tr>
+                </table>
+
+                <h3 style="margin-top: 25px;">Implementation Code</h3>
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Redis (Node.js)</summary>
+                    <div class="code-block">const result = await redis.eval(`
+local key = KEYS[1]
+local limit = tonumber(ARGV[1])
+local current = redis.call('GET', key)
+if current == nil then
+    redis.call('SET', key, 1)
+    redis.call('EXPIRE', key, 1)
+    return 1
+elseif tonumber(current) < limit then
+    return redis.call('INCR', key)
+else
+    return 0
+end
+`, 1, 'rate:' + userId, 100);</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Express.js Middleware</summary>
+                    <div class="code-block">const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 100,
+    handler: (req, res) => res.status(429).json({error: 'Too many requests'})
+});
+app.use('/api/', limiter);</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">AWS API Gateway</summary>
+                    <div class="code-block">throttle_settings = {
+    'rate_limit': 100,
+    'burst_limit': 200
+}
+# Set in API Gateway Stage</div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2026 invokebot.com</footer>
+
+    <script>
+        let simulation = {
+            accepted: [],
+            rejected: [],
+            tokensAvailable: 100,
+            lastRefill: Date.now()
+        };
+
+        class RateLimiter {
+            constructor(algorithm, rateLimit, burstSize, windowSize) {
+                this.algorithm = algorithm;
+                this.rateLimit = rateLimit;
+                this.burstSize = burstSize;
+                this.windowSize = windowSize;
+                this.tokens = burstSize;
+                this.requestLog = [];
+                this.lastRefill = Date.now();
+            }
+
+            allowRequest() {
+                const now = Date.now();
+
+                if (this.algorithm === 'token-bucket') {
+                    this.refillTokens(now);
+                    if (this.tokens >= 1) {
+                        this.tokens -= 1;
+                        return true;
+                    }
+                    return false;
+                } else if (this.algorithm === 'sliding-window-log') {
+                    const cutoff = now - (this.windowSize * 1000);
+                    this.requestLog = this.requestLog.filter(t => t > cutoff);
+                    if (this.requestLog.length < this.rateLimit) {
+                        this.requestLog.push(now);
+                        return true;
+                    }
+                    return false;
+                } else if (this.algorithm === 'fixed-window') {
+                    const windowKey = Math.floor(now / (this.windowSize * 1000));
+                    if (!this.window || this.window.key !== windowKey) {
+                        this.window = { key: windowKey, count: 0 };
+                    }
+                    if (this.window.count < this.rateLimit) {
+                        this.window.count++;
+                        return true;
+                    }
+                    return false;
+                }
+                return true;
+            }
+
+            refillTokens(now) {
+                const elapsed = (now - this.lastRefill) / 1000;
+                const tokensToAdd = elapsed * this.rateLimit;
+                this.tokens = Math.min(this.burstSize, this.tokens + tokensToAdd);
+                this.lastRefill = now;
+            }
+
+            getMetrics() {
+                return {
+                    tokensAvailable: Math.round(this.tokens * 100) / 100,
+                    logSize: this.requestLog.length,
+                    memory: this.algorithm === 'sliding-window-log'
+                        ? (this.requestLog.length * 8) / 1024
+                        : 0.5
+                };
+            }
+        }
+
+        function updateMetrics() {
+            const algorithm = document.getElementById('algorithm').value;
+            const rateLimit = parseInt(document.getElementById('rateLimit').value);
+            const burstSize = parseInt(document.getElementById('burstSize').value);
+            const windowSize = parseInt(document.getElementById('windowSize').value);
+
+            document.getElementById('throughput').textContent = rateLimit + '<span class="metric-unit">req/s</span>';
+            document.getElementById('rejectionRate').textContent = '0<span class="metric-unit">%</span>';
+            document.getElementById('memory').textContent =
+                (algorithm === 'sliding-window-log' ? '2-5' : '0.5') + '<span class="metric-unit">KB</span>';
+            document.getElementById('recovery').textContent =
+                Math.ceil(burstSize / rateLimit) + '<span class="metric-unit">s</span>';
+
+            drawSimulation();
+        }
+
+        function simulateLoad(multiplier) {
+            const algorithm = document.getElementById('algorithm').value;
+            const rateLimit = parseInt(document.getElementById('rateLimit').value);
+            const burstSize = parseInt(document.getElementById('burstSize').value);
+            const windowSize = parseInt(document.getElementById('windowSize').value);
+
+            const limiter = new RateLimiter(algorithm, rateLimit, burstSize, windowSize);
+            simulation.accepted = [];
+            simulation.rejected = [];
+
+            const loadPattern = document.getElementById('loadPattern').value;
+            const duration = 60; // seconds
+            let requestRate = rateLimit * multiplier;
+
+            for (let t = 0; t < duration; t++) {
+                let requests = requestRate;
+
+                if (loadPattern === 'bursty') {
+                    requests = Math.random() < 0.3 ? requestRate * 3 : requestRate / 2;
+                } else if (loadPattern === 'periodic') {
+                    requests = t % 10 < 5 ? requestRate * 1.5 : requestRate * 0.5;
+                }
+
+                for (let i = 0; i < Math.floor(requests); i++) {
+                    if (limiter.allowRequest()) {
+                        simulation.accepted.push(t);
+                    } else {
+                        simulation.rejected.push(t);
+                    }
+                }
+            }
+
+            const rejectionRate = simulation.rejected.length /
+                (simulation.accepted.length + simulation.rejected.length) * 100;
+            document.getElementById('rejectionRate').textContent =
+                Math.round(rejectionRate * 10) / 10 + '<span class="metric-unit">%</span>';
+
+            const metrics = limiter.getMetrics();
+            document.getElementById('bucketLevel').style.width =
+                (metrics.tokensAvailable / burstSize) * 100 + '%';
+
+            drawSimulation();
+        }
+
+        function drawSimulation() {
+            const canvas = document.getElementById('simulationCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= 60; i += 10) {
+                const x = (i / 60) * width;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+            }
+
+            // Draw accepted requests (green)
+            ctx.fillStyle = '#10b981';
+            simulation.accepted.forEach(t => {
+                const x = (t / 60) * width + Math.random() * 4 - 2;
+                const y = height * 0.3 + Math.random() * 20;
+                ctx.fillRect(x, y, 2, 2);
+            });
+
+            // Draw rejected requests (red)
+            ctx.fillStyle = '#ef4444';
+            simulation.rejected.forEach(t => {
+                const x = (t / 60) * width + Math.random() * 4 - 2;
+                const y = height * 0.7 + Math.random() * 20;
+                ctx.fillRect(x, y, 2, 2);
+            });
+
+            // Draw legend
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(20, height - 30, 12, 12);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('Accepted', 40, height - 22);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(width / 2, height - 30, 12, 12);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('Rejected', width / 2 + 20, height - 22);
+        }
+
+        function resetSimulation() {
+            simulation = {
+                accepted: [],
+                rejected: [],
+                tokensAvailable: 100,
+                lastRefill: Date.now()
+            };
+            document.getElementById('rejectionRate').textContent = '0<span class="metric-unit">%</span>';
+            document.getElementById('bucketLevel').style.width = '100%';
+            drawSimulation();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateMetrics();
+            resetSimulation();
+        });
+    </script>
+</body>
+</html>

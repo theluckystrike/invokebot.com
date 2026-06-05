@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Timeout Calculator - invokebot.com</title>
+    <meta name="description" content="Calculate optimal API timeout settings from latency percentiles. Includes retry strategies and circuit breaker configuration.">
+    <link rel="canonical" href="https://invokebot.com/tools/api-timeout-calculator">
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="API Timeout Calculator">
+    <meta property="og:description" content="Determine optimal timeout settings based on latency percentiles and SLA targets.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/api-timeout-calculator">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "API Timeout Calculator",
+        "url": "https://invokebot.com/tools/api-timeout-calculator",
+        "description": "Calculate optimal timeout settings from latency percentiles with retry and circuit breaker configuration",
+        "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 36px);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+            color: #a855f7;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #a855f7;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #9333ea;
+        }
+
+        .metric {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            color: #a855f7;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-unit {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .metric-sub {
+            color: #a0a0a0;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            margin: 15px 0;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            background-color: #0a0a0a;
+        }
+
+        .decision-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .decision-table td {
+            padding: 10px;
+            border: 1px solid #333333;
+        }
+
+        .decision-table td:first-child {
+            background-color: #0a0a0a;
+            color: #a855f7;
+            font-weight: 600;
+            width: 100px;
+        }
+
+        .decision-table .aggressive {
+            color: #ef4444;
+        }
+
+        .decision-table .conservative {
+            color: #10b981;
+        }
+
+        .code-block {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+
+        .retry-timeline {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .retry-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .retry-step-num {
+            background-color: #a855f7;
+            color: #ffffff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: 600;
+        }
+
+        .retry-step-bar {
+            flex: 1;
+            height: 20px;
+            background-color: #333333;
+            border-radius: 3px;
+            margin-right: 10px;
+        }
+
+        .retry-step-time {
+            color: #a0a0a0;
+            width: 50px;
+            text-align: right;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+            font-size: 12px;
+            border-top: 1px solid #333333;
+            margin-top: 40px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        small {
+            color: #a0a0a0;
+            margin-top: 5px;
+            display: block;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Timeout Calculator</h1>
+        <p class="subtitle">Calculate optimal timeout settings from latency percentiles</p>
+
+        <div class="grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h2>Latency Profile</h2>
+
+                <div class="form-group">
+                    <label>P50 Latency (ms)</label>
+                    <input type="number" id="p50" value="100" min="1" onchange="calculate()">
+                    <small>Median latency</small>
+                </div>
+
+                <div class="form-group">
+                    <label>P90 Latency (ms)</label>
+                    <input type="number" id="p90" value="300" min="1" onchange="calculate()">
+                    <small>90th percentile</small>
+                </div>
+
+                <div class="form-group">
+                    <label>P95 Latency (ms)</label>
+                    <input type="number" id="p95" value="500" min="1" onchange="calculate()">
+                    <small>95th percentile</small>
+                </div>
+
+                <div class="form-group">
+                    <label>P99 Latency (ms)</label>
+                    <input type="number" id="p99" value="1000" min="1" onchange="calculate()">
+                    <small>99th percentile</small>
+                </div>
+
+                <h3 style="margin-top: 30px;">Request Pattern</h3>
+
+                <div class="form-group">
+                    <label>Sequential API Calls</label>
+                    <input type="number" id="sequential" value="1" min="1" onchange="calculate()">
+                    <small>Total calls in chain</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Parallel Calls</label>
+                    <input type="number" id="parallel" value="1" min="1" onchange="calculate()">
+                    <small>Max concurrent requests</small>
+                </div>
+
+                <h3>Retry Strategy</h3>
+
+                <div class="form-group">
+                    <label>Max Retries</label>
+                    <input type="number" id="maxRetries" value="3" min="0" onchange="calculate()">
+                </div>
+
+                <div class="form-group">
+                    <label>Backoff Strategy</label>
+                    <select id="backoffStrategy" onchange="calculate()">
+                        <option value="linear">Linear</option>
+                        <option value="exponential">Exponential</option>
+                        <option value="jitter">Exponential + Jitter</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>SLA Target</label>
+                    <select id="slaTarget" onchange="calculate()">
+                        <option value="99">99%</option>
+                        <option value="99.5">99.5%</option>
+                        <option value="99.9">99.9%</option>
+                        <option value="99.99">99.99%</option>
+                    </select>
+                </div>
+
+                <button onclick="calculate()">Calculate Timeout</button>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="panel">
+                <h2>Recommended Timeout Settings</h2>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="metric">
+                        <div class="metric-label">Per-Call Timeout</div>
+                        <div class="metric-value" id="perCallTimeout">1100<span class="metric-unit">ms</span></div>
+                        <div class="metric-sub">P99 + 10% buffer</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Chain Timeout</div>
+                        <div class="metric-value" id="chainTimeout">1100<span class="metric-unit">ms</span></div>
+                        <div class="metric-sub">Sequential total</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Retry Budget</div>
+                        <div class="metric-value" id="retryBudget">4400<span class="metric-unit">ms</span></div>
+                        <div class="metric-sub">With retries</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Expected Error Rate</div>
+                        <div class="metric-value" id="errorRate">1<span class="metric-unit">%</span></div>
+                        <div class="metric-sub">Timeouts @ set limit</div>
+                    </div>
+                </div>
+
+                <h3>Latency Distribution</h3>
+                <canvas id="distributionCanvas" width="600" height="250"></canvas>
+
+                <h3>Timeout Strategy Comparison</h3>
+                <table class="decision-table">
+                    <tr>
+                        <td>Strategy</td>
+                        <td>Timeout</td>
+                        <td>Pros</td>
+                        <td>Cons</td>
+                    </tr>
+                    <tr>
+                        <td class="aggressive">Aggressive</td>
+                        <td>P95 (500ms)</td>
+                        <td>Fast feedback</td>
+                        <td>High false negatives</td>
+                    </tr>
+                    <tr>
+                        <td>Balanced</td>
+                        <td>P99 (1000ms)</td>
+                        <td>Recommended</td>
+                        <td>Balanced trade-off</td>
+                    </tr>
+                    <tr>
+                        <td class="conservative">Conservative</td>
+                        <td>P99.9 (1500ms)</td>
+                        <td>Low false negatives</td>
+                        <td>Slower feedback</td>
+                    </tr>
+                </table>
+
+                <h3 style="margin-top: 25px;">Retry Timeline</h3>
+                <div class="retry-timeline" id="retryTimeline"></div>
+
+                <h3 style="margin-top: 25px;">Implementation Examples</h3>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Axios (JavaScript)</summary>
+                    <div class="code-block">const client = axios.create({
+    timeout: <span id="code_per_call">1100</span>,
+    httpAgent: new http.Agent({ keepAlive: true }),
+    httpsAgent: new https.Agent({ keepAlive: true })
+});
+
+const axiosRetry = require('axios-retry');
+axiosRetry(client, {
+    retries: <span id="code_retries">3</span>,
+    retryDelay: (count) => {
+        if (<span id="code_strategy">'exponential'</span> === 'exponential') {
+            return Math.min(1000 * Math.pow(2, count), 10000);
+        }
+        return count * 1000;
+    }
+});</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Fetch (JavaScript)</summary>
+                    <div class="code-block">const fetchWithTimeout = (url, options = {}, timeout = <span id="code_timeout">1100</span>) => {
+    return Promise.race([
+        fetch(url, options),
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout')), timeout)
+        )
+    ]);
+};
+
+async function callWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i <= maxRetries; i++) {
+        try {
+            return await fetchWithTimeout(url, options);
+        } catch (e) {
+            if (i === maxRetries) throw e;
+            const delay = Math.pow(2, i) * 1000;
+            await new Promise(r => setTimeout(r, delay));
+        }
+    }
+}</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Go</summary>
+                    <div class="code-block">client := &http.Client{
+    Timeout: time.Duration(<span id="code_go_timeout">1100</span>) * time.Millisecond,
+    Transport: &http.Transport{
+        MaxIdleConns:       100,
+        MaxIdleConnsPerHost: 100,
+        IdleConnTimeout:    90 * time.Second,
+    },
+}</div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2026 invokebot.com</footer>
+
+    <script>
+        function calculate() {
+            const p50 = parseInt(document.getElementById('p50').value);
+            const p90 = parseInt(document.getElementById('p90').value);
+            const p95 = parseInt(document.getElementById('p95').value);
+            const p99 = parseInt(document.getElementById('p99').value);
+            const sequential = parseInt(document.getElementById('sequential').value);
+            const parallel = parseInt(document.getElementById('parallel').value);
+            const maxRetries = parseInt(document.getElementById('maxRetries').value);
+            const backoffStrategy = document.getElementById('backoffStrategy').value;
+            const slaTarget = parseFloat(document.getElementById('slaTarget').value);
+
+            // Calculate timeout: P99 + 10% buffer
+            const perCallTimeout = Math.ceil(p99 * 1.1);
+            const chainTimeout = perCallTimeout * sequential;
+
+            // Calculate retry budget
+            let retryBudget = perCallTimeout * (1 + maxRetries);
+            if (backoffStrategy === 'linear') {
+                retryBudget = perCallTimeout + (1 + 2 + 3 + maxRetries) * 1000;
+            } else {
+                retryBudget = perCallTimeout * (1 + maxRetries);
+            }
+
+            // Calculate error rate
+            const range = p99 - p50;
+            const errorRate = Math.round((100 - slaTarget) * 10) / 10;
+
+            // Update display
+            document.getElementById('perCallTimeout').innerHTML =
+                perCallTimeout + '<span class="metric-unit">ms</span>';
+            document.getElementById('chainTimeout').innerHTML =
+                chainTimeout + '<span class="metric-unit">ms</span>';
+            document.getElementById('retryBudget').innerHTML =
+                Math.ceil(retryBudget) + '<span class="metric-unit">ms</span>';
+            document.getElementById('errorRate').innerHTML =
+                errorRate + '<span class="metric-unit">%</span>';
+
+            // Update code blocks
+            document.getElementById('code_per_call').textContent = perCallTimeout;
+            document.getElementById('code_retries').textContent = maxRetries;
+            document.getElementById('code_strategy').textContent = "'" + backoffStrategy + "'";
+            document.getElementById('code_timeout').textContent = perCallTimeout;
+            document.getElementById('code_go_timeout').textContent = perCallTimeout;
+
+            // Draw distribution
+            drawDistribution(p50, p90, p95, p99, perCallTimeout);
+
+            // Draw retry timeline
+            drawRetryTimeline(maxRetries, backoffStrategy, perCallTimeout);
+        }
+
+        function drawDistribution(p50, p90, p95, p99, timeout) {
+            const canvas = document.getElementById('distributionCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw log-normal distribution curve
+            const maxLatency = p99 * 1.5;
+            const scale = width / maxLatency;
+            const peak = height * 0.7;
+
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let x = 0; x < width; x++) {
+                const latency = x / scale;
+                // Approximate log-normal curve
+                const y = peak * Math.exp(-Math.pow(Math.log(latency / p50), 2) / 0.5);
+                if (x === 0) ctx.moveTo(x, height - y);
+                else ctx.lineTo(x, height - y);
+            }
+            ctx.stroke();
+
+            // Draw percentile lines
+            const percentiles = [
+                { value: p50, label: 'P50', color: '#a0a0a0' },
+                { value: p90, label: 'P90', color: '#fbbf24' },
+                { value: p95, label: 'P95', color: '#f97316' },
+                { value: p99, label: 'P99', color: '#ef4444' }
+            ];
+
+            percentiles.forEach(p => {
+                const x = p.value * scale;
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, height);
+                ctx.stroke();
+
+                ctx.fillStyle = p.color;
+                ctx.font = '11px sans-serif';
+                ctx.fillText(p.label, x - 15, 15);
+            });
+
+            // Draw timeout line
+            const timeoutX = timeout * scale;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(timeoutX, 0);
+            ctx.lineTo(timeoutX, height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#10b981';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText('Timeout', timeoutX - 30, height - 10);
+        }
+
+        function drawRetryTimeline(maxRetries, strategy, baseTimeout) {
+            const timeline = document.getElementById('retryTimeline');
+            let html = '';
+            let totalTime = 0;
+
+            for (let i = 0; i <= maxRetries; i++) {
+                let delay = baseTimeout;
+                if (i > 0) {
+                    if (strategy === 'linear') {
+                        delay = i * 1000;
+                    } else if (strategy === 'exponential') {
+                        delay = Math.pow(2, i) * 1000;
+                    } else if (strategy === 'jitter') {
+                        delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    }
+                }
+
+                const barWidth = Math.min((delay / 5000) * 100, 100);
+                totalTime += delay;
+
+                html += `
+                    <div class="retry-step">
+                        <div class="retry-step-num">${i + 1}</div>
+                        <div class="retry-step-bar" style="width: ${barWidth}%"></div>
+                        <div class="retry-step-time">${Math.round(delay)}ms</div>
+                    </div>
+                `;
+            }
+
+            html += `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333333; color: #a855f7;">
+                Total Budget: ${Math.round(totalTime)}ms
+            </div>`;
+
+            timeline.innerHTML = html;
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            calculate();
+        });
+    </script>
+</body>
+</html>

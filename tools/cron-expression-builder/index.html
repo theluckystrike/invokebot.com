@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron Expression Builder - invokebot.com</title>
+    <meta name="description" content="Build cron expressions visually. Preview next runs, validate syntax, export to crontab, CloudWatch, and GitHub Actions formats.">
+    <link rel="canonical" href="https://invokebot.com/tools/cron-expression-builder">
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="Cron Expression Builder">
+    <meta property="og:description" content="Build cron expressions visually. Preview next runs, validate syntax, export formats.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/cron-expression-builder">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Cron Expression Builder",
+        "url": "https://invokebot.com/tools/cron-expression-builder",
+        "description": "Visual cron expression builder with next-run preview and format export",
+        "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 36px);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .field-row {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .field-row input {
+            padding: 8px;
+            font-size: 13px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 15px;
+            background-color: #a855f7;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #9333ea;
+        }
+
+        button.secondary {
+            background-color: #333333;
+        }
+
+        button.secondary:hover {
+            background-color: #444444;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .preset-buttons button {
+            padding: 8px 12px;
+            font-size: 12px;
+            min-width: auto;
+        }
+
+        .info-box {
+            background-color: #0a0a0a;
+            border-left: 3px solid #a855f7;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .error {
+            border-left-color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        .success {
+            border-left-color: #10b981;
+            background-color: rgba(16, 185, 129, 0.1);
+        }
+
+        .cron-expression {
+            background-color: #0a0a0a;
+            border: 1px solid #a855f7;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 16px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+
+        .copy-button {
+            padding: 5px 10px;
+            font-size: 12px;
+            margin-left: 5px;
+            min-width: 60px;
+        }
+
+        .next-runs {
+            display: grid;
+            gap: 8px;
+        }
+
+        .run-item {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .run-time {
+            color: #a855f7;
+            font-weight: 600;
+        }
+
+        .run-relative {
+            color: #a0a0a0;
+            font-size: 12px;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            margin: 15px 0;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            background-color: #0a0a0a;
+        }
+
+        .reference-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 15px;
+        }
+
+        .reference-table td {
+            padding: 10px;
+            border: 1px solid #333333;
+        }
+
+        .reference-table td:first-child {
+            background-color: #0a0a0a;
+            color: #a855f7;
+            font-weight: 600;
+            width: 80px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+            font-size: 12px;
+            border-top: 1px solid #333333;
+            margin-top: 40px;
+        }
+
+        .timezone-select {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .timezone-select select {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Cron Expression Builder</h1>
+        <p class="subtitle">Create and validate cron schedules with visual preview</p>
+
+        <div class="grid">
+            <!-- Input Panel -->
+            <div class="panel">
+                <h2 style="font-size: 18px; margin-bottom: 20px;">Create Expression</h2>
+
+                <!-- Presets -->
+                <div class="form-group">
+                    <label>Quick Presets</label>
+                    <div class="preset-buttons">
+                        <button onclick="setPreset('*/1 * * * *')">Every Minute</button>
+                        <button onclick="setPreset('0 * * * *')">Hourly</button>
+                        <button onclick="setPreset('0 0 * * *')">Daily</button>
+                        <button onclick="setPreset('0 9 * * 1')">Weekly (Mon 9am)</button>
+                        <button onclick="setPreset('0 0 1 * *')">Monthly</button>
+                        <button onclick="setPreset('0 0 1 */3 *')">Quarterly</button>
+                    </div>
+                </div>
+
+                <!-- Field Inputs -->
+                <h3 style="font-size: 14px; margin: 20px 0 10px 0; color: #a855f7;">Build by Field</h3>
+                <div class="field-row">
+                    <div>
+                        <label style="font-size: 12px; margin-bottom: 5px;">Minute</label>
+                        <input type="text" id="minute" placeholder="0-59, *" value="0">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; margin-bottom: 5px;">Hour</label>
+                        <input type="text" id="hour" placeholder="0-23, *" value="*">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; margin-bottom: 5px;">Day</label>
+                        <input type="text" id="day" placeholder="1-31, *" value="*">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; margin-bottom: 5px;">Month</label>
+                        <input type="text" id="month" placeholder="1-12, *" value="*">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; margin-bottom: 5px;">Day of Week</label>
+                        <input type="text" id="dow" placeholder="0-6, *" value="*">
+                    </div>
+                </div>
+
+                <button onclick="buildFromFields()" style="width: 100%; margin-bottom: 15px;">Build Expression</button>
+
+                <!-- Direct Input -->
+                <h3 style="font-size: 14px; margin: 20px 0 10px 0; color: #a855f7;">Or Paste Expression</h3>
+                <div class="form-group">
+                    <input type="text" id="cronInput" placeholder="e.g., 0 9 * * 1" value="0 9 * * 1">
+                </div>
+
+                <!-- Format Select -->
+                <div class="form-group">
+                    <label>Cron Format</label>
+                    <select id="cronFormat" onchange="updateExpression()">
+                        <option value="5">Standard (5 fields)</option>
+                        <option value="6">Extended (6 fields with seconds)</option>
+                    </select>
+                </div>
+
+                <!-- Timezone -->
+                <div class="timezone-select">
+                    <label style="margin: 0;">Timezone</label>
+                    <select id="timezone" onchange="updateExpression()">
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">Eastern</option>
+                        <option value="America/Chicago">Central</option>
+                        <option value="America/Denver">Mountain</option>
+                        <option value="America/Los_Angeles">Pacific</option>
+                        <option value="Europe/London">London</option>
+                        <option value="Europe/Paris">Paris</option>
+                        <option value="Asia/Tokyo">Tokyo</option>
+                        <option value="Asia/Shanghai">Shanghai</option>
+                    </select>
+                </div>
+
+                <button onclick="updateExpression()" style="width: 100%;">Generate Schedule</button>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="panel">
+                <h2 style="font-size: 18px; margin-bottom: 20px;">Schedule Preview</h2>
+
+                <!-- Status -->
+                <div id="statusBox" class="info-box" style="display: none;"></div>
+
+                <!-- Expression Display -->
+                <div class="form-group">
+                    <label>Expression</label>
+                    <div style="display: flex; gap: 10px;">
+                        <div class="cron-expression" id="expressionDisplay">0 9 * * 1</div>
+                        <button class="copy-button" onclick="copyToClipboard()">Copy</button>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="form-group">
+                    <label>Human-Readable Description</label>
+                    <div class="info-box" id="description">At 09:00 on Monday</div>
+                </div>
+
+                <!-- Export Formats -->
+                <div class="form-group">
+                    <label>Export Formats</label>
+                    <div class="button-group">
+                        <button class="secondary" onclick="exportFormat('crontab')">Crontab</button>
+                        <button class="secondary" onclick="exportFormat('cloudwatch')">CloudWatch</button>
+                        <button class="secondary" onclick="exportFormat('github')">GitHub Actions</button>
+                    </div>
+                </div>
+
+                <!-- Next Runs -->
+                <div class="form-group">
+                    <label>Next 10 Runs</label>
+                    <div id="nextRuns" class="next-runs"></div>
+                </div>
+
+                <!-- 24h Timeline -->
+                <div class="form-group">
+                    <label>Next 24 Hours Timeline</label>
+                    <canvas id="timelineCanvas" width="400" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reference Table -->
+        <div class="panel full-width">
+            <h2 style="font-size: 18px; margin-bottom: 15px;">Cron Syntax Reference</h2>
+            <table class="reference-table">
+                <tr>
+                    <td>Field</td>
+                    <td>Range</td>
+                    <td>Special Characters</td>
+                    <td>Example</td>
+                </tr>
+                <tr>
+                    <td>Minute</td>
+                    <td>0-59</td>
+                    <td>* , - /</td>
+                    <td>0,30 = every 30 minutes</td>
+                </tr>
+                <tr>
+                    <td>Hour</td>
+                    <td>0-23</td>
+                    <td>* , - /</td>
+                    <td>9-17 = business hours</td>
+                </tr>
+                <tr>
+                    <td>Day</td>
+                    <td>1-31</td>
+                    <td>* , - / ?</td>
+                    <td>1 = first of month</td>
+                </tr>
+                <tr>
+                    <td>Month</td>
+                    <td>1-12</td>
+                    <td>* , - /</td>
+                    <td>1,4,7,10 = quarterly</td>
+                </tr>
+                <tr>
+                    <td>Day of Week</td>
+                    <td>0-6 (Sun-Sat)</td>
+                    <td>* , - / ?</td>
+                    <td>1-5 = Mon-Fri</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <footer>© 2026 invokebot.com</footer>
+
+    <script>
+        class CronParser {
+            constructor(expression, format = 5) {
+                this.expression = expression.trim();
+                this.format = parseInt(format);
+                this.fields = this.expression.split(/\s+/);
+                this.valid = this.validate();
+            }
+
+            validate() {
+                const expectedFields = this.format;
+                if (this.fields.length !== expectedFields) return false;
+
+                const ranges = [
+                    { min: 0, max: this.format === 6 ? 59 : 59 }, // second/minute
+                    { min: 0, max: 59 }, // minute/hour
+                    { min: 0, max: 23 }, // hour/day
+                    { min: 1, max: 31 }, // day/month
+                    { min: 1, max: 12 }, // month/dow
+                    { min: 0, max: 6 }   // dow
+                ];
+
+                for (let i = 0; i < this.fields.length; i++) {
+                    if (!this.validateField(this.fields[i], ranges[i])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            validateField(field, range) {
+                if (field === '*' || field === '?') return true;
+                if (field.includes(',')) {
+                    return field.split(',').every(f => this.validateField(f.trim(), range));
+                }
+                if (field.includes('-')) {
+                    const [start, end] = field.split('-');
+                    return !isNaN(start) && !isNaN(end) && start >= range.min && end <= range.max;
+                }
+                if (field.includes('/')) {
+                    const [base, step] = field.split('/');
+                    return !isNaN(step) && (base === '*' || this.validateField(base, range));
+                }
+                return !isNaN(field) && field >= range.min && field <= range.max;
+            }
+
+            describe() {
+                if (!this.valid) return 'Invalid cron expression';
+
+                const parts = [];
+                const minute = this.fields[this.format === 6 ? 1 : 0];
+                const hour = this.fields[this.format === 6 ? 2 : 1];
+                const day = this.fields[this.format === 6 ? 3 : 2];
+                const month = this.fields[this.format === 6 ? 4 : 3];
+                const dow = this.fields[this.format === 6 ? 5 : 4];
+
+                // Build description
+                let desc = '';
+                if (minute !== '*') desc += `At minute ${minute} `;
+                if (hour !== '*') desc += `past hour ${hour} `;
+                if (dow !== '*' && dow !== '?') desc += `on ${this.dowName(dow)} `;
+                if (day !== '*' && day !== '?') desc += `on day ${day} `;
+                if (month !== '*') desc += `in month ${month} `;
+
+                return desc || 'Every minute';
+            }
+
+            dowName(field) {
+                const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                if (field === '0' || field === '7') return 'Sunday';
+                if (field === '1') return 'Monday';
+                if (field === '2') return 'Tuesday';
+                if (field === '3') return 'Wednesday';
+                if (field === '4') return 'Thursday';
+                if (field === '5') return 'Friday';
+                if (field === '6') return 'Saturday';
+                return field;
+            }
+
+            getNextRuns(count = 10, timezone = 'UTC') {
+                const runs = [];
+                let current = new Date();
+                const maxIterations = 1000;
+                let iterations = 0;
+
+                while (runs.length < count && iterations < maxIterations) {
+                    current.setSeconds(0);
+                    current.setMilliseconds(0);
+
+                    if (this.matchesCron(current)) {
+                        const tzTime = new Date(current.toLocaleString('en-US', { timeZone: timezone }));
+                        runs.push({
+                            iso: current.toISOString(),
+                            local: current.toLocaleString(),
+                            tz: tzTime.toLocaleString()
+                        });
+                    }
+                    current.setMinutes(current.getMinutes() + 1);
+                    iterations++;
+                }
+
+                return runs;
+            }
+
+            matchesCron(date) {
+                const minute = date.getMinutes();
+                const hour = date.getHours();
+                const day = date.getDate();
+                const month = date.getMonth() + 1;
+                const dow = date.getDay();
+
+                const values = this.format === 6
+                    ? [date.getSeconds(), minute, hour, day, month, dow]
+                    : [minute, hour, day, month, dow];
+
+                for (let i = 0; i < values.length; i++) {
+                    if (!this.fieldMatches(this.fields[i], values[i], i)) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            fieldMatches(field, value, fieldIndex) {
+                if (field === '*' || field === '?') return true;
+
+                if (field.includes(',')) {
+                    return field.split(',').some(f => this.fieldMatches(f.trim(), value, fieldIndex));
+                }
+
+                if (field.includes('-')) {
+                    const [start, end] = field.split('-').map(Number);
+                    return value >= start && value <= end;
+                }
+
+                if (field.includes('/')) {
+                    const [base, step] = field.split('/');
+                    if (base === '*') return value % step === 0;
+                    const start = parseInt(base);
+                    return value >= start && (value - start) % parseInt(step) === 0;
+                }
+
+                return parseInt(field) === value;
+            }
+        }
+
+        function buildFromFields() {
+            const fields = [
+                document.getElementById('minute').value || '*',
+                document.getElementById('hour').value || '*',
+                document.getElementById('day').value || '*',
+                document.getElementById('month').value || '*',
+                document.getElementById('dow').value || '*'
+            ];
+            document.getElementById('cronInput').value = fields.join(' ');
+            updateExpression();
+        }
+
+        function setPreset(preset) {
+            document.getElementById('cronInput').value = preset;
+            updateExpression();
+        }
+
+        function updateExpression() {
+            const expr = document.getElementById('cronInput').value;
+            const format = document.getElementById('cronFormat').value;
+            const timezone = document.getElementById('timezone').value;
+
+            const parser = new CronParser(expr, format);
+
+            // Show status
+            const statusBox = document.getElementById('statusBox');
+            if (!parser.valid) {
+                statusBox.className = 'info-box error';
+                statusBox.textContent = 'Invalid cron expression';
+                statusBox.style.display = 'block';
+                return;
+            } else {
+                statusBox.className = 'info-box success';
+                statusBox.textContent = 'Valid expression';
+                statusBox.style.display = 'block';
+            }
+
+            // Update display
+            document.getElementById('expressionDisplay').textContent = expr;
+            document.getElementById('description').textContent = parser.describe();
+
+            // Get next runs
+            const runs = parser.getNextRuns(10, timezone);
+            const runsHtml = runs.map((run, i) => `
+                <div class="run-item">
+                    <div>
+                        <div class="run-time">${new Date(run.iso).toLocaleString()}</div>
+                        <div class="run-relative">in ${getRelativeTime(new Date(run.iso))}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('nextRuns').innerHTML = runsHtml;
+
+            // Draw timeline
+            drawTimeline(runs);
+        }
+
+        function drawTimeline(runs) {
+            const canvas = document.getElementById('timelineCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw 24h grid
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+            // Filter runs in next 24 hours
+            const visible = runs.filter(r => {
+                const d = new Date(r.iso);
+                return d >= now && d <= tomorrow;
+            });
+
+            // Draw bars
+            visible.forEach((run, i) => {
+                const d = new Date(run.iso);
+                const progress = (d - now) / (24 * 60 * 60 * 1000);
+                const x = progress * width;
+
+                ctx.fillStyle = '#a855f7';
+                ctx.fillRect(x - 2, 20, 4, 40);
+
+                ctx.fillStyle = '#a0a0a0';
+                ctx.font = '10px sans-serif';
+                ctx.fillText(d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0'), x - 15, 70);
+            });
+
+            // Draw timeline axis
+            ctx.strokeStyle = '#333333';
+            ctx.beginPath();
+            ctx.moveTo(0, 20);
+            ctx.lineTo(width, 20);
+            ctx.stroke();
+        }
+
+        function getRelativeTime(date) {
+            const now = new Date();
+            const diff = date - now;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}d ${hours % 24}h`;
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            return `${minutes}m`;
+        }
+
+        function copyToClipboard() {
+            const expr = document.getElementById('expressionDisplay').textContent;
+            navigator.clipboard.writeText(expr).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        function exportFormat(format) {
+            const expr = document.getElementById('expressionDisplay').textContent;
+            let output = '';
+
+            if (format === 'crontab') {
+                output = `${expr} /path/to/command`;
+            } else if (format === 'cloudwatch') {
+                output = `cron(${expr.split(' ').slice(1).join(' ')} ?)`;
+            } else if (format === 'github') {
+                output = `cron: '${expr}'`;
+            }
+
+            navigator.clipboard.writeText(output).then(() => {
+                alert('Exported: ' + output);
+            });
+        }
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            updateExpression();
+        });
+    </script>
+</body>
+</html>

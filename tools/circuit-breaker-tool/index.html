@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Breaker Configuration Tool - invokebot.com</title>
+    <meta name="description" content="Configure circuit breaker thresholds with live failure rate simulation. See state transitions in real-time.">
+    <link rel="canonical" href="https://invokebot.com/tools/circuit-breaker-tool">
+
+    <!-- OG Tags -->
+    <meta property="og:title" content="Circuit Breaker Configuration Tool">
+    <meta property="og:description" content="Design and simulate circuit breaker patterns with failure rate thresholds.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://invokebot.com/tools/circuit-breaker-tool">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Circuit Breaker Configuration Tool",
+        "url": "https://invokebot.com/tools/circuit-breaker-tool",
+        "description": "Design circuit breaker strategies with live state transition simulation",
+        "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+            font-size: clamp(24px, 5vw, 36px);
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            margin-bottom: 30px;
+            font-size: clamp(14px, 3vw, 16px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: #1a1a1a;
+            border: 1px solid #333333;
+            border-radius: 8px;
+            padding: 25px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            font-size: 14px;
+            margin: 20px 0 10px 0;
+            color: #a855f7;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #a855f7;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #a855f7;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        button:hover {
+            background-color: #9333ea;
+        }
+
+        button.success {
+            background-color: #10b981;
+        }
+
+        button.success:hover {
+            background-color: #059669;
+        }
+
+        button.error {
+            background-color: #ef4444;
+        }
+
+        button.error:hover {
+            background-color: #dc2626;
+        }
+
+        button.slow {
+            background-color: #f97316;
+        }
+
+        button.slow:hover {
+            background-color: #ea580c;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .preset-buttons button {
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 0;
+        }
+
+        .preset-buttons button:last-child {
+            margin-bottom: 8px;
+        }
+
+        .state-indicator {
+            background-color: #0a0a0a;
+            border: 2px solid #333333;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .state-closed {
+            background-color: #10b981;
+            color: #ffffff;
+            border: 2px solid #10b981;
+        }
+
+        .state-open {
+            background-color: #ef4444;
+            color: #ffffff;
+            border: 2px solid #ef4444;
+        }
+
+        .state-half-open {
+            background-color: #f97316;
+            color: #ffffff;
+            border: 2px solid #f97316;
+        }
+
+        .metric {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .metric-value {
+            color: #a855f7;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-unit {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .gauge {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .gauge-label {
+            color: #a0a0a0;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .gauge-bar {
+            height: 24px;
+            background-color: #333333;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            background-color: #10b981;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        canvas {
+            width: 100%;
+            height: 250px;
+            margin: 15px 0;
+            border: 1px solid #333333;
+            border-radius: 4px;
+            background-color: #0a0a0a;
+        }
+
+        .log-entry {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .log-time {
+            color: #a0a0a0;
+            font-size: 11px;
+        }
+
+        .log-text {
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .log-success {
+            border-left: 3px solid #10b981;
+        }
+
+        .log-error {
+            border-left: 3px solid #ef4444;
+        }
+
+        .log-state {
+            border-left: 3px solid #a855f7;
+        }
+
+        .code-block {
+            background-color: #0a0a0a;
+            border: 1px solid #333333;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 11px;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666666;
+            font-size: 12px;
+            border-top: 1px solid #333333;
+            margin-top: 40px;
+        }
+
+        small {
+            color: #a0a0a0;
+            margin-top: 5px;
+            display: block;
+            font-size: 12px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .control-buttons button {
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Circuit Breaker Configuration Tool</h1>
+        <p class="subtitle">Design and simulate circuit breaker state transitions</p>
+
+        <div class="grid">
+            <!-- Configuration Panel -->
+            <div class="panel">
+                <h2>Configuration</h2>
+
+                <div class="form-group">
+                    <label>Failure Threshold (%)</label>
+                    <input type="number" id="failureThreshold" value="50" min="1" max="100" onchange="updateConfig()">
+                    <small>% failures to open circuit</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Evaluation Window (requests)</label>
+                    <input type="number" id="evaluationWindow" value="10" min="1" onchange="updateConfig()">
+                    <small>Min calls before decision</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Sliding Window Type</label>
+                    <select id="windowType" onchange="updateConfig()">
+                        <option value="count">Count-based</option>
+                        <option value="time">Time-based (60s)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Open Duration (seconds)</label>
+                    <input type="number" id="openDuration" value="30" min="1" onchange="updateConfig()">
+                    <small>Wait before half-open</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Half-Open Requests</label>
+                    <input type="number" id="halfOpenRequests" value="3" min="1" onchange="updateConfig()">
+                    <small>Permitted during half-open</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Slow Call Threshold (ms)</label>
+                    <input type="number" id="slowCallThreshold" value="1000" min="100" onchange="updateConfig()">
+                    <small>Latency to count as slow</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Slow Call Rate (%)</label>
+                    <input type="number" id="slowCallRate" value="50" min="1" max="100" onchange="updateConfig()">
+                    <small>Slow calls to trigger open</small>
+                </div>
+
+                <h3>Presets</h3>
+                <div class="preset-buttons">
+                    <button class="success" onclick="setPreset('database')">Database</button>
+                    <button class="success" onclick="setPreset('api')">API</button>
+                    <button class="success" onclick="setPreset('microservice')">Microservice</button>
+                    <button class="success" onclick="setPreset('cache')">Cache</button>
+                </div>
+
+                <h3 style="margin-top: 20px;">Simulate Requests</h3>
+                <div class="control-buttons">
+                    <button class="success" onclick="simulateRequest('success')">Success</button>
+                    <button class="error" onclick="simulateRequest('failure')">Failure</button>
+                    <button class="slow" onclick="simulateRequest('slow')">Slow</button>
+                </div>
+
+                <button onclick="simulateLoadTest()" style="margin-bottom: 15px;">Run Load Test</button>
+                <button onclick="resetCircuit()" style="background-color: #333333;">Reset</button>
+            </div>
+
+            <!-- Visualization Panel -->
+            <div class="panel">
+                <h2>Circuit Breaker State</h2>
+
+                <!-- State Indicator -->
+                <div class="state-indicator" id="stateIndicator">
+                    <div class="state-badge state-closed" id="stateBadge">CLOSED</div>
+                    <div style="color: #a0a0a0; font-size: 13px; margin-top: 10px;">
+                        <span id="stateSubtext">Accepting requests</span>
+                    </div>
+                </div>
+
+                <!-- Metrics -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="metric">
+                        <div class="metric-label">Failure Rate</div>
+                        <div class="metric-value" id="failureRate">0<span class="metric-unit">%</span></div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Total Calls</div>
+                        <div class="metric-value" id="totalCalls">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">Blocked Calls</div>
+                        <div class="metric-value" id="blockedCalls">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">MTBF</div>
+                        <div class="metric-value" id="mtbf">-<span class="metric-unit">s</span></div>
+                    </div>
+                </div>
+
+                <!-- Failure Rate Gauge -->
+                <div class="gauge">
+                    <div class="gauge-label">Failure Rate Threshold: <span id="gaugeThreshold">50%</span></div>
+                    <div class="gauge-bar">
+                        <div class="gauge-fill" id="gaugeFill" style="width: 0%;">
+                            <span id="gaugePercent">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Call Timeline -->
+                <h3>Call History (last 50)</h3>
+                <canvas id="callTimelineCanvas" width="600" height="150"></canvas>
+
+                <!-- State Log -->
+                <h3 style="margin-top: 20px;">Event Log</h3>
+                <div id="eventLog" style="max-height: 250px; overflow-y: auto;"></div>
+
+                <!-- Availability -->
+                <h3 style="margin-top: 20px;">Availability Metrics</h3>
+                <div class="metric">
+                    <div class="metric-label">Availability</div>
+                    <div class="metric-value" id="availability">100<span class="metric-unit">%</span></div>
+                    <div style="color: #a0a0a0; font-size: 11px; margin-top: 5px;">
+                        <span id="availabilityBreakdown">0 downtime periods</span>
+                    </div>
+                </div>
+
+                <!-- Implementation Examples -->
+                <h3 style="margin-top: 25px;">Implementation Code</h3>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Resilience4j (Java)</summary>
+                    <div class="code-block">CircuitBreakerConfig config = CircuitBreakerConfig.custom()
+    .failureRateThreshold(<span id="code_java_threshold">50</span>)
+    .slowCallRateThreshold(<span id="code_java_slow_rate">50</span>)
+    .slowCallDurationThreshold(Duration.ofMillis(<span id="code_java_slow_threshold">1000</span>))
+    .waitDurationInOpenState(Duration.ofSeconds(<span id="code_java_wait">30</span>))
+    .minimumNumberOfCalls(<span id="code_java_min">10</span>)
+    .permittedNumberOfCallsInHalfOpenState(<span id="code_java_half_open">3</span>)
+    .build();
+
+CircuitBreaker breaker = CircuitBreaker.of("myBreaker", config);
+breaker.executeSupplier(() -> callDownstream());</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Polly (.NET)</summary>
+                    <div class="code-block">var policy = Policy.Handle<HttpRequestException>()
+    .OrResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
+    .CircuitBreaker(<span id="code_dotnet_failures">5</span>, TimeSpan.FromSeconds(<span id="code_dotnet_wait">30</span>),
+        onBreak: (outcome, ts) => Console.WriteLine("Circuit opened"),
+        onReset: () => Console.WriteLine("Circuit closed"));
+
+var response = await policy.ExecuteAsync(() =>
+    httpClient.GetAsync("https://api.example.com"));</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">opossum (Node.js)</summary>
+                    <div class="code-block">const breaker = new CircuitBreaker(callFunction, {
+    timeout: <span id="code_node_timeout">1000</span>,
+    errorThresholdPercentage: <span id="code_node_threshold">50</span>,
+    resetTimeout: <span id="code_node_reset">30000</span>,
+    rollingCountTimeout: 10000,
+    rollingCountBuckets: 10,
+    name: 'myService'
+});
+
+await breaker.fire(args).catch(err => {
+    if (err.breaker) console.log('Circuit open');
+});</div>
+                </details>
+
+                <details>
+                    <summary style="color: #a855f7; cursor: pointer; margin-bottom: 10px;">Hystrix Pattern (Overview)</summary>
+                    <div class="code-block">public class MyService {
+    @HystrixCommand(
+        fallbackMethod = "fallback",
+        commandProperties = {
+            @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds",
+                            value = "1000"),
+            @HystrixProperty(name = "circuitBreaker.errorThresholdPercentage",
+                            value = "50"),
+            @HystrixProperty(name = "circuitBreaker.sleepWindowInMilliseconds",
+                            value = "30000")
+        }
+    )
+    public String callDownstream() {
+        return restTemplate.getForObject("...", String.class);
+    }
+
+    public String fallback() {
+        return "Service unavailable";
+    }
+}</div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <footer>© 2026 invokebot.com</footer>
+
+    <script>
+        let circuitState = {
+            state: 'closed', // closed, open, half-open
+            totalCalls: 0,
+            successCalls: 0,
+            failedCalls: 0,
+            slowCalls: 0,
+            blockedCalls: 0,
+            callHistory: [],
+            lastOpenTime: null,
+            downtimePeriods: 0,
+            eventLog: []
+        };
+
+        let config = {
+            failureThreshold: 50,
+            evaluationWindow: 10,
+            windowType: 'count',
+            openDuration: 30,
+            halfOpenRequests: 3,
+            slowCallThreshold: 1000,
+            slowCallRate: 50
+        };
+
+        function updateConfig() {
+            config.failureThreshold = parseInt(document.getElementById('failureThreshold').value);
+            config.evaluationWindow = parseInt(document.getElementById('evaluationWindow').value);
+            config.windowType = document.getElementById('windowType').value;
+            config.openDuration = parseInt(document.getElementById('openDuration').value);
+            config.halfOpenRequests = parseInt(document.getElementById('halfOpenRequests').value);
+            config.slowCallThreshold = parseInt(document.getElementById('slowCallThreshold').value);
+            config.slowCallRate = parseInt(document.getElementById('slowCallRate').value);
+
+            document.getElementById('gaugeThreshold').textContent = config.failureThreshold + '%';
+
+            // Update code blocks
+            document.getElementById('code_java_threshold').textContent = config.failureThreshold;
+            document.getElementById('code_java_slow_rate').textContent = config.slowCallRate;
+            document.getElementById('code_java_slow_threshold').textContent = config.slowCallThreshold;
+            document.getElementById('code_java_wait').textContent = config.openDuration;
+            document.getElementById('code_java_min').textContent = config.evaluationWindow;
+            document.getElementById('code_java_half_open').textContent = config.halfOpenRequests;
+
+            document.getElementById('code_dotnet_wait').textContent = config.openDuration;
+            document.getElementById('code_node_threshold').textContent = config.failureThreshold;
+            document.getElementById('code_node_reset').textContent = config.openDuration * 1000;
+
+            updateDisplay();
+        }
+
+        function simulateRequest(type) {
+            circuitState.totalCalls++;
+
+            let allowed = true;
+            if (circuitState.state === 'open') {
+                if (circuitState.lastOpenTime && Date.now() - circuitState.lastOpenTime > config.openDuration * 1000) {
+                    circuitState.state = 'half-open';
+                    circuitState.halfOpenCounter = 0;
+                    addLog('Circuit transitioned to HALF-OPEN', 'state');
+                } else {
+                    circuitState.blockedCalls++;
+                    allowed = false;
+                    addLog('Request blocked (circuit open)', 'state');
+                }
+            }
+
+            if (circuitState.state === 'half-open' && circuitState.halfOpenCounter >= config.halfOpenRequests) {
+                circuitState.blockedCalls++;
+                allowed = false;
+                addLog('Half-open limit reached', 'state');
+            }
+
+            if (allowed) {
+                if (type === 'success') {
+                    circuitState.successCalls++;
+                    circuitState.callHistory.push({ type: 'success', time: Date.now() });
+                    addLog('Request success', 'success');
+
+                    if (circuitState.state === 'half-open') {
+                        circuitState.halfOpenCounter++;
+                        if (circuitState.halfOpenCounter >= config.halfOpenRequests) {
+                            circuitState.state = 'closed';
+                            circuitState.callHistory = [];
+                            addLog('Circuit CLOSED (recovered)', 'state');
+                        }
+                    }
+                } else if (type === 'failure') {
+                    circuitState.failedCalls++;
+                    circuitState.callHistory.push({ type: 'failure', time: Date.now() });
+                    addLog('Request failed', 'error');
+
+                    if (circuitState.state === 'half-open') {
+                        circuitState.state = 'open';
+                        circuitState.lastOpenTime = Date.now();
+                        circuitState.downtimePeriods++;
+                        addLog('Circuit OPEN (failure in half-open)', 'state');
+                    }
+                } else if (type === 'slow') {
+                    circuitState.slowCalls++;
+                    circuitState.callHistory.push({ type: 'slow', time: Date.now() });
+                    addLog('Slow request detected', 'error');
+                }
+
+                checkCircuitState();
+            }
+
+            updateDisplay();
+            drawCallTimeline();
+        }
+
+        function checkCircuitState() {
+            if (circuitState.callHistory.length < config.evaluationWindow) return;
+
+            const recent = circuitState.callHistory.slice(-config.evaluationWindow);
+            const failures = recent.filter(c => c.type === 'failure' || c.type === 'slow').length;
+            const failureRate = (failures / recent.length) * 100;
+
+            if (failureRate >= config.failureThreshold && circuitState.state === 'closed') {
+                circuitState.state = 'open';
+                circuitState.lastOpenTime = Date.now();
+                circuitState.downtimePeriods++;
+                addLog('Circuit OPEN (threshold exceeded)', 'state');
+            }
+        }
+
+        function addLog(message, type) {
+            const time = new Date().toLocaleTimeString();
+            circuitState.eventLog.unshift({ message, type, time });
+            if (circuitState.eventLog.length > 20) circuitState.eventLog.pop();
+        }
+
+        function updateDisplay() {
+            const failureRate = circuitState.totalCalls > 0
+                ? ((circuitState.failedCalls + circuitState.slowCalls) / circuitState.totalCalls) * 100
+                : 0;
+
+            const availability = circuitState.totalCalls > 0
+                ? ((circuitState.totalCalls - circuitState.blockedCalls) / circuitState.totalCalls) * 100
+                : 100;
+
+            // Update state badge
+            const badge = document.getElementById('stateBadge');
+            const subtext = document.getElementById('stateSubtext');
+
+            badge.className = 'state-badge';
+            if (circuitState.state === 'closed') {
+                badge.classList.add('state-closed');
+                badge.textContent = 'CLOSED';
+                subtext.textContent = 'Accepting requests';
+            } else if (circuitState.state === 'open') {
+                badge.classList.add('state-open');
+                badge.textContent = 'OPEN';
+                const remaining = Math.max(0, config.openDuration - Math.floor((Date.now() - circuitState.lastOpenTime) / 1000));
+                subtext.textContent = `Recovering in ${remaining}s`;
+            } else {
+                badge.classList.add('state-half-open');
+                badge.textContent = 'HALF-OPEN';
+                subtext.textContent = `Testing: ${circuitState.halfOpenCounter || 0}/${config.halfOpenRequests}`;
+            }
+
+            // Update metrics
+            document.getElementById('failureRate').innerHTML =
+                Math.round(failureRate * 10) / 10 + '<span class="metric-unit">%</span>';
+            document.getElementById('totalCalls').textContent = circuitState.totalCalls;
+            document.getElementById('blockedCalls').textContent = circuitState.blockedCalls;
+            document.getElementById('availability').innerHTML =
+                Math.round(availability * 10) / 10 + '<span class="metric-unit">%</span>';
+
+            // Update gauge
+            const fillWidth = Math.min(failureRate, 100);
+            document.getElementById('gaugeFill').style.width = fillWidth + '%';
+            document.getElementById('gaugePercent').textContent = Math.round(failureRate) + '%';
+
+            // Update event log
+            const logHtml = circuitState.eventLog.map(log => `
+                <div class="log-entry log-${log.type}">
+                    <span class="log-time">${log.time}</span>
+                    <span class="log-text">${log.message}</span>
+                </div>
+            `).join('');
+            document.getElementById('eventLog').innerHTML = logHtml;
+        }
+
+        function drawCallTimeline() {
+            const canvas = document.getElementById('callTimelineCanvas');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+
+            ctx.fillStyle = '#0a0a0a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw calls
+            const recentCalls = circuitState.callHistory.slice(-50);
+            const startTime = recentCalls.length > 0 ? recentCalls[0].time : Date.now();
+            const timeRange = Math.max(5000, Date.now() - startTime + 1000);
+
+            recentCalls.forEach((call, i) => {
+                const elapsed = call.time - startTime;
+                const x = (elapsed / timeRange) * width;
+                const y = (i / 50) * height + 10;
+
+                let color = '#10b981';
+                let size = 2;
+                if (call.type === 'failure') {
+                    color = '#ef4444';
+                    size = 3;
+                } else if (call.type === 'slow') {
+                    color = '#f97316';
+                    size = 2.5;
+                }
+
+                ctx.fillStyle = color;
+                ctx.fillRect(x - size, y, size * 2, 4);
+            });
+
+            // Draw legend
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(20, height - 25, 8, 8);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '10px sans-serif';
+            ctx.fillText('Success', 32, height - 18);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(120, height - 25, 8, 8);
+            ctx.fillText('Failure', 132, height - 18);
+
+            ctx.fillStyle = '#f97316';
+            ctx.fillRect(200, height - 25, 8, 8);
+            ctx.fillText('Slow', 212, height - 18);
+        }
+
+        function setPreset(preset) {
+            if (preset === 'database') {
+                document.getElementById('failureThreshold').value = 30;
+                document.getElementById('evaluationWindow').value = 5;
+                document.getElementById('openDuration').value = 60;
+                document.getElementById('slowCallThreshold').value = 500;
+            } else if (preset === 'api') {
+                document.getElementById('failureThreshold').value = 50;
+                document.getElementById('evaluationWindow').value = 10;
+                document.getElementById('openDuration').value = 30;
+                document.getElementById('slowCallThreshold').value = 1000;
+            } else if (preset === 'microservice') {
+                document.getElementById('failureThreshold').value = 40;
+                document.getElementById('evaluationWindow').value = 20;
+                document.getElementById('openDuration').value = 45;
+                document.getElementById('slowCallThreshold').value = 800;
+            } else if (preset === 'cache') {
+                document.getElementById('failureThreshold').value = 60;
+                document.getElementById('evaluationWindow').value = 15;
+                document.getElementById('openDuration').value = 15;
+                document.getElementById('slowCallThreshold').value = 100;
+            }
+            updateConfig();
+        }
+
+        function simulateLoadTest() {
+            for (let i = 0; i < 50; i++) {
+                const rand = Math.random();
+                if (rand < 0.7) {
+                    simulateRequest('success');
+                } else if (rand < 0.9) {
+                    simulateRequest('failure');
+                } else {
+                    simulateRequest('slow');
+                }
+            }
+        }
+
+        function resetCircuit() {
+            circuitState = {
+                state: 'closed',
+                totalCalls: 0,
+                successCalls: 0,
+                failedCalls: 0,
+                slowCalls: 0,
+                blockedCalls: 0,
+                callHistory: [],
+                lastOpenTime: null,
+                downtimePeriods: 0,
+                eventLog: []
+            };
+            updateDisplay();
+            drawCallTimeline();
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            updateConfig();
+            updateDisplay();
+            drawCallTimeline();
+        });
+    </script>
+</body>
+</html>

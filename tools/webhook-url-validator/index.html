@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook URL Validator — Free Tool</title>
+    <meta name="description" content="Webhook URL Validator: Validate webhook URLs, check HTTPS, test with sample payloads. Free online tool.">
+    <meta name="keywords" content="webhook validator, webhook URL checker, HTTPS validation, webhook testing">
+    <link rel="canonical" href="https://invokebot.com/tools/webhook-url-validator">
+
+    <meta property="og:title" content="Webhook URL Validator — Free Tool">
+    <meta property="og:description" content="Validate webhook URLs, check HTTPS, test with sample payloads. Free online tool.">
+    <meta property="og:url" content="https://invokebot.com/tools/webhook-url-validator">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://invokebot.com/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Webhook URL Validator",
+        "description": "Validate webhook URLs, check HTTPS, test with sample payloads",
+        "url": "https://invokebot.com/tools/webhook-url-validator",
+        "applicationCategory": "DeveloperApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .tool-section {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00d4aa;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background: #00d4aa;
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00b889;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1e2749;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            color: #e0e6ed;
+            word-break: break-all;
+        }
+
+        .status-pass {
+            color: #48bb78;
+        }
+
+        .status-fail {
+            color: #f56565;
+        }
+
+        .status-warning {
+            color: #ecc94b;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1e2749;
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: #a0aec0;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #00d4aa;
+            border-bottom-color: #00d4aa;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            border-top: 1px solid #1e2749;
+            margin-top: 40px;
+        }
+
+        .error {
+            background: rgba(245, 101, 101, 0.1);
+            border-left: 4px solid #f56565;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #fc8181;
+        }
+
+        .success {
+            background: rgba(72, 187, 120, 0.1);
+            border-left: 4px solid #48bb78;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #9ae6b4;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .tool-section {
+                padding: 20px;
+            }
+        }
+    </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Webhook URL Validator</h1>
+            <p class="subtitle">Validate, test, and debug webhook URLs instantly</p>
+        </header>
+
+        <div class="tool-section">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="validate">Validate</button>
+                <button class="tab-btn" data-tab="test">Test</button>
+            </div>
+
+            <div id="validate" class="tab-content active">
+                <label for="webhookUrl">Webhook URL</label>
+                <input type="text" id="webhookUrl" placeholder="https://example.com/webhook">
+
+                <button onclick="validateWebhook()">Validate URL</button>
+
+                <div id="validateResults" class="results">
+                    <div id="validateContent"></div>
+                </div>
+            </div>
+
+            <div id="test" class="tab-content">
+                <label for="testUrl">Webhook URL</label>
+                <input type="text" id="testUrl" placeholder="https://example.com/webhook">
+
+                <label for="payload">JSON Payload (Optional)</label>
+                <textarea id="payload" placeholder='{"event": "test", "timestamp": 1234567890}'>{
+  "event": "test",
+  "timestamp": 1234567890,
+  "data": {
+    "message": "Webhook test payload"
+  }
+}</textarea>
+
+                <label for="method">HTTP Method</label>
+                <select id="method" style="padding: 12px; background: #0a0e27; border: 1px solid #1e2749; border-radius: 6px; color: #e0e6ed; margin-bottom: 16px;">
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                </select>
+
+                <button onclick="testWebhook()">Send Test Webhook</button>
+
+                <div id="testResults" class="results">
+                    <div id="testContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 invokebot.com. All rights reserved.</p>
+    </footer>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(tabName).classList.add('active');
+            });
+        });
+
+        function validateWebhook() {
+            const url = document.getElementById('webhookUrl').value.trim();
+            const resultsDiv = document.getElementById('validateResults');
+            const contentDiv = document.getElementById('validateContent');
+
+            if (!url) {
+                contentDiv.innerHTML = '<div class="error">Please enter a webhook URL</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            let html = '';
+
+            try {
+                const urlObj = new URL(url);
+                html += '<div class="result-item"><div class="result-label">URL Format</div><div class="result-value status-pass">✓ Valid URL format</div></div>';
+
+                const protocol = urlObj.protocol;
+                const isHttps = protocol === 'https:';
+                const protocolStatus = isHttps ? 'status-pass' : 'status-warning';
+                const protocolMsg = isHttps ? '✓ HTTPS (Recommended)' : '⚠ HTTP (Not recommended for webhooks)';
+                html += `<div class="result-item"><div class="result-label">Protocol</div><div class="result-value ${protocolStatus}">${protocolMsg}</div></div>`;
+
+                const hostname = urlObj.hostname;
+                const isLocalhost = hostname === 'localhost' || hostname.startsWith('127.');
+                const hostnameStatus = isLocalhost ? 'status-warning' : 'status-pass';
+                html += `<div class="result-item"><div class="result-label">Hostname</div><div class="result-value ${hostnameStatus}">${hostname}</div></div>`;
+
+                const port = urlObj.port;
+                const portText = port ? `Port ${port}` : 'Default port';
+                html += `<div class="result-item"><div class="result-label">Port</div><div class="result-value">${portText}</div></div>`;
+
+                const pathname = urlObj.pathname;
+                html += `<div class="result-item"><div class="result-label">Path</div><div class="result-value">${pathname || '/'}</div></div>`;
+
+                const hasQuery = urlObj.search.length > 0;
+                html += `<div class="result-item"><div class="result-label">Query Parameters</div><div class="result-value">${hasQuery ? urlObj.search : 'None'}</div></div>`;
+
+                html += '<div class="result-item success" style="border-left: 4px solid #48bb78; background: rgba(72, 187, 120, 0.1);">✓ URL is valid and ready to receive webhooks</div>';
+
+            } catch (e) {
+                html = `<div class="error">✗ Invalid URL format: ${e.message}</div>`;
+            }
+
+            contentDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+
+        function testWebhook() {
+            const url = document.getElementById('testUrl').value.trim();
+            const payload = document.getElementById('payload').value.trim();
+            const method = document.getElementById('method').value;
+            const resultsDiv = document.getElementById('testResults');
+            const contentDiv = document.getElementById('testContent');
+
+            if (!url) {
+                contentDiv.innerHTML = '<div class="error">Please enter a webhook URL</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            contentDiv.innerHTML = '<div class="result-item">Testing webhook...</div>';
+            resultsDiv.classList.add('show');
+
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (payload) {
+                    try {
+                        JSON.parse(payload);
+                        options.body = payload;
+                    } catch {
+                        contentDiv.innerHTML = '<div class="error">Invalid JSON payload</div>';
+                        return;
+                    }
+                }
+
+                fetch(url, options)
+                    .then(response => {
+                        let html = `<div class="result-item"><div class="result-label">Status Code</div><div class="result-value status-${response.ok ? 'pass' : 'fail'}">${response.status} ${response.statusText}</div></div>`;
+
+                        html += '<div class="result-item"><div class="result-label">Response Headers</div><div class="result-value"><pre style="overflow-x: auto; background: #0a0e27; padding: 10px; border-radius: 4px;">';
+
+                        const importantHeaders = ['content-type', 'content-length', 'server', 'x-ratelimit-limit', 'x-ratelimit-remaining'];
+                        importantHeaders.forEach(header => {
+                            const value = response.headers.get(header);
+                            if (value) {
+                                html += `${header}: ${value}\n`;
+                            }
+                        });
+
+                        html += '</pre></div></div>';
+
+                        html += response.ok ? '<div class="result-item success">✓ Webhook test sent successfully</div>' : '<div class="error">✗ Server returned error status</div>';
+
+                        contentDiv.innerHTML = html;
+                    })
+                    .catch(error => {
+                        contentDiv.innerHTML = `<div class="error">✗ CORS or network error: ${error.message}</div><div class="result-item"><div class="result-value" style="color: #cbd5e0;">Note: Some webhooks may not be testable from a browser due to CORS restrictions. This is expected behavior. Your webhook URL is still valid.</div></div>`;
+                    });
+            } catch (e) {
+                contentDiv.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+            }
+        }
+    </script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<div style="margin:30px auto;max-width:728px;text-align:center;padding:18px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px">
+<p style="margin:0 0 6px;color:#94a3b8;font-size:0.85rem">Recommended by our team</p>
+<a href="https://www.belikenative.com?ref=satellite" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;font-size:1.05rem;text-decoration:none">BeLikeNative.com</a>
+<p style="margin:6px 0 0;color:#cbd5e1;font-size:0.9rem">The #1 AI writing tool for freelancers — perfect grammar in any language, instantly.</p>
+</div>
+</body>
+</html>

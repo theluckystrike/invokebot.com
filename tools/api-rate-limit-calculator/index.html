@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Rate Limit Calculator — Free Tool</title>
+    <meta name="description" content="API Rate Limit Calculator: Calculate requests per day/month, burst capacity, rate limiting strategies. Free tool.">
+    <meta name="keywords" content="rate limit calculator, API rate limiting, request limits, API quota">
+    <link rel="canonical" href="https://invokebot.com/tools/api-rate-limit-calculator">
+
+    <meta property="og:title" content="API Rate Limit Calculator — Free Tool">
+    <meta property="og:description" content="Calculate API rate limits, daily/monthly quotas, burst capacity. Free tool.">
+    <meta property="og:url" content="https://invokebot.com/tools/api-rate-limit-calculator">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://invokebot.com/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "API Rate Limit Calculator",
+        "description": "Calculate API rate limits, daily/monthly quotas, and burst capacity",
+        "url": "https://invokebot.com/tools/api-rate-limit-calculator",
+        "applicationCategory": "DeveloperApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .tool-section {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00d4aa;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        button {
+            background: #00d4aa;
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #00b889;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-card {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 16px;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .result-value {
+            color: #e0e6ed;
+            font-size: 1.8rem;
+            font-weight: 700;
+            font-family: 'Monaco', monospace;
+        }
+
+        .result-unit {
+            color: #a0aec0;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .recommendations {
+            background: rgba(0, 212, 170, 0.1);
+            border-left: 4px solid #00d4aa;
+            padding: 16px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .recommendations h3 {
+            color: #00d4aa;
+            margin-bottom: 12px;
+        }
+
+        .recommendation-item {
+            margin-bottom: 12px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .recommendation-item:before {
+            content: "▸";
+            position: absolute;
+            left: 0;
+            color: #00d4aa;
+        }
+
+        .error {
+            background: rgba(245, 101, 101, 0.1);
+            border-left: 4px solid #f56565;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #fc8181;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            border-top: 1px solid #1e2749;
+            margin-top: 40px;
+        }
+
+        .strategy-box {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+        }
+
+        .strategy-title {
+            color: #00d4aa;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+    </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>API Rate Limit Calculator</h1>
+            <p class="subtitle">Calculate rate limits, quotas, and burst capacity</p>
+        </header>
+
+        <div class="tool-section">
+            <div class="input-grid">
+                <div>
+                    <label for="requestsPerSecond">Requests Per Second (RPS)</label>
+                    <input type="number" id="requestsPerSecond" placeholder="100" value="100" min="1">
+                </div>
+                <div>
+                    <label for="burstWindow">Burst Window (Seconds)</label>
+                    <input type="number" id="burstWindow" placeholder="60" value="60" min="1">
+                </div>
+                <div>
+                    <label for="avgPayloadSize">Avg Payload Size (KB)</label>
+                    <input type="number" id="avgPayloadSize" placeholder="10" value="10" min="1">
+                </div>
+                <div>
+                    <label for="parallelRequests">Max Parallel Requests</label>
+                    <input type="number" id="parallelRequests" placeholder="10" value="10" min="1">
+                </div>
+            </div>
+
+            <button onclick="calculateLimits()">Calculate Limits</button>
+
+            <div id="results" class="results">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 invokebot.com. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(2) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(2) + 'K';
+            }
+            return num.toLocaleString();
+        }
+
+        function calculateLimits() {
+            const rps = parseFloat(document.getElementById('requestsPerSecond').value);
+            const burstWindow = parseFloat(document.getElementById('burstWindow').value);
+            const payloadSize = parseFloat(document.getElementById('avgPayloadSize').value);
+            const parallelRequests = parseFloat(document.getElementById('parallelRequests').value);
+
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+
+            if (!rps || rps <= 0 || !burstWindow || burstWindow <= 0) {
+                contentDiv.innerHTML = '<div class="error">Please enter valid positive numbers</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            // Calculate limits
+            const burstCapacity = rps * burstWindow;
+            const requestsPerMinute = rps * 60;
+            const requestsPerHour = rps * 3600;
+            const requestsPerDay = rps * 86400;
+            const requestsPerMonth = requestsPerDay * 30;
+
+            const bandwidthPerSecond = rps * payloadSize;
+            const bandwidthPerDay = bandwidthPerSecond * 86400;
+            const bandwidthPerMonth = bandwidthPerDay * 30;
+
+            const maxConcurrentBandwidth = parallelRequests * payloadSize;
+
+            // Build results
+            let html = `
+                <div class="result-grid">
+                    <div class="result-card">
+                        <div class="result-label">Burst Capacity</div>
+                        <div class="result-value">${formatNumber(burstCapacity)}</div>
+                        <div class="result-unit">requests in ${burstWindow}s</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Requests/Minute</div>
+                        <div class="result-value">${formatNumber(requestsPerMinute)}</div>
+                        <div class="result-unit">sustainable rate</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Requests/Hour</div>
+                        <div class="result-value">${formatNumber(requestsPerHour)}</div>
+                        <div class="result-unit">hourly quota</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Requests/Day</div>
+                        <div class="result-value">${formatNumber(requestsPerDay)}</div>
+                        <div class="result-unit">daily quota</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Requests/Month</div>
+                        <div class="result-value">${formatNumber(requestsPerMonth)}</div>
+                        <div class="result-unit">monthly quota</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Bandwidth/Second</div>
+                        <div class="result-value">${bandwidthPerSecond.toFixed(0)}</div>
+                        <div class="result-unit">KB/s throughput</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Bandwidth/Day</div>
+                        <div class="result-value">${formatNumber(bandwidthPerDay)}</div>
+                        <div class="result-unit">KB transferred</div>
+                    </div>
+                    <div class="result-card">
+                        <div class="result-label">Max Concurrent Bandwidth</div>
+                        <div class="result-value">${formatNumber(maxConcurrentBandwidth)}</div>
+                        <div class="result-unit">KB at peak</div>
+                    </div>
+                </div>
+            `;
+
+            // Recommendations
+            html += `
+                <div class="recommendations">
+                    <h3>Rate Limiting Strategies</h3>
+                    <div class="strategy-box">
+                        <div class="strategy-title">Token Bucket Algorithm</div>
+                        Capacity: ${burstCapacity} tokens, Refill rate: ${rps} tokens/sec. Best for variable request rates with controlled bursts.
+                    </div>
+                    <div class="strategy-box">
+                        <div class="strategy-title">Sliding Window Log</div>
+                        Allow requests if within the last 60 seconds < ${requestsPerMinute} requests. Best for exact quota enforcement.
+                    </div>
+                    <div class="strategy-box">
+                        <div class="strategy-title">Fixed Window Counter</div>
+                        Reset counter every ${Math.ceil(requestsPerHour / 60)} minutes, limit: ${requestsPerMinute} requests. Simple but less precise.
+                    </div>
+                    <div class="strategy-box">
+                        <div class="strategy-title">Leaky Bucket Algorithm</div>
+                        Queue capacity: ${burstCapacity}, Drain rate: ${rps} req/sec. Best for smooth rate enforcement.
+                    </div>
+                </div>
+            `;
+
+            // Recommendations section
+            html += `
+                <div class="recommendations">
+                    <h3>Recommended Configuration</h3>
+            `;
+
+            const avgRequestTime = (1 / rps).toFixed(3);
+            const recommendedTimeout = Math.max(5, Math.ceil(burstWindow / 2));
+
+            html += `
+                    <div class="recommendation-item">
+                        <strong>Timeout:</strong> ${recommendedTimeout}s per request (avg processing time: ${avgRequestTime}s)
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>Retry Policy:</strong> Exponential backoff with max ${Math.ceil(requestsPerMinute / 10)} retries
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>Concurrent Connections:</strong> Keep below ${Math.ceil(parallelRequests * 1.5)} for safety margin
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>Queue Strategy:</strong> Use token bucket for ${rps} RPS with ${burstCapacity} token capacity
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>Monitoring Threshold:</strong> Alert if 80% of monthly quota (${formatNumber(requestsPerMonth * 0.8)}) is reached
+                    </div>
+                    <div class="recommendation-item">
+                        <strong>Bandwidth Monitoring:</strong> Alert if ${Math.ceil(bandwidthPerDay / 10)} KB/day usage observed
+                    </div>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+
+        // Calculate on Enter
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') calculateLimits();
+            });
+        });
+    </script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<div style="margin:30px auto;max-width:728px;text-align:center;padding:18px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px">
+<p style="margin:0 0 6px;color:#94a3b8;font-size:0.85rem">Recommended by our team</p>
+<a href="https://www.belikenative.com?ref=satellite" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;font-size:1.05rem;text-decoration:none">BeLikeNative.com</a>
+<p style="margin:6px 0 0;color:#cbd5e1;font-size:0.9rem">The #1 AI writing tool for freelancers — perfect grammar in any language, instantly.</p>
+</div>
+</body>
+</html>

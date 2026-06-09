@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Path Extractor — Free Online Tool</title>
+    <meta name="description" content="JSON Path Extractor: Write JSONPath expressions, extract data, support dot notation. Free online tool.">
+    <meta name="keywords" content="JSONPath, JSON extractor, JSON query, dot notation, bracket notation">
+    <link rel="canonical" href="https://invokebot.com/tools/json-path-extractor">
+
+    <meta property="og:title" content="JSON Path Extractor — Free Online Tool">
+    <meta property="og:description" content="Extract JSON data using JSONPath expressions. Support dot and bracket notation. Free tool.">
+    <meta property="og:url" content="https://invokebot.com/tools/json-path-extractor">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://invokebot.com/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "JSON Path Extractor",
+        "description": "Extract JSON data using JSONPath expressions with dot and bracket notation",
+        "url": "https://invokebot.com/tools/json-path-extractor",
+        "applicationCategory": "DeveloperApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .tool-section {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .input-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00d4aa;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            min-height: 250px;
+            transition: border-color 0.3s;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        button {
+            background: #00d4aa;
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #00b889;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1e2749;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            background: #131829;
+            padding: 12px;
+            border-left: 3px solid #00d4aa;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+            color: #e0e6ed;
+            word-break: break-all;
+        }
+
+        .error {
+            background: rgba(245, 101, 101, 0.1);
+            border-left: 4px solid #f56565;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #fc8181;
+        }
+
+        .success {
+            background: rgba(72, 187, 120, 0.1);
+            border-left: 4px solid #48bb78;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #9ae6b4;
+        }
+
+        .examples {
+            background: rgba(0, 212, 170, 0.1);
+            border-left: 4px solid #00d4aa;
+            padding: 16px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .examples h3 {
+            color: #00d4aa;
+            margin-bottom: 12px;
+        }
+
+        .example-item {
+            margin-bottom: 10px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+
+        .example-path {
+            color: #00d4aa;
+            font-weight: 600;
+        }
+
+        .example-desc {
+            color: #a0aec0;
+            font-size: 0.85rem;
+        }
+
+        .quick-example {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.3s;
+        }
+
+        .quick-example:hover {
+            background: #131829;
+            border-color: #00d4aa;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            border-top: 1px solid #1e2749;
+            margin-top: 40px;
+        }
+
+        .highlight {
+            background: rgba(0, 212, 170, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #00d4aa;
+        }
+    </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>JSON Path Extractor</h1>
+            <p class="subtitle">Extract data from JSON using JSONPath expressions</p>
+        </header>
+
+        <div class="tool-section">
+            <div class="input-wrapper">
+                <div>
+                    <label for="jsonInput">JSON Data</label>
+                    <textarea id="jsonInput" placeholder='{"user": {"name": "John", "age": 30}, "items": [{"id": 1}, {"id": 2}]}'>{
+  "user": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "age": 30,
+    "active": true
+  },
+  "items": [
+    {"id": 1, "title": "Item 1", "price": 10},
+    {"id": 2, "title": "Item 2", "price": 20}
+  ],
+  "metadata": {
+    "timestamp": "2026-06-09T10:00:00Z",
+    "version": "1.0"
+  }
+}</textarea>
+                </div>
+
+                <div>
+                    <label for="pathInput">JSONPath Expression</label>
+                    <textarea id="pathInput" placeholder="$.user.name" style="margin-bottom: 16px;">$.user.name</textarea>
+
+                    <button onclick="extractPath()">Extract Data</button>
+
+                    <div class="examples">
+                        <h3>Examples</h3>
+                        <div class="example-item">
+                            <div class="example-path">$.user.name</div>
+                            <div class="example-desc">Access nested property</div>
+                            <div class="quick-example" onclick="setPath('$.user.name')">Use this</div>
+                        </div>
+                        <div class="example-item">
+                            <div class="example-path">$.items[*].title</div>
+                            <div class="example-desc">Get all titles from array</div>
+                            <div class="quick-example" onclick="setPath('$.items[*].title')">Use this</div>
+                        </div>
+                        <div class="example-item">
+                            <div class="example-path">$.items[0].price</div>
+                            <div class="example-desc">Access array element</div>
+                            <div class="quick-example" onclick="setPath('$.items[0].price')">Use this</div>
+                        </div>
+                        <div class="example-item">
+                            <div class="example-path">$..id</div>
+                            <div class="example-desc">Deep search for all id fields</div>
+                            <div class="quick-example" onclick="setPath('$..id')">Use this</div>
+                        </div>
+                        <div class="example-item">
+                            <div class="example-path">$.user</div>
+                            <div class="example-desc">Access object directly</div>
+                            <div class="quick-example" onclick="setPath('$.user')">Use this</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="results" class="results">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 invokebot.com. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function setPath(path) {
+            document.getElementById('pathInput').value = path;
+            extractPath();
+        }
+
+        function extractPath() {
+            const jsonText = document.getElementById('jsonInput').value.trim();
+            const pathExpr = document.getElementById('pathInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+
+            if (!jsonText || !pathExpr) {
+                contentDiv.innerHTML = '<div class="error">Please enter both JSON and JSONPath expression</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const jsonData = JSON.parse(jsonText);
+                const results = evaluateJsonPath(jsonData, pathExpr);
+
+                let html = '<div class="success">✓ Path evaluated successfully</div>';
+                html += `<div class="result-item"><div class="result-label">Path Expression</div><div class="result-value">${pathExpr}</div></div>`;
+
+                if (Array.isArray(results) && results.length > 0) {
+                    html += `<div class="result-item"><div class="result-label">Results (${results.length} match${results.length > 1 ? 'es' : ''})</div>`;
+                    html += '<div>';
+                    results.forEach((result, idx) => {
+                        const formatted = typeof result === 'string' ? result : JSON.stringify(result, null, 2);
+                        html += `<div class="result-value" style="margin-bottom: 10px;">[${idx}] ${formatted}</div>`;
+                    });
+                    html += '</div></div>';
+                } else if (results) {
+                    const formatted = typeof results === 'string' ? results : JSON.stringify(results, null, 2);
+                    html += `<div class="result-item"><div class="result-label">Result</div><div class="result-value">${formatted}</div></div>`;
+                } else {
+                    html += '<div class="error">No matches found for this path</div>';
+                }
+
+                contentDiv.innerHTML = html;
+
+            } catch (e) {
+                let errorMsg = e.message;
+                if (errorMsg.includes('JSON')) {
+                    errorMsg = 'Invalid JSON: ' + errorMsg;
+                } else {
+                    errorMsg = 'Path error: ' + errorMsg;
+                }
+                contentDiv.innerHTML = `<div class="error">✗ ${errorMsg}</div>`;
+            }
+
+            resultsDiv.classList.add('show');
+        }
+
+        function evaluateJsonPath(obj, path) {
+            // Remove $ prefix if present
+            path = path.replace(/^\$/, '');
+
+            if (!path || path === '' || path === '/') {
+                return obj;
+            }
+
+            const parts = [];
+            let current = '';
+            let inBrackets = false;
+
+            for (let i = 0; i < path.length; i++) {
+                const char = path[i];
+
+                if (char === '[') {
+                    if (current) parts.push(current);
+                    current = '';
+                    inBrackets = true;
+                } else if (char === ']') {
+                    if (current) parts.push('[' + current + ']');
+                    current = '';
+                    inBrackets = false;
+                } else if (char === '.' && !inBrackets) {
+                    if (current) parts.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            if (current) {
+                if (inBrackets) {
+                    parts.push('[' + current + ']');
+                } else {
+                    parts.push(current);
+                }
+            }
+
+            let results = [obj];
+
+            for (const part of parts) {
+                const newResults = [];
+
+                for (const item of results) {
+                    if (part === '..') {
+                        deepSearch(item, newResults);
+                    } else if (part === '*') {
+                        if (Array.isArray(item)) {
+                            newResults.push(...item);
+                        } else if (typeof item === 'object') {
+                            newResults.push(...Object.values(item));
+                        }
+                    } else if (part.startsWith('[')) {
+                        const index = part.slice(1, -1);
+                        if (index === '*') {
+                            if (Array.isArray(item)) newResults.push(...item);
+                        } else if (!isNaN(index)) {
+                            if (Array.isArray(item) && item[parseInt(index)] !== undefined) {
+                                newResults.push(item[parseInt(index)]);
+                            }
+                        }
+                    } else {
+                        if (item && typeof item === 'object' && part in item) {
+                            newResults.push(item[part]);
+                        }
+                    }
+                }
+
+                results = newResults;
+            }
+
+            return results.length === 1 ? results[0] : results;
+        }
+
+        function deepSearch(obj, results) {
+            if (obj && typeof obj === 'object') {
+                Object.values(obj).forEach(val => {
+                    results.push(val);
+                    deepSearch(val, results);
+                });
+            }
+        }
+
+        document.getElementById('jsonInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                e.target.value = e.target.value.substring(0, start) + '\t' + e.target.value.substring(end);
+                e.target.selectionStart = e.target.selectionEnd = start + 1;
+            }
+        });
+    </script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<div style="margin:30px auto;max-width:728px;text-align:center;padding:18px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px">
+<p style="margin:0 0 6px;color:#94a3b8;font-size:0.85rem">Recommended by our team</p>
+<a href="https://www.belikenative.com?ref=satellite" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;font-size:1.05rem;text-decoration:none">BeLikeNative.com</a>
+<p style="margin:6px 0 0;color:#cbd5e1;font-size:0.9rem">The #1 AI writing tool for freelancers — perfect grammar in any language, instantly.</p>
+</div>
+</body>
+</html>

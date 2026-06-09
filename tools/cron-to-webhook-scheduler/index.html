@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cron to Webhook Scheduler — Free Tool</title>
+    <meta name="description" content="Cron to Webhook Scheduler: Convert cron expressions to schedules, show next 10 execution times. Free tool.">
+    <meta name="keywords" content="cron scheduler, webhook scheduler, cron expression, automation scheduling">
+    <link rel="canonical" href="https://invokebot.com/tools/cron-to-webhook-scheduler">
+
+    <meta property="og:title" content="Cron to Webhook Scheduler — Free Tool">
+    <meta property="og:description" content="Convert cron expressions to schedules, show next 10 execution times. Free tool.">
+    <meta property="og:url" content="https://invokebot.com/tools/cron-to-webhook-scheduler">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://invokebot.com/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Cron to Webhook Scheduler",
+        "description": "Convert cron expressions to schedules and generate webhook trigger configurations",
+        "url": "https://invokebot.com/tools/cron-to-webhook-scheduler",
+        "applicationCategory": "DeveloperApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .tool-section {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00d4aa;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        button {
+            background: #00d4aa;
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00b889;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-item {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #1e2749;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            color: #e0e6ed;
+            word-break: break-all;
+        }
+
+        .status-pass {
+            color: #48bb78;
+        }
+
+        .status-fail {
+            color: #f56565;
+        }
+
+        .execution-time {
+            background: #0a0e27;
+            padding: 8px 12px;
+            border-left: 3px solid #00d4aa;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', monospace;
+            font-size: 0.9rem;
+        }
+
+        .error {
+            background: rgba(245, 101, 101, 0.1);
+            border-left: 4px solid #f56565;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #fc8181;
+        }
+
+        .success {
+            background: rgba(72, 187, 120, 0.1);
+            border-left: 4px solid #48bb78;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #9ae6b4;
+        }
+
+        .preset-btn {
+            background: #1e2749;
+            color: #00d4aa;
+            border: 1px solid #1e2749;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 12px;
+            transition: all 0.3s;
+        }
+
+        .preset-btn:hover {
+            background: #2d3d5c;
+            border-color: #00d4aa;
+        }
+
+        .code-block {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        .code-block code {
+            font-family: 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .tool-section {
+                padding: 20px;
+            }
+
+            .preset-btn {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            border-top: 1px solid #1e2749;
+            margin-top: 40px;
+        }
+    </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cron to Webhook Scheduler</h1>
+            <p class="subtitle">Convert cron expressions to schedules instantly</p>
+        </header>
+
+        <div class="tool-section">
+            <label for="cronInput">Cron Expression</label>
+            <input type="text" id="cronInput" placeholder="0 9 * * MON-FRI" value="0 9 * * MON-FRI">
+
+            <label>Quick Presets</label>
+            <div style="margin-bottom: 20px;">
+                <button class="preset-btn" onclick="setCron('0 * * * *')">Every Hour</button>
+                <button class="preset-btn" onclick="setCron('0 0 * * *')">Daily at Midnight</button>
+                <button class="preset-btn" onclick="setCron('0 9 * * MON-FRI')">Weekdays 9 AM</button>
+                <button class="preset-btn" onclick="setCron('0 0 * * 0')">Weekly on Sunday</button>
+                <button class="preset-btn" onclick="setCron('0 0 1 * *')">Monthly 1st</button>
+                <button class="preset-btn" onclick="setCron('*/15 * * * *')">Every 15 Minutes</button>
+            </div>
+
+            <label for="timezone">Timezone</label>
+            <input type="text" id="timezone" placeholder="UTC" value="UTC" style="margin-bottom: 20px;">
+
+            <button onclick="parseCron()">Parse Cron Expression</button>
+
+            <div id="results" class="results">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 invokebot.com. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function setCron(expr) {
+            document.getElementById('cronInput').value = expr;
+            parseCron();
+        }
+
+        function getNextExecutionTimes(cronExpr, count = 10) {
+            const parts = cronExpr.trim().split(/\s+/);
+            if (parts.length !== 5) {
+                throw new Error('Invalid cron format. Expected: minute hour day month dayOfWeek');
+            }
+
+            const [minute, hour, day, month, dayOfWeek] = parts;
+            const times = [];
+            let current = new Date();
+
+            for (let i = 0; i < count * 10; i++) {
+                current = new Date(current.getTime() + 60000);
+
+                if (matchesCron(current, minute, hour, day, month, dayOfWeek)) {
+                    times.push(new Date(current));
+                    if (times.length === count) break;
+                }
+            }
+
+            return times;
+        }
+
+        function matchesCron(date, minute, hour, day, month, dayOfWeek) {
+            const m = date.getMinutes();
+            const h = date.getHours();
+            const d = date.getDate();
+            const mo = date.getMonth() + 1;
+            const dw = date.getDay();
+
+            if (!matchesCronPart(m, minute, 0, 59)) return false;
+            if (!matchesCronPart(h, hour, 0, 23)) return false;
+            if (!matchesCronPart(d, day, 1, 31)) return false;
+            if (!matchesCronPart(mo, month, 1, 12)) return false;
+
+            const dayMatch = dayOfWeek === '?' || dayOfWeek === '*' || matchesCronPart(dw, dayOfWeek, 0, 6);
+            const dateMatch = day === '?' || day === '*' || matchesCronPart(d, day, 1, 31);
+
+            return (dayMatch || dateMatch) && matchesCronPart(mo, month, 1, 12);
+        }
+
+        function matchesCronPart(value, part, min, max) {
+            if (part === '*' || part === '?') return true;
+
+            if (part.includes(',')) {
+                return part.split(',').some(p => matchesCronPart(value, p, min, max));
+            }
+
+            if (part.includes('-')) {
+                const [start, end] = part.split('-').map(p => parseSpecialDay(p));
+                return value >= parseInt(start) && value <= parseInt(end);
+            }
+
+            if (part.includes('/')) {
+                const [base, step] = part.split('/');
+                const baseVal = base === '*' ? min : parseInt(base);
+                return (value - baseVal) % parseInt(step) === 0 && value >= baseVal;
+            }
+
+            const dayMap = { 'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6 };
+            const mappedPart = dayMap[part] !== undefined ? dayMap[part] : parseInt(part);
+
+            return value === mappedPart;
+        }
+
+        function parseSpecialDay(str) {
+            const dayMap = { 'SUN': 0, 'MON': 1, 'TUE': 2, 'WED': 3, 'THU': 4, 'FRI': 5, 'SAT': 6 };
+            return dayMap[str] !== undefined ? dayMap[str] : str;
+        }
+
+        function describeCron(cronExpr) {
+            const parts = cronExpr.trim().split(/\s+/);
+            const [minute, hour, day, month, dayOfWeek] = parts;
+
+            let desc = '';
+
+            if (minute === '*/15') desc += 'Every 15 minutes';
+            else if (minute === '*/30') desc += 'Every 30 minutes';
+            else if (minute === '0') {
+                if (hour === '*') desc += 'Every hour';
+                else if (hour === '0') desc += 'Daily at midnight';
+                else desc += `Every day at ${hour}:00`;
+            } else desc += `At ${minute} minutes past the hour`;
+
+            if (dayOfWeek !== '*' && dayOfWeek !== '?') {
+                desc += ` on ${dayOfWeek}`;
+            }
+
+            return desc;
+        }
+
+        function parseCron() {
+            const cronExpr = document.getElementById('cronInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+
+            if (!cronExpr) {
+                contentDiv.innerHTML = '<div class="error">Please enter a cron expression</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            try {
+                const description = describeCron(cronExpr);
+                const times = getNextExecutionTimes(cronExpr, 10);
+
+                let html = `<div class="success">✓ Valid cron expression</div>`;
+                html += `<div class="result-item"><div class="result-label">Description</div><div class="result-value">${description}</div></div>`;
+
+                html += `<div class="result-item"><div class="result-label">Next 10 Execution Times</div><div class="result-value">`;
+                times.forEach((time, idx) => {
+                    const formatted = time.toLocaleString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    html += `<div class="execution-time">${idx + 1}. ${formatted}</div>`;
+                });
+                html += `</div></div>`;
+
+                const webhookConfig = {
+                    schedule: cronExpr,
+                    description: description,
+                    timezone: document.getElementById('timezone').value || 'UTC',
+                    nextExecutions: times.slice(0, 3).map(t => t.toISOString())
+                };
+
+                html += `<div class="result-item"><div class="result-label">Webhook Configuration (JSON)</div><div class="code-block"><code>${JSON.stringify(webhookConfig, null, 2)}</code></div></div>`;
+
+                contentDiv.innerHTML = html;
+
+            } catch (e) {
+                contentDiv.innerHTML = `<div class="error">✗ Invalid cron expression: ${e.message}</div><div class="result-item"><div class="result-value">Format: minute hour day month dayOfWeek (e.g., 0 9 * * MON-FRI)</div></div>`;
+            }
+
+            resultsDiv.classList.add('show');
+        }
+
+        document.getElementById('cronInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') parseCron();
+        });
+    </script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<div style="margin:30px auto;max-width:728px;text-align:center;padding:18px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px">
+<p style="margin:0 0 6px;color:#94a3b8;font-size:0.85rem">Recommended by our team</p>
+<a href="https://www.belikenative.com?ref=satellite" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;font-size:1.05rem;text-decoration:none">BeLikeNative.com</a>
+<p style="margin:6px 0 0;color:#cbd5e1;font-size:0.9rem">The #1 AI writing tool for freelancers — perfect grammar in any language, instantly.</p>
+</div>
+</body>
+</html>

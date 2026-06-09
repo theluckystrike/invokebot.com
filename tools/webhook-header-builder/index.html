@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webhook Header Builder — Free Tool</title>
+    <meta name="description" content="Webhook Header Builder: Build custom HTTP headers, add auth tokens. Generate curl and code snippets. Free.">
+    <meta name="keywords" content="webhook headers, HTTP headers builder, authorization headers, curl command generator">
+    <link rel="canonical" href="https://invokebot.com/tools/webhook-header-builder">
+
+    <meta property="og:title" content="Webhook Header Builder — Free Tool">
+    <meta property="og:description" content="Build custom HTTP headers, add auth tokens, generate curl and code snippets. Free tool.">
+    <meta property="og:url" content="https://invokebot.com/tools/webhook-header-builder">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://invokebot.com/og-image.jpg">
+
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Webhook Header Builder",
+        "description": "Build custom HTTP headers visually and generate curl commands and code snippets",
+        "url": "https://invokebot.com/tools/webhook-header-builder",
+        "applicationCategory": "DeveloperApplication",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e0e6ed;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-top: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #00d4aa;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .tool-section {
+            background: #131829;
+            border: 1px solid #1e2749;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #00d4aa;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            color: #e0e6ed;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00d4aa;
+        }
+
+        button {
+            background: #00d4aa;
+            color: #0a0e27;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00b889;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .button-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .button-group button {
+            width: 100%;
+        }
+
+        .header-item {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        @media (max-width: 800px) {
+            .header-item {
+                grid-template-columns: 1fr;
+            }
+
+            .header-item button {
+                width: 100%;
+            }
+        }
+
+        .header-item input {
+            margin-bottom: 0;
+        }
+
+        .remove-btn {
+            background: #f56565;
+            color: white;
+            padding: 10px 16px;
+            font-size: 0.9rem;
+        }
+
+        .remove-btn:hover {
+            background: #e53e3e;
+        }
+
+        .results {
+            background: #0a0e27;
+            border: 1px solid #1e2749;
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #1e2749;
+        }
+
+        .result-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #00d4aa;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+        }
+
+        .code-block {
+            background: #131829;
+            border: 1px solid #1e2749;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: #a0aec0;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #1e2749;
+            color: #00d4aa;
+            border: 1px solid #1e2749;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            background: #2d3d5c;
+            border-color: #00d4aa;
+        }
+
+        .preset-section {
+            margin-bottom: 20px;
+        }
+
+        .preset-label {
+            font-size: 0.9rem;
+            color: #a0aec0;
+            margin-bottom: 8px;
+        }
+
+        .preset-btn {
+            background: #1e2749;
+            color: #00d4aa;
+            border: 1px solid #1e2749;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        .preset-btn:hover {
+            background: #2d3d5c;
+            border-color: #00d4aa;
+        }
+
+        .success {
+            background: rgba(72, 187, 120, 0.1);
+            border-left: 4px solid #48bb78;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #9ae6b4;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            border-top: 1px solid #1e2749;
+            margin-top: 40px;
+        }
+    </style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2241192243363112" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Webhook Header Builder</h1>
+            <p class="subtitle">Build custom HTTP headers and generate code snippets</p>
+        </header>
+
+        <div class="tool-section">
+            <label for="webhookUrl">Webhook URL</label>
+            <input type="text" id="webhookUrl" placeholder="https://example.com/webhook" value="https://example.com/webhook">
+
+            <label for="httpMethod">HTTP Method</label>
+            <select id="httpMethod">
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="PATCH">PATCH</option>
+                <option value="DELETE">DELETE</option>
+            </select>
+
+            <label>Preset Headers</label>
+            <div class="preset-section">
+                <div class="preset-label">Quick add popular headers:</div>
+                <button class="preset-btn" onclick="addPresetHeader('Authorization', 'Bearer YOUR_TOKEN')">Bearer Token</button>
+                <button class="preset-btn" onclick="addPresetHeader('X-API-Key', 'YOUR_API_KEY')">API Key</button>
+                <button class="preset-btn" onclick="addPresetHeader('Content-Type', 'application/json')">JSON</button>
+                <button class="preset-btn" onclick="addPresetHeader('X-Webhook-Secret', 'YOUR_SECRET')">Webhook Secret</button>
+                <button class="preset-btn" onclick="addPresetHeader('User-Agent', 'webhook-client/1.0')">User-Agent</button>
+            </div>
+
+            <label>Custom Headers</label>
+            <div id="headersContainer"></div>
+
+            <div class="button-group">
+                <button onclick="addHeader()">+ Add Header</button>
+                <button onclick="generateOutput()">Generate Code</button>
+            </div>
+
+            <div id="results" class="results">
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 invokebot.com. All rights reserved.</p>
+    </footer>
+
+    <script>
+        let headerCount = 0;
+
+        function addHeader() {
+            headerCount++;
+            const container = document.getElementById('headersContainer');
+            const html = `
+                <div class="header-item" id="header-${headerCount}">
+                    <input type="text" placeholder="Header Name" class="header-name" value="">
+                    <input type="text" placeholder="Header Value" class="header-value" value="">
+                    <button class="remove-btn" onclick="removeHeader(${headerCount})">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function addPresetHeader(name, value) {
+            headerCount++;
+            const container = document.getElementById('headersContainer');
+            const html = `
+                <div class="header-item" id="header-${headerCount}">
+                    <input type="text" placeholder="Header Name" class="header-name" value="${name}">
+                    <input type="text" placeholder="Header Value" class="header-value" value="${value}">
+                    <button class="remove-btn" onclick="removeHeader(${headerCount})">Remove</button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        }
+
+        function removeHeader(id) {
+            const element = document.getElementById(`header-${id}`);
+            if (element) element.remove();
+        }
+
+        function generateOutput() {
+            const url = document.getElementById('webhookUrl').value.trim();
+            const method = document.getElementById('httpMethod').value;
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('resultsContent');
+
+            if (!url) {
+                contentDiv.innerHTML = '<div style="color: #f56565;">Please enter a webhook URL</div>';
+                resultsDiv.classList.add('show');
+                return;
+            }
+
+            const headers = [];
+            document.querySelectorAll('.header-item').forEach(item => {
+                const name = item.querySelector('.header-name').value.trim();
+                const value = item.querySelector('.header-value').value.trim();
+                if (name && value) {
+                    headers.push({ name, value });
+                }
+            });
+
+            let html = '<div class="success">✓ Headers configured</div>';
+
+            // cURL command
+            let curlCmd = `curl -X ${method} "${url}"`;
+            headers.forEach(h => {
+                curlCmd += ` \\\n  -H "${h.name}: ${h.value}"`;
+            });
+            curlCmd += ` \\\n  -d '{"event": "webhook"}'`;
+
+            html += `
+                <div class="result-section">
+                    <div class="result-title">cURL Command</div>
+                    <div class="code-block">
+                        ${curlCmd.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            `;
+
+            // JavaScript Fetch
+            const fetchCode = `const headers = {
+${headers.map(h => `  '${h.name}': '${h.value}'`).join(',\n')}
+};
+
+fetch('${url}', {
+  method: '${method}',
+  headers: headers,
+  body: JSON.stringify({ event: 'webhook' })
+})
+.then(response => response.json())
+.then(data => console.log(data));`;
+
+            html += `
+                <div class="result-section">
+                    <div class="result-title">JavaScript (Fetch API)</div>
+                    <div class="code-block">
+                        <pre>${fetchCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            `;
+
+            // Python Requests
+            const pythonCode = `import requests
+
+headers = {
+${headers.map(h => `    '${h.name}': '${h.value}'`).join(',\n')}
+}
+
+response = requests.${method.toLowerCase()}(
+    '${url}',
+    headers=headers,
+    json={'event': 'webhook'}
+)
+print(response.json())`;
+
+            html += `
+                <div class="result-section">
+                    <div class="result-title">Python (Requests)</div>
+                    <div class="code-block">
+                        <pre>${pythonCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            `;
+
+            // Node.js/Axios
+            const axiosCode = `const axios = require('axios');
+
+const headers = {
+${headers.map(h => `  '${h.name}': '${h.value}'`).join(',\n')}
+};
+
+axios.${method.toLowerCase()}('${url}',
+  { event: 'webhook' },
+  { headers }
+)
+.then(response => console.log(response.data))
+.catch(error => console.error(error));`;
+
+            html += `
+                <div class="result-section">
+                    <div class="result-title">Node.js (Axios)</div>
+                    <div class="code-block">
+                        <pre>${axiosCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            `;
+
+            // Headers JSON
+            const headersJson = JSON.stringify(
+                Object.fromEntries(headers.map(h => [h.name, h.value])),
+                null,
+                2
+            );
+
+            html += `
+                <div class="result-section">
+                    <div class="result-title">Headers JSON</div>
+                    <div class="code-block">
+                        <pre>${headersJson.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                        <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+                    </div>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+
+        function copyCode(button) {
+            const codeBlock = button.previousElementSibling;
+            const text = codeBlock.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.innerText;
+                button.innerText = 'Copied!';
+                setTimeout(() => {
+                    button.innerText = originalText;
+                }, 2000);
+            });
+        }
+
+        // Initialize with one empty header
+        addHeader();
+    </script>
+<div style="margin:20px auto;max-width:728px;text-align:center">
+<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-2241192243363112" data-ad-slot="auto" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+<div style="margin:30px auto;max-width:728px;text-align:center;padding:18px 24px;background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;border-radius:10px">
+<p style="margin:0 0 6px;color:#94a3b8;font-size:0.85rem">Recommended by our team</p>
+<a href="https://www.belikenative.com?ref=satellite" target="_blank" rel="noopener" style="color:#38bdf8;font-weight:600;font-size:1.05rem;text-decoration:none">BeLikeNative.com</a>
+<p style="margin:6px 0 0;color:#cbd5e1;font-size:0.9rem">The #1 AI writing tool for freelancers — perfect grammar in any language, instantly.</p>
+</div>
+</body>
+</html>

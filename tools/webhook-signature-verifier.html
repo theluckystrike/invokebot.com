@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Provider Webhook Signature Verifier</title>
+<meta name="description" content="Paste a raw payload, secret, and signature header to verify HMAC signatures for Stripe, GitHub, Shopify, Slack, and custom schemes right in your browser.">
+<link rel="canonical" href="https://invokebot.com/tools/webhook-signature-verifier">
+<meta property="og:title" content="Multi-Provider Webhook Signature Verifier">
+<meta property="og:description" content="Paste a raw payload, secret, and signature header to verify HMAC signatures for Stripe, GitHub, Shopify, Slack, and custom schemes right in your browser.">
+<meta property="og:url" content="https://invokebot.com/tools/webhook-signature-verifier">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Multi-Provider Webhook Signature Verifier",
+      "url": "https://invokebot.com/tools/webhook-signature-verifier",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "description": "Paste a raw payload, secret, and signature header to verify HMAC signatures for Stripe, GitHub, Shopify, Slack, and custom schemes right in your browser.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://invokebot.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://invokebot.com/tools/" },
+        { "@type": "ListItem", "position": 3, "name": "Multi-Provider Webhook Signature Verifier", "item": "https://invokebot.com/tools/webhook-signature-verifier" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#2b3440;
+  --fg:#e6edf3;--muted:#8b949e;--accent:#58a6ff;--ok:#3fb950;--bad:#f85149;--warn:#d29922;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;font-size:16px}
+nav{display:flex;gap:20px;padding:14px 22px;background:var(--panel);border-bottom:1px solid var(--border);font-size:14px}
+nav a{color:var(--accent);text-decoration:none;font-weight:600}
+nav a:hover{text-decoration:underline}
+main{max-width:920px;margin:0 auto;padding:26px 20px 60px}
+h1{font-size:1.9rem;line-height:1.25;margin:.3em 0 .2em}
+h2{font-size:1.3rem;margin:1.6em 0 .5em;border-bottom:1px solid var(--border);padding-bottom:.3em}
+.lede{color:var(--muted);font-size:1.05rem;margin:.4em 0 1.4em}
+section#tool{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin:10px 0 24px}
+label{display:block;font-weight:600;font-size:.9rem;margin:14px 0 5px;color:var(--fg)}
+.hint{font-weight:400;color:var(--muted);font-size:.8rem}
+select,textarea,input[type=text],input[type=number]{
+  width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+select{font-family:inherit}
+textarea{resize:vertical;min-height:70px}
+.row{display:flex;gap:14px;flex-wrap:wrap}
+.row>div{flex:1;min-width:200px}
+.verdict{margin-top:18px;padding:16px 18px;border-radius:10px;border:1px solid var(--border);background:var(--panel2)}
+.verdict h3{margin:0 0 6px;font-size:1.15rem}
+.badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:.8rem;font-weight:700;letter-spacing:.03em}
+.b-ok{background:rgba(63,185,80,.15);color:var(--ok);border:1px solid var(--ok)}
+.b-bad{background:rgba(248,81,73,.15);color:var(--bad);border:1px solid var(--bad)}
+.b-warn{background:rgba(210,153,34,.15);color:var(--warn);border:1px solid var(--warn)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;word-break:break-all}
+.kv{margin-top:12px;font-size:13px}
+.kv div{padding:6px 0;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap}
+.kv .k{color:var(--muted);min-width:150px;font-weight:600}
+.kv .v{flex:1;min-width:180px}
+.sub{color:var(--muted);font-size:.8rem;margin-top:4px}
+code{background:var(--panel2);padding:2px 6px;border-radius:5px;font-size:.85em;font-family:ui-monospace,monospace}
+pre{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;font-size:13px}
+.prose p{margin:.7em 0}
+.prose a{color:var(--accent)}
+footer{border-top:1px solid var(--border);margin-top:40px;padding:22px 20px;color:var(--muted);font-size:14px;text-align:center}
+footer a{color:var(--accent);text-decoration:none;margin:0 8px}
+.related a{color:var(--accent);text-decoration:none}
+.related li{margin:5px 0}
+.spec{font-size:.82rem;color:var(--muted);margin-top:6px;font-family:ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/tools/">All Tools</a>
+</nav>
+<main>
+<h1>Verify Inbound Webhook Signatures From Any Provider</h1>
+<p class="lede">Paste the raw request body, your signing secret, and the exact signature header your endpoint received. This tool recomputes the HMAC the way Stripe, GitHub, Shopify, Slack, or your own scheme expects &mdash; then does a constant-time comparison, entirely in your browser.</p>
+
+<section id="tool">
+  <label for="provider">Provider / signing scheme</label>
+  <select id="provider">
+    <option value="stripe">Stripe (t=…,v1=… &mdash; HMAC-SHA256 over "timestamp.payload")</option>
+    <option value="github">GitHub (X-Hub-Signature-256: sha256=hex)</option>
+    <option value="shopify">Shopify (X-Shopify-Hmac-Sha256: base64)</option>
+    <option value="slack">Slack (v0=hex over "v0:timestamp:body")</option>
+    <option value="custom256">Custom &mdash; HMAC-SHA256, hex header</option>
+    <option value="custom1">Custom &mdash; HMAC-SHA1, hex header</option>
+  </select>
+  <div class="spec" id="spec"></div>
+
+  <label for="payload">Raw request body (payload) <span class="hint">exact bytes received &mdash; do not re-serialize JSON</span></label>
+  <textarea id="payload" spellcheck="false"></textarea>
+
+  <div class="row">
+    <div>
+      <label for="secret">Signing secret <span class="hint">whsec_… / webhook secret</span></label>
+      <input id="secret" type="text" spellcheck="false">
+    </div>
+    <div>
+      <label for="header">Signature header value <span class="hint">paste the whole header</span></label>
+      <input id="header" type="text" spellcheck="false">
+    </div>
+  </div>
+
+  <div class="row">
+    <div id="tsWrap">
+      <label for="tolerance">Timestamp tolerance (seconds) <span class="hint">replay window</span></label>
+      <input id="tolerance" type="number" value="300" min="0">
+    </div>
+    <div id="nowWrap">
+      <label for="now">"Now" (Unix seconds) <span class="hint">for replay check</span></label>
+      <input id="now" type="number">
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict" aria-live="polite"></div>
+</section>
+
+<div class="prose">
+<h2>How signature verification actually works</h2>
+<p>Every major webhook provider signs the <em>raw</em> request body with a shared secret using an HMAC keyed hash, then puts the result in a header. Verification means you compute the same HMAC on your side and check it matches. The subtlety is that each provider signs a slightly different <strong>signed payload</strong> and encodes the digest differently, so a generic "HMAC-SHA256 of the body" check silently fails for half of them.</p>
+<p><strong>Stripe</strong> sends <code>Stripe-Signature: t=1700000000,v1=hexdigest</code>. The signed payload is the timestamp, a literal period, and the body: <code>signed = t + "." + payload</code>, hashed with HMAC-SHA256, hex-encoded, compared to <code>v1</code>. Stripe also expects a replay check &mdash; reject if <code>|now - t|</code> exceeds your tolerance (default 300s). <strong>GitHub</strong> signs the body directly and prefixes the header with <code>sha256=</code>. <strong>Shopify</strong> is the odd one out: it HMAC-SHA256s the body but sends the digest <em>base64-encoded</em>, not hex. <strong>Slack</strong> builds a basestring <code>v0:timestamp:body</code>, signs it, and prefixes <code>v0=</code>. Custom schemes are usually a bare hex digest over the body with SHA-256 or SHA-1.</p>
+<p>This tool parses the header for the scheme you pick, pulls out any embedded timestamp, reconstructs the exact signed payload, runs it through the browser's <code>SubtleCrypto.sign("HMAC", …)</code> API with the correct hash, and encodes the digest to match the provider. The comparison is <strong>constant-time</strong> (it XORs every byte regardless of where the first mismatch is) so this page never leaks timing information the way a naive <code>a === b</code> would. Nothing is uploaded &mdash; the secret and payload never leave your machine.</p>
+<p>Use it to debug a <code>400 signature mismatch</code> in production: a trailing newline, a re-serialized JSON body, the wrong secret from a rotated key, or a clock-skewed timestamp are the usual culprits. Flip the provider dropdown to see how the same body produces completely different valid signatures per spec.</p>
+
+<h2>Related Tools</h2>
+<ul class="related">
+  <li><a href="/tools/hmac-signature-generator">HMAC Signature Generator</a> &mdash; produce a valid header for testing.</li>
+  <li><a href="/tools/webhook-payload-inspector">Webhook Payload Inspector</a> &mdash; pretty-print and diff raw event bodies.</li>
+  <li><a href="/tools/jwt-decoder">JWT Decoder &amp; Verifier</a> &mdash; validate signed bearer tokens.</li>
+</ul>
+</div>
+
+<footer>
+  <div>
+    <a href="/">Home</a>
+    <a href="/tools/">All Tools</a>
+    <a href="/tools/webhook-payload-inspector">Payload Inspector</a>
+    <a href="https://zovo.one">Zovo</a>
+  </div>
+  <p>&copy; 2026 invokebot.com &mdash; runs entirely in your browser.</p>
+</footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var enc = new TextEncoder();
+
+  var SPECS = {
+    stripe:   {hash:"SHA-256", ts:true, label:'Header shape: t=<unix>,v1=<hex>[,v0=<hex>]. Signed payload = "t.payload". Compared to the v1 hex digest.'},
+    github:   {hash:"SHA-256", ts:false, label:'Header shape: sha256=<hex>. Signed payload = raw body. Hex-encoded digest.'},
+    shopify:  {hash:"SHA-256", ts:false, label:'Header shape: <base64>. Signed payload = raw body. Base64-encoded digest.'},
+    slack:    {hash:"SHA-256", ts:true, label:'Basestring = "v0:<timestamp>:<body>". Header = v0=<hex>. Timestamp from X-Slack-Request-Timestamp — paste it in the header field as v0=<hex> and set ts below, or include it: see hint.'},
+    custom256:{hash:"SHA-256", ts:false, label:'Header shape: <hex>. Signed payload = raw body. HMAC-SHA256, hex.'},
+    custom1:  {hash:"SHA-1",   ts:false, label:'Header shape: <hex>. Signed payload = raw body. HMAC-SHA1, hex.'}
+  };
+
+  // Slack needs a timestamp we can't always get from the sig header alone,
+  // so for Slack we accept "ts=<unix>,v0=<hex>" combined form.
+  SPECS.slack.label = 'Combined header form accepted: "ts=<unix>,v0=<hex>". Basestring = "v0:ts:body". HMAC-SHA256, hex.';
+
+  var DEFAULTS = {
+    stripe:   {payload:'{"id":"evt_1","object":"event","type":"payment_intent.succeeded"}', secret:'whsec_testsecret'},
+    github:   {payload:'{"zen":"Non-blocking is better than blocking.","hook_id":1}', secret:'mygithubsecret'},
+    shopify:  {payload:'{"id":820982911946154508,"topic":"orders/create"}', secret:'shpss_shopifysecret'},
+    slack:    {payload:'token=xyz&command=%2Fweather&text=94070', secret:'slacksigningsecret'},
+    custom256:{payload:'{"event":"ping"}', secret:'topsecret'},
+    custom1:  {payload:'{"event":"ping"}', secret:'topsecret'}
+  };
+
+  var $ = function(id){return document.getElementById(id);};
+  var provider=$("provider"), payload=$("payload"), secret=$("secret"),
+      header=$("header"), tol=$("tolerance"), nowEl=$("now"),
+      spec=$("spec"), verdict=$("verdict"), tsWrap=$("tsWrap"), nowWrap=$("nowWrap");
+
+  function toHex(buf){
+    var b=new Uint8Array(buf), s="";
+    for(var i=0;i<b.length;i++){ s += (b[i]<16?"0":"") + b[i].toString(16); }
+    return s;
+  }
+  function toB64(buf){
+    var b=new Uint8Array(buf), s="";
+    for(var i=0;i<b.length;i++){ s += String.fromCharCode(b[i]); }
+    return btoa(s);
+  }
+  // constant-time string compare (equal-length only; length-diff short-circuits but leaks nothing secret)
+  function ctEqual(a,b){
+    if(a.length!==b.length) return false;
+    var diff=0;
+    for(var i=0;i<a.length;i++){ diff |= (a.charCodeAt(i) ^ b.charCodeAt(i)); }
+    return diff===0;
+  }
+
+  async function hmac(hashName, key, msg){
+    var ck = await crypto.subtle.importKey(
+      "raw", enc.encode(key), {name:"HMAC", hash:{name:hashName}}, false, ["sign"]
+    );
+    return crypto.subtle.sign("HMAC", ck, enc.encode(msg));
+  }
+
+  // Parse the header for the chosen provider into {expected, timestamp, note}
+  function parseHeader(p, raw){
+    raw = (raw||"").trim();
+    if(p==="stripe"){
+      var t=null, v1=null;
+      raw.split(",").forEach(function(part){
+        var kv=part.split("=");
+        var k=(kv[0]||"").trim(), val=kv.slice(1).join("=").trim();
+        if(k==="t") t=val;
+        if(k==="v1") v1=val;
+      });
+      return {expected:(v1||"").toLowerCase(), timestamp:t?parseInt(t,10):null, enc:"hex"};
+    }
+    if(p==="github"){
+      return {expected:raw.replace(/^sha256=/i,"").toLowerCase(), timestamp:null, enc:"hex"};
+    }
+    if(p==="shopify"){
+      return {expected:raw, timestamp:null, enc:"base64"};
+    }
+    if(p==="slack"){
+      var ts=null, v0=null;
+      raw.split(",").forEach(function(part){
+        var kv=part.split("=");
+        var k=(kv[0]||"").trim(), val=kv.slice(1).join("=").trim();
+        if(k==="ts") ts=val;
+        if(k==="v0") v0=val;
+      });
+      if(v0===null && /^v0=/i.test(raw)){ v0=raw.replace(/^v0=/i,""); }
+      return {expected:(v0||"").toLowerCase(), timestamp:ts?parseInt(ts,10):null, enc:"hex"};
+    }
+    // custom
+    return {expected:raw.replace(/^sha(?:1|256)=/i,"").toLowerCase(), timestamp:null, enc:"hex"};
+  }
+
+  function buildSignedPayload(p, body, timestamp){
+    if(p==="stripe"){ return (timestamp!=null?timestamp:"") + "." + body; }
+    if(p==="slack"){ return "v0:" + (timestamp!=null?timestamp:"") + ":" + body; }
+    return body; // github, shopify, custom
+  }
+
+  function esc(s){return String(s).replace(/[&<>]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;"}[c];});}
+
+  async function run(){
+    var p = provider.value;
+    var sp = SPECS[p];
+    spec.textContent = sp.label;
+    // show/hide timestamp controls
+    var showTs = sp.ts;
+    tsWrap.style.display = showTs ? "" : "none";
+    nowWrap.style.display = showTs ? "" : "none";
+
+    var body = payload.value;
+    var sec = secret.value;
+    var parsed = parseHeader(p, header.value);
+    var signedPayload = buildSignedPayload(p, body, parsed.timestamp);
+
+    var sig;
+    try{
+      var buf = await hmac(sp.hash, sec, signedPayload);
+      sig = parsed.enc==="base64" ? toB64(buf) : toHex(buf);
+    }catch(e){
+      verdict.innerHTML = '<span class="badge b-bad">ERROR</span> Web Crypto failed: ' + esc(e.message||e);
+      return;
+    }
+
+    var expected = parsed.expected;
+    var compHex = parsed.enc==="base64" ? sig : sig.toLowerCase();
+    var expNorm = parsed.enc==="base64" ? expected : expected.toLowerCase();
+    var match = expNorm.length>0 && ctEqual(compHex, expNorm);
+
+    // replay check
+    var replayHtml = "";
+    var replayOk = true;
+    if(showTs){
+      if(parsed.timestamp==null){
+        replayHtml = '<span class="badge b-warn">NO TIMESTAMP</span> Header did not contain a parseable timestamp.';
+        replayOk = false;
+      }else{
+        var now = parseInt(nowEl.value,10);
+        var tolerance = parseInt(tol.value,10);
+        if(isNaN(now)) now = Math.floor(Date.now()/1000);
+        var age = now - parsed.timestamp;
+        var absAge = Math.abs(age);
+        if(!isNaN(tolerance) && absAge > tolerance){
+          replayOk = false;
+          replayHtml = '<span class="badge b-bad">REPLAY / STALE</span> Timestamp is ' + absAge +
+            's from now (tolerance ' + tolerance + 's). Stripe/Slack would reject this.';
+        }else{
+          replayHtml = '<span class="badge b-ok">FRESH</span> Timestamp ' + absAge +
+            's from now, within ' + tolerance + 's tolerance.';
+        }
+      }
+    }
+
+    var overall, badge;
+    if(!expected){
+      badge='<span class="badge b-warn">NO SIGNATURE</span>';
+      overall='Paste a signature header value to compare against.';
+    }else if(match && (!showTs || replayOk)){
+      badge='<span class="badge b-ok">VALID &#10003;</span>';
+      overall='Signature matches the recomputed HMAC' + (showTs?' and the timestamp is fresh.':'.');
+    }else if(match && showTs && !replayOk){
+      badge='<span class="badge b-warn">SIGNATURE OK, TIMESTAMP FAIL</span>';
+      overall='HMAC matches but the replay/timestamp check failed &mdash; a strict verifier still rejects this.';
+    }else{
+      badge='<span class="badge b-bad">MISMATCH &#10007;</span>';
+      overall='Recomputed HMAC does not match the supplied signature. Check the secret, exact body bytes, and provider.';
+    }
+
+    verdict.innerHTML =
+      '<h3>'+badge+'</h3><div>'+overall+'</div>' +
+      (showTs? '<div style="margin-top:8px">'+replayHtml+'</div>' : '') +
+      '<div class="kv">' +
+        '<div><span class="k">HMAC algorithm</span><span class="v">'+sp.hash+' ('+parsed.enc+')</span></div>' +
+        '<div><span class="k">Signed payload</span><span class="v mono">'+esc(signedPayload.length>120?signedPayload.slice(0,120)+" …":signedPayload)+'</span></div>' +
+        (parsed.timestamp!=null?'<div><span class="k">Parsed timestamp</span><span class="v mono">'+parsed.timestamp+'</span></div>':'') +
+        '<div><span class="k">Computed signature</span><span class="v mono">'+esc(compHex)+'</span></div>' +
+        '<div><span class="k">Supplied signature</span><span class="v mono">'+esc(expected||"(none)")+'</span></div>' +
+      '</div>';
+  }
+
+  function loadDefaults(){
+    var p = provider.value;
+    var d = DEFAULTS[p];
+    payload.value = d.payload;
+    secret.value = d.secret;
+    var nowSec = Math.floor(Date.now()/1000);
+    nowEl.value = nowSec;
+    // Precompute a valid header so the tool shows VALID out of the box.
+    var sp = SPECS[p];
+    var ts = nowSec;
+    var signed = buildSignedPayload(p, d.payload, ts);
+    hmac(sp.hash, d.secret, signed).then(function(buf){
+      var digest, hdr;
+      if(p==="stripe"){ hdr = "t="+ts+",v1="+toHex(buf); }
+      else if(p==="github"){ hdr = "sha256="+toHex(buf); }
+      else if(p==="shopify"){ hdr = toB64(buf); }
+      else if(p==="slack"){ hdr = "ts="+ts+",v0="+toHex(buf); }
+      else { hdr = toHex(buf); }
+      header.value = hdr;
+      run();
+    });
+  }
+
+  provider.addEventListener("change", loadDefaults);
+  [payload, secret, header, tol, nowEl].forEach(function(el){
+    el.addEventListener("input", run);
+  });
+
+  loadDefaults();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CloudEvents Envelope Validator &amp; Converter</title>
+<meta name="description" content="Validate a JSON event against the CloudEvents 1.0 spec and convert between structured and binary HTTP content modes with per-attribute error reporting.">
+<link rel="canonical" href="https://invokebot.com/tools/cloudevents-envelope-validator">
+<meta property="og:title" content="CloudEvents Envelope Validator &amp; Converter">
+<meta property="og:description" content="Validate a JSON event against the CloudEvents 1.0 spec and convert between structured and binary HTTP content modes with per-attribute error reporting.">
+<meta property="og:url" content="https://invokebot.com/tools/cloudevents-envelope-validator">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "CloudEvents Envelope Validator & Converter",
+      "url": "https://invokebot.com/tools/cloudevents-envelope-validator",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "description": "Validate a JSON event against the CloudEvents 1.0 spec and convert between structured and binary HTTP content modes with per-attribute error reporting.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://invokebot.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://invokebot.com/tools/" },
+        { "@type": "ListItem", "position": 3, "name": "CloudEvents Envelope Validator & Converter", "item": "https://invokebot.com/tools/cloudevents-envelope-validator" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+:root{
+  --bg:#0d1117;--panel:#161b22;--panel2:#1c2330;--border:#2d3745;
+  --fg:#e6edf3;--muted:#8b98a9;--accent:#58a6ff;--accent2:#7ee787;
+  --err:#ff7b72;--warn:#e3b341;--ok:#3fb950;--mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.6;font-size:16px;
+}
+nav{display:flex;gap:20px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--panel);font-size:14px}
+nav a{color:var(--accent);text-decoration:none}
+nav a:hover{text-decoration:underline}
+main{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+h1{font-size:1.7rem;line-height:1.25;margin:.4em 0 .3em}
+h2{font-size:1.25rem;margin:1.8em 0 .5em;border-bottom:1px solid var(--border);padding-bottom:.3em}
+.lede{color:var(--muted);max-width:70ch}
+#tool{margin-top:24px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px}
+.card h3{margin:0 0 4px;font-size:1rem}
+.card .hint{color:var(--muted);font-size:12.5px;margin:0 0 10px}
+label{display:block;font-size:12.5px;color:var(--muted);margin:10px 0 4px;font-weight:600;letter-spacing:.02em}
+textarea,select,input[type=text]{
+  width:100%;background:var(--bg);color:var(--fg);border:1px solid var(--border);
+  border-radius:8px;padding:10px;font-family:var(--mono);font-size:13px;resize:vertical;
+}
+textarea{min-height:230px;white-space:pre;overflow:auto}
+select,input[type=text]{font-family:inherit}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row label{margin:0}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{background:var(--panel2);color:var(--muted);border:0;padding:7px 14px;cursor:pointer;font-size:13px;font-family:inherit}
+.seg button.active{background:var(--accent);color:#08111f;font-weight:700}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--fg);padding:7px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+.btn:hover{border-color:var(--accent)}
+.status{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;margin-bottom:8px}
+.dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+.dot.ok{background:var(--ok)}.dot.bad{background:var(--err)}.dot.warn{background:var(--warn)}
+.report{list-style:none;margin:0;padding:0;font-size:13.5px;max-height:260px;overflow:auto}
+.report li{padding:7px 10px;border-radius:7px;margin-bottom:5px;display:flex;gap:8px;align-items:flex-start;background:var(--panel2)}
+.report li .ic{flex:0 0 auto;font-family:var(--mono);font-weight:700}
+.report li.e{border-left:3px solid var(--err)}
+.report li.w{border-left:3px solid var(--warn)}
+.report li.p{border-left:3px solid var(--ok)}
+.report .attr{font-family:var(--mono);color:var(--accent2)}
+.report .e .ic{color:var(--err)}.report .w .ic{color:var(--warn)}.report .p .ic{color:var(--ok)}
+pre.out{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--mono);font-size:12.5px;overflow:auto;max-height:340px;white-space:pre-wrap;word-break:break-word;margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-family:var(--mono);font-size:12.5px}
+.kv .k{color:var(--accent);white-space:nowrap}
+.kv .v{color:var(--fg);word-break:break-all}
+.tag{display:inline-block;font-size:11px;background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:2px 9px;color:var(--muted);margin-right:6px}
+.prose{max-width:74ch;margin-top:10px}
+.prose code{background:var(--panel2);padding:1px 5px;border-radius:5px;font-family:var(--mono);font-size:13px}
+.prose h2{max-width:none}
+.rel a{display:block;color:var(--accent);text-decoration:none;padding:6px 0}
+.rel a:hover{text-decoration:underline}
+footer{border-top:1px solid var(--border);padding:22px 20px;color:var(--muted);font-size:13px;text-align:center}
+footer a{color:var(--accent);text-decoration:none;margin:0 8px}
+small.mut{color:var(--muted)}
+.copybar{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/tools/">Tools</a>
+</nav>
+<main>
+  <h1>Validate &amp; Transcode CloudEvents 1.0 Envelopes</h1>
+  <p class="lede">Paste an event, get a per-attribute pass/fail report against the CNCF CloudEvents 1.0 core specification, then transcode it between <strong>structured</strong> content mode (one JSON body) and <strong>binary</strong> HTTP content mode (<code>ce-*</code> headers plus a raw data body) &mdash; in both directions, entirely in your browser.</p>
+
+  <section id="tool">
+    <div class="row">
+      <div>
+        <label style="margin:0 0 4px">Input content mode</label>
+        <div class="seg" id="modeSeg">
+          <button data-mode="structured" class="active">Structured JSON</button>
+          <button data-mode="binary">Binary (HTTP)</button>
+        </div>
+      </div>
+      <div style="margin-left:auto">
+        <button class="btn" id="sampleBtn">Load sample</button>
+        <button class="btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Input</h3>
+        <p class="hint" id="inHint">A structured CloudEvent is a single JSON object where context attributes and <code>data</code> live at the top level.</p>
+        <textarea id="input" spellcheck="false" aria-label="Event input"></textarea>
+      </div>
+
+      <div class="card">
+        <h3>Validation report</h3>
+        <p class="hint">Required &amp; optional context attributes checked against CloudEvents 1.0 type &amp; naming rules.</p>
+        <div class="status"><span class="dot warn" id="dot"></span><span id="statusText">Waiting for input&hellip;</span></div>
+        <ul class="report" id="report"></ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <div class="copybar">
+        <div>
+          <label style="margin:0 0 4px">Convert to</label>
+          <div class="seg" id="outSeg">
+            <button data-out="binary" class="active">Binary (HTTP headers + body)</button>
+            <button data-out="structured">Structured JSON</button>
+          </div>
+        </div>
+        <button class="btn" id="copyBtn">Copy output</button>
+      </div>
+      <div id="outWrap"></div>
+    </div>
+  </section>
+
+  <div class="prose">
+    <h2>How the validator and transcoder work</h2>
+    <p>The CloudEvents 1.0 specification defines an event as a set of <em>context attributes</em> plus an optional <code>data</code> payload. This tool encodes the formal rules rather than a loose schema check. Every context attribute name must match the regex <code>^[a-z0-9]+$</code> &mdash; lowercase ASCII letters and digits only, no dots, dashes, or underscores. Four attributes are <strong>REQUIRED</strong> and must be non-empty strings: <code>id</code>, <code>source</code>, <code>specversion</code> (which must equal <code>1.0</code>), and <code>type</code>. The <code>source</code> attribute must be a non-empty URI-reference, and <code>id</code> must be unique per source.</p>
+    <p>Optional attributes are type-checked when present: <code>time</code> must be a valid RFC 3339 timestamp, <code>datacontenttype</code> a well-formed RFC 2046 media type, and <code>dataschema</code> an absolute URI. The <code>subject</code> attribute is a free string. Any additional top-level key that satisfies the naming rule is treated as an <em>extension attribute</em> and must be a string, boolean, integer, binary, or URI &mdash; nested objects and arrays are rejected, because the spec forbids complex extension values.</p>
+    <p>Transcoding follows the HTTP Protocol Binding. In <strong>structured</strong> mode the whole event is one JSON document. In <strong>binary</strong> mode each context attribute becomes an HTTP header prefixed with <code>ce-</code> (so <code>type</code> &rarr; <code>ce-type</code>), the <code>datacontenttype</code> attribute maps to the standard <code>Content-Type</code> header, and <code>data</code> becomes the raw message body. The converter reverses this mapping loss-lessly: the algorithm strips the <code>ce-</code> prefix from headers to rebuild the JSON envelope, and re-prefixes attributes to emit headers. Everything runs client-side with zero network calls, so private event payloads never leave your machine.</p>
+  </div>
+
+  <h2>Related Tools</h2>
+  <div class="rel">
+    <a href="/tools/event-schema-validator">Event Schema Validator &mdash; check arbitrary JSON events against a custom schema</a>
+    <a href="/tools/webhook-payload-inspector">Webhook Payload Inspector &mdash; decode and pretty-print incoming webhook bodies</a>
+    <a href="/tools/rfc3339-timestamp-converter">RFC 3339 Timestamp Converter &mdash; parse and format event <code>time</code> values</a>
+  </div>
+</main>
+
+<footer>
+  <div>
+    <a href="/">Home</a>
+    <a href="/tools/">All Tools</a>
+    <a href="/tools/event-schema-validator">Event Schema Validator</a>
+  </div>
+  <div style="margin-top:8px">&copy; 2026 invokebot.com &middot; Built by <a href="https://zovo.one">Michael Lip</a></div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var input = document.getElementById('input');
+  var report = document.getElementById('report');
+  var dot = document.getElementById('dot');
+  var statusText = document.getElementById('statusText');
+  var outWrap = document.getElementById('outWrap');
+  var inHint = document.getElementById('inHint');
+  var modeSeg = document.getElementById('modeSeg');
+  var outSeg = document.getElementById('outSeg');
+
+  var inMode = 'structured';   // structured | binary
+  var outMode = 'binary';      // binary | structured
+
+  var REQUIRED = ['id','source','specversion','type'];
+  var KNOWN_OPTIONAL = ['datacontenttype','dataschema','subject','time'];
+  var NAME_RE = /^[a-z0-9]+$/;
+  var MEDIA_RE = /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*(\s*;.*)?$/i;
+
+  var SAMPLE_STRUCTURED = JSON.stringify({
+    specversion: "1.0",
+    type: "com.example.order.created",
+    source: "/orders/acme-store",
+    id: "A234-1234-1234",
+    time: "2026-06-30T14:20:05Z",
+    datacontenttype: "application/json",
+    subject: "order/9f1c",
+    data: { orderId: "9f1c", total: 42.5, currency: "USD" }
+  }, null, 2);
+
+  var SAMPLE_BINARY =
+    "ce-specversion: 1.0\n" +
+    "ce-type: com.example.order.created\n" +
+    "ce-source: /orders/acme-store\n" +
+    "ce-id: A234-1234-1234\n" +
+    "ce-time: 2026-06-30T14:20:05Z\n" +
+    "ce-subject: order/9f1c\n" +
+    "Content-Type: application/json\n" +
+    "\n" +
+    '{"orderId":"9f1c","total":42.5,"currency":"USD"}';
+
+  // ---- RFC 3339 validation ----
+  function isRfc3339(v){
+    if(typeof v !== 'string') return false;
+    var re = /^(\d{4})-(\d{2})-(\d{2})[Tt](\d{2}):(\d{2}):(\d{2})(\.\d+)?([Zz]|[+-]\d{2}:\d{2})$/;
+    var m = re.exec(v);
+    if(!m) return false;
+    var y=+m[1], mo=+m[2], d=+m[3], h=+m[4], mi=+m[5], s=+m[6];
+    if(mo<1||mo>12||d<1||d>31||h>23||mi>59||s>60) return false;
+    var days=[31,(y%4===0&&(y%100!==0||y%400===0))?29:28,31,30,31,30,31,31,30,31,30,31];
+    if(d>days[mo-1]) return false;
+    return true;
+  }
+
+  function isAbsoluteUri(v){
+    if(typeof v !== 'string' || !v) return false;
+    return /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(v);
+  }
+  function isUriRef(v){
+    // URI-reference: non-empty string; absolute URI OR relative reference
+    return typeof v === 'string' && v.length > 0;
+  }
+
+  // ---- parse input into an event object {attrs, data, dataIsRaw} ----
+  function parseStructured(text){
+    var obj = JSON.parse(text); // throws on bad JSON
+    if(obj === null || typeof obj !== 'object' || Array.isArray(obj)){
+      throw new Error('Structured CloudEvent must be a JSON object.');
+    }
+    var attrs = {}, data, hasData = false;
+    for(var k in obj){
+      if(!Object.prototype.hasOwnProperty.call(obj,k)) continue;
+      if(k === 'data'){ data = obj[k]; hasData = true; }
+      else if(k === 'data_base64'){ data = obj[k]; hasData = true; attrs.__base64 = true; }
+      else attrs[k] = obj[k];
+    }
+    return { attrs: attrs, data: data, hasData: hasData, dataIsRaw: false };
+  }
+
+  function parseBinary(text){
+    // headers section then blank line then body
+    var norm = text.replace(/\r\n/g,'\n');
+    var idx = norm.indexOf('\n\n');
+    var headerBlock, body, hasData;
+    if(idx === -1){ headerBlock = norm; body = ''; hasData = false; }
+    else { headerBlock = norm.slice(0, idx); body = norm.slice(idx+2); hasData = true; }
+    var lines = headerBlock.split('\n');
+    var attrs = {}, dct = null;
+    for(var i=0;i<lines.length;i++){
+      var line = lines[i].trim();
+      if(!line) continue;
+      var c = line.indexOf(':');
+      if(c === -1) throw new Error('Malformed header line (no colon): "'+line+'"');
+      var name = line.slice(0,c).trim();
+      var val = line.slice(c+1).trim();
+      var lname = name.toLowerCase();
+      if(lname === 'content-type'){ dct = val; }
+      else if(lname.indexOf('ce-') === 0){ attrs[lname.slice(3)] = val; }
+      // other HTTP headers ignored for CE purposes
+    }
+    if(dct !== null) attrs.datacontenttype = dct;
+    // try to parse body as JSON so structured output is clean; else keep raw string
+    var data = body, hasBody = hasData && body.length>0;
+    if(hasBody){
+      var trimmed = body.trim();
+      if(trimmed.length){
+        try{ data = JSON.parse(trimmed); }
+        catch(e){ data = body; } // raw text body
+      }
+    }
+    return { attrs: attrs, data: data, hasData: hasBody, dataIsRaw: true };
+  }
+
+  // ---- validate an event object ----
+  function validate(ev){
+    var findings = [];
+    var attrs = ev.attrs;
+
+    // required
+    REQUIRED.forEach(function(name){
+      if(!(name in attrs) || attrs[name] === undefined || attrs[name] === null || attrs[name] === ''){
+        findings.push({level:'e', attr:name, msg:'REQUIRED attribute is missing or empty.'});
+      } else if(typeof attrs[name] !== 'string'){
+        findings.push({level:'e', attr:name, msg:'REQUIRED attribute must be a string, got '+typeName(attrs[name])+'.'});
+      } else {
+        if(name === 'specversion' && attrs[name] !== '1.0'){
+          findings.push({level:'e', attr:'specversion', msg:'Must equal "1.0" (found "'+attrs[name]+'").'});
+        } else if(name === 'source' && !isUriRef(attrs[name])){
+          findings.push({level:'e', attr:'source', msg:'Must be a non-empty URI-reference.'});
+        } else {
+          findings.push({level:'p', attr:name, msg:'OK ("'+truncate(attrs[name])+'").'});
+        }
+      }
+    });
+
+    // naming rule + optional/extension handling
+    for(var key in attrs){
+      if(key === '__base64') continue;
+      if(REQUIRED.indexOf(key) !== -1) continue;
+      if(!NAME_RE.test(key)){
+        findings.push({level:'e', attr:key, msg:'Invalid attribute name. CloudEvents names must match ^[a-z0-9]+$ (lowercase letters/digits only).'});
+        continue;
+      }
+      var v = attrs[key];
+      if(key === 'time'){
+        if(isRfc3339(v)) findings.push({level:'p', attr:'time', msg:'Valid RFC 3339 timestamp.'});
+        else findings.push({level:'e', attr:'time', msg:'Not a valid RFC 3339 timestamp (expected e.g. 2026-06-30T14:20:05Z).'});
+      } else if(key === 'datacontenttype'){
+        if(MEDIA_RE.test(String(v))) findings.push({level:'p', attr:'datacontenttype', msg:'Well-formed media type.'});
+        else findings.push({level:'w', attr:'datacontenttype', msg:'Does not look like a valid RFC 2046 media type.'});
+      } else if(key === 'dataschema'){
+        if(isAbsoluteUri(v)) findings.push({level:'p', attr:'dataschema', msg:'Absolute URI.'});
+        else findings.push({level:'e', attr:'dataschema', msg:'Must be an absolute URI (needs a scheme, e.g. https:).'});
+      } else if(key === 'subject'){
+        if(typeof v === 'string' && v.length) findings.push({level:'p', attr:'subject', msg:'OK.'});
+        else findings.push({level:'w', attr:'subject', msg:'subject should be a non-empty string when present.'});
+      } else {
+        // extension attribute
+        var t = typeName(v);
+        if(t === 'object' || t === 'array'){
+          findings.push({level:'e', attr:key, msg:'Extension attribute must be a simple type (string/boolean/integer/URI), not '+t+'.'});
+        } else {
+          findings.push({level:'w', attr:key, msg:'Extension attribute ('+t+'). Allowed, but not part of the core spec.'});
+        }
+      }
+    }
+
+    // data sanity
+    if(ev.hasData && attrs.datacontenttype === undefined){
+      findings.push({level:'w', attr:'data', msg:'data is present but datacontenttype is unset; consumers may assume application/json.'});
+    }
+
+    return findings;
+  }
+
+  function typeName(v){
+    if(v === null) return 'null';
+    if(Array.isArray(v)) return 'array';
+    if(Number.isInteger(v)) return 'integer';
+    return typeof v;
+  }
+  function truncate(s){ s=String(s); return s.length>40 ? s.slice(0,40)+'…' : s; }
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+  // ---- output builders ----
+  function toStructured(ev){
+    var out = {};
+    // canonical ordering: specversion first, then required, then rest, data last
+    if('specversion' in ev.attrs) out.specversion = ev.attrs.specversion;
+    ['id','source','type'].forEach(function(k){ if(k in ev.attrs) out[k] = ev.attrs[k]; });
+    Object.keys(ev.attrs).forEach(function(k){
+      if(k === '__base64') return;
+      if(['specversion','id','source','type'].indexOf(k) !== -1) return;
+      out[k] = ev.attrs[k];
+    });
+    if(ev.hasData){
+      if(ev.attrs.__base64) out.data_base64 = ev.data;
+      else out.data = ev.data;
+    }
+    return JSON.stringify(out, null, 2);
+  }
+
+  function toBinary(ev){
+    var headers = [];
+    // specversion first
+    var order = ['specversion','id','source','type'];
+    var seen = {};
+    order.forEach(function(k){
+      if(k in ev.attrs){ headers.push({k:'ce-'+k, v:String(ev.attrs[k])}); seen[k]=1; }
+    });
+    Object.keys(ev.attrs).forEach(function(k){
+      if(k==='__base64'||seen[k]) return;
+      if(k === 'datacontenttype'){ return; } // maps to Content-Type
+      headers.push({k:'ce-'+k, v:String(ev.attrs[k])});
+    });
+    var ct = ev.attrs.datacontenttype;
+    var bodyStr = '';
+    if(ev.hasData){
+      if(typeof ev.data === 'string') bodyStr = ev.data;
+      else bodyStr = JSON.stringify(ev.data);
+      if(ct === undefined && typeof ev.data !== 'string'){ ct = 'application/json'; }
+    }
+    if(ct !== undefined) headers.push({k:'Content-Type', v:String(ct)});
+    return { headers: headers, body: bodyStr, hasBody: ev.hasData };
+  }
+
+  // ---- render ----
+  var lastOutputText = '';
+
+  function render(){
+    var text = input.value;
+    outWrap.innerHTML = '';
+    report.innerHTML = '';
+
+    if(!text.trim()){
+      setStatus('warn','Waiting for input…');
+      lastOutputText = '';
+      return;
+    }
+
+    var ev, parseErr = null;
+    try{
+      ev = (inMode === 'structured') ? parseStructured(text) : parseBinary(text);
+    }catch(e){ parseErr = e.message || String(e); }
+
+    if(parseErr){
+      setStatus('bad','Could not parse input');
+      var li = document.createElement('li');
+      li.className = 'e';
+      li.innerHTML = '<span class="ic">✖</span><span><span class="attr">parse</span> &mdash; '+esc(parseErr)+'</span>';
+      report.appendChild(li);
+      lastOutputText = '';
+      return;
+    }
+
+    var findings = validate(ev);
+    var errs = findings.filter(function(f){return f.level==='e';}).length;
+    var warns = findings.filter(function(f){return f.level==='w';}).length;
+
+    if(errs === 0 && warns === 0) setStatus('ok','Valid CloudEvents 1.0 envelope');
+    else if(errs === 0) setStatus('ok','Valid — '+warns+' warning'+(warns>1?'s':''));
+    else setStatus('bad', errs+' error'+(errs>1?'s':'')+(warns?', '+warns+' warning'+(warns>1?'s':''):''));
+
+    findings.forEach(function(f){
+      var li = document.createElement('li');
+      li.className = f.level;
+      var ic = f.level==='e'?'✖':(f.level==='w'?'⚠':'✔');
+      li.innerHTML = '<span class="ic">'+ic+'</span><span><span class="attr">'+esc(f.attr)+'</span> &mdash; '+esc(f.msg)+'</span>';
+      report.appendChild(li);
+    });
+
+    // build conversion output
+    if(outMode === 'structured'){
+      lastOutputText = toStructured(ev);
+      var pre = document.createElement('pre');
+      pre.className = 'out';
+      pre.textContent = lastOutputText;
+      outWrap.appendChild(pre);
+    } else {
+      var bin = toBinary(ev);
+      var lines = bin.headers.map(function(h){ return h.k+': '+h.v; });
+      lastOutputText = lines.join('\n') + (bin.hasBody ? '\n\n'+bin.body : '');
+      var kv = document.createElement('div');
+      kv.innerHTML = '<div style="margin-bottom:8px"><span class="tag">HTTP binary content mode</span></div>';
+      var grid = document.createElement('div');
+      grid.className = 'kv';
+      bin.headers.forEach(function(h){
+        var kk = document.createElement('div'); kk.className='k'; kk.textContent=h.k+':';
+        var vv = document.createElement('div'); vv.className='v'; vv.textContent=h.v;
+        grid.appendChild(kk); grid.appendChild(vv);
+      });
+      kv.appendChild(grid);
+      if(bin.hasBody){
+        var lbl = document.createElement('div');
+        lbl.innerHTML = '<label style="margin:12px 0 4px">Message body (raw data)</label>';
+        kv.appendChild(lbl);
+        var pre2 = document.createElement('pre'); pre2.className='out'; pre2.textContent=bin.body;
+        kv.appendChild(pre2);
+      } else {
+        var nb = document.createElement('p'); nb.className='hint'; nb.style.marginTop='10px';
+        nb.textContent='(no data payload — empty message body)';
+        kv.appendChild(nb);
+      }
+      outWrap.appendChild(kv);
+    }
+  }
+
+  function setStatus(kind, text){
+    dot.className = 'dot '+(kind==='ok'?'ok':kind==='bad'?'bad':'warn');
+    statusText.textContent = text;
+  }
+
+  function updateHint(){
+    if(inMode === 'structured'){
+      inHint.innerHTML = 'A structured CloudEvent is a single JSON object where context attributes and <code>data</code> live at the top level.';
+    } else {
+      inHint.innerHTML = 'Binary mode: one <code>ce-*: value</code> header per line, a blank line, then the raw data body. <code>Content-Type</code> maps to <code>datacontenttype</code>.';
+    }
+  }
+
+  // ---- events ----
+  input.addEventListener('input', render);
+
+  modeSeg.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    inMode = b.getAttribute('data-mode');
+    [].forEach.call(modeSeg.querySelectorAll('button'), function(x){ x.classList.toggle('active', x===b); });
+    updateHint();
+    // auto-swap sample if the box holds the other sample or is empty
+    if(!input.value.trim() || input.value === SAMPLE_STRUCTURED || input.value === SAMPLE_BINARY){
+      input.value = inMode === 'structured' ? SAMPLE_STRUCTURED : SAMPLE_BINARY;
+    }
+    render();
+  });
+
+  outSeg.addEventListener('click', function(e){
+    var b = e.target.closest('button'); if(!b) return;
+    outMode = b.getAttribute('data-out');
+    [].forEach.call(outSeg.querySelectorAll('button'), function(x){ x.classList.toggle('active', x===b); });
+    render();
+  });
+
+  document.getElementById('sampleBtn').addEventListener('click', function(){
+    input.value = inMode === 'structured' ? SAMPLE_STRUCTURED : SAMPLE_BINARY;
+    render();
+  });
+  document.getElementById('clearBtn').addEventListener('click', function(){
+    input.value = ''; render(); input.focus();
+  });
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    if(!lastOutputText) return;
+    var ta = document.createElement('textarea');
+    ta.value = lastOutputText; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    var b = this; var t = b.textContent; b.textContent = 'Copied!';
+    setTimeout(function(){ b.textContent = t; }, 1200);
+  });
+
+  // init
+  updateHint();
+  input.value = SAMPLE_STRUCTURED;
+  render();
+})();
+</script>
+</body>
+</html>

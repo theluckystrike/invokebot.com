@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Backoff &amp; Retry Schedule Visualizer</title>
+<meta name="description" content="Model exponential, linear, or fixed retry backoff with jitter and see the full attempt timeline, per-attempt delays, and total retry window before">
+<link rel="canonical" href="https://invokebot.com/tools/backoff-retry-schedule-visualizer">
+<meta property="og:title" content="Backoff &amp; Retry Schedule Visualizer">
+<meta property="og:description" content="Model exponential, linear, or fixed retry backoff with jitter and see the full attempt timeline, per-attempt delays, and total retry window before">
+<meta property="og:url" content="https://invokebot.com/tools/backoff-retry-schedule-visualizer">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Backoff & Retry Schedule Visualizer",
+      "description": "Model exponential, linear, or fixed retry backoff with jitter and see the full attempt timeline, per-attempt delays, and total retry window before a payload is dead-lettered.",
+      "url": "https://invokebot.com/tools/backoff-retry-schedule-visualizer",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://invokebot.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Tools", "item": "https://invokebot.com/tools/" },
+        { "@type": "ListItem", "position": 3, "name": "Backoff & Retry Schedule Visualizer", "item": "https://invokebot.com/tools/backoff-retry-schedule-visualizer" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --border:#2a3240;
+    --fg:#e6edf3; --muted:#8b98a9; --accent:#58a6ff; --accent2:#3fb950;
+    --warn:#f0883e; --danger:#f85149; --bar:#388bfd; --bar2:#2d6ecc;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; font-size:16px;
+  }
+  a{color:var(--accent); text-decoration:none}
+  a:hover{text-decoration:underline}
+  nav{
+    display:flex; gap:20px; padding:14px 22px; background:var(--panel);
+    border-bottom:1px solid var(--border); font-size:14px; flex-wrap:wrap;
+  }
+  main{max-width:1000px; margin:0 auto; padding:26px 20px 60px}
+  h1{font-size:26px; line-height:1.2; margin:12px 0 8px}
+  h2{font-size:19px; margin:34px 0 12px; border-bottom:1px solid var(--border); padding-bottom:6px}
+  .lead{color:var(--muted); font-size:15px; max-width:70ch}
+  #tool{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:12px; padding:20px; margin-top:22px;
+  }
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:14px 18px;
+  }
+  .field{display:flex; flex-direction:column; gap:5px}
+  .field label{font-size:12.5px; color:var(--muted); font-weight:600; letter-spacing:.02em}
+  .field input,.field select{
+    background:var(--panel2); border:1px solid var(--border); color:var(--fg);
+    border-radius:8px; padding:9px 10px; font-size:14px; font-family:inherit;
+  }
+  .field input:focus,.field select:focus{outline:none; border-color:var(--accent)}
+  .hint{font-size:11px; color:var(--muted)}
+  .summary{
+    display:flex; flex-wrap:wrap; gap:12px; margin:22px 0 6px;
+  }
+  .stat{
+    flex:1 1 150px; background:var(--panel2); border:1px solid var(--border);
+    border-radius:10px; padding:12px 14px;
+  }
+  .stat .k{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  .stat .v{font-size:22px; font-weight:700; margin-top:3px; font-variant-numeric:tabular-nums}
+  .stat .v.small{font-size:16px}
+  #chart{display:flex; flex-direction:column; gap:5px; margin-top:14px}
+  .row{display:flex; align-items:center; gap:10px; font-size:12.5px}
+  .row .lab{width:66px; flex:0 0 66px; color:var(--muted); font-variant-numeric:tabular-nums; text-align:right}
+  .row .track{flex:1; background:#0a0e14; border-radius:4px; height:22px; position:relative; overflow:hidden}
+  .row .fill{
+    height:100%; background:linear-gradient(90deg,var(--bar),var(--bar2));
+    border-radius:4px; min-width:2px; display:flex; align-items:center;
+    justify-content:flex-end; padding-right:6px;
+  }
+  .row .fill.capped{background:linear-gradient(90deg,var(--warn),#c96a24)}
+  .row .fill span{font-size:11px; color:#0a0e14; font-weight:700; white-space:nowrap}
+  .row .cum{width:78px; flex:0 0 78px; color:var(--muted); font-variant-numeric:tabular-nums}
+  table{width:100%; border-collapse:collapse; margin-top:14px; font-size:13px}
+  th,td{text-align:right; padding:7px 9px; border-bottom:1px solid var(--border); font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.04em}
+  td.capped{color:var(--warn)}
+  .out-block{
+    background:var(--panel2); border:1px solid var(--border); border-radius:10px;
+    padding:14px; margin-top:16px;
+  }
+  .out-block h3{margin:0 0 8px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em}
+  pre{
+    margin:0; background:#0a0e14; border:1px solid var(--border); border-radius:8px;
+    padding:12px; overflow-x:auto; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12.5px; color:#c9d6e4;
+  }
+  .btnrow{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+  button{
+    background:var(--panel2); border:1px solid var(--border); color:var(--fg);
+    border-radius:8px; padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit;
+  }
+  button:hover{border-color:var(--accent); color:var(--accent)}
+  .note{color:var(--warn); font-size:12.5px; margin-top:10px}
+  .prose{max-width:74ch}
+  .prose code{background:var(--panel2); padding:2px 5px; border-radius:4px; font-size:13px}
+  code.inline{background:var(--panel2); padding:2px 6px; border-radius:5px; font-family:ui-monospace,monospace; font-size:13px}
+  footer{
+    border-top:1px solid var(--border); margin-top:44px; padding:22px 20px;
+    color:var(--muted); font-size:13px; text-align:center;
+  }
+  footer a{margin:0 8px}
+  @media(max-width:560px){
+    .row .lab{width:52px;flex-basis:52px} .row .cum{width:62px;flex-basis:62px}
+    h1{font-size:22px}
+  }
+</style>
+</head>
+<body>
+<nav>
+  <a href="/">Home</a>
+  <a href="/tools/">All Tools</a>
+</nav>
+<main>
+  <h1>Visualize Your Retry Backoff Schedule Before It Hits Production</h1>
+  <p class="lead">Tune base delay, growth curve, cap, and jitter, then read the exact per-attempt delays and the total wall-clock window before a webhook payload is dead-lettered. Everything runs in your browser &mdash; copy the schedule straight into your queue or gateway config.</p>
+
+  <section id="tool">
+    <div class="grid">
+      <div class="field">
+        <label for="strategy">Backoff Strategy</label>
+        <select id="strategy">
+          <option value="exponential" selected>Exponential (base &times; mult^n)</option>
+          <option value="linear">Linear (base &times; (n+1))</option>
+          <option value="fixed">Fixed (base)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="base">Base Delay (ms)</label>
+        <input id="base" type="number" min="1" step="1" value="1000">
+        <span class="hint">Delay of the first retry</span>
+      </div>
+      <div class="field">
+        <label for="mult">Multiplier</label>
+        <input id="mult" type="number" min="1" step="0.1" value="2">
+        <span class="hint">Growth per attempt (exp only)</span>
+      </div>
+      <div class="field">
+        <label for="attempts">Max Attempts</label>
+        <input id="attempts" type="number" min="1" max="30" step="1" value="6">
+        <span class="hint">Retries before dead-letter</span>
+      </div>
+      <div class="field">
+        <label for="cap">Max Delay Cap (ms)</label>
+        <input id="cap" type="number" min="1" step="1" value="30000">
+        <span class="hint">Ceiling per attempt</span>
+      </div>
+      <div class="field">
+        <label for="jitter">Jitter Mode</label>
+        <select id="jitter">
+          <option value="none">None (deterministic)</option>
+          <option value="full" selected>Full (0 &rarr; delay)</option>
+          <option value="equal">Equal (delay/2 + rand)</option>
+          <option value="decorrelated">Decorrelated</option>
+        </select>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button id="reroll" type="button">Re-roll jitter</button>
+      <button id="copyJson" type="button">Copy JSON schedule</button>
+      <button id="reset" type="button">Reset defaults</button>
+    </div>
+    <div id="capNote" class="note" style="display:none"></div>
+
+    <div class="summary" id="summary"></div>
+
+    <h2 style="margin-top:24px">Attempt Timeline</h2>
+    <div id="chart"></div>
+
+    <h2>Per-Attempt Breakdown</h2>
+    <div style="overflow-x:auto">
+      <table id="tbl">
+        <thead>
+          <tr><th>Attempt</th><th>Nominal (ms)</th><th>Actual delay (ms)</th><th>Cumulative</th><th>Notes</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="out-block">
+      <h3>JSON schedule (delays in ms)</h3>
+      <pre id="json"></pre>
+    </div>
+  </section>
+
+  <h2>How the schedule is computed</h2>
+  <div class="prose">
+    <p>Each retry attempt <code>n</code> (0-indexed) gets a <strong>nominal delay</strong> from the chosen strategy. Exponential uses <code>base &times; multiplier<sup>n</sup></code>, linear uses <code>base &times; (n + 1)</code>, and fixed always returns <code>base</code>. Every nominal delay is then clamped to the cap: <code>d = min(cap, nominal)</code>. This is the classic capped-exponential-backoff rule used by AWS SDKs, Google Cloud clients, and most message brokers.</p>
+    <p>Jitter breaks up the "thundering herd" problem, where thousands of clients that failed at the same instant all retry in lockstep and hammer a recovering server. <strong>Full jitter</strong> replaces the delay with a uniform random value in <code>[0, d]</code>. <strong>Equal jitter</strong> keeps half the delay fixed and randomizes the other half: <code>d/2 + rand(0, d/2)</code>. <strong>Decorrelated jitter</strong> &mdash; the strategy AWS recommends for the best spread &mdash; ignores the plain exponential and instead computes <code>sleep = min(cap, rand(base, prev &times; 3))</code>, feeding each attempt from the previous one so the sequence self-decorrelates. <strong>None</strong> leaves the deterministic capped delay untouched.</p>
+    <p>The visualizer accumulates every actual delay into a running total. That cumulative figure is the real answer developers need: the <em>total retry window</em>, i.e. how long a failing payload survives in the queue before it is exhausted and dead-lettered. If your cap or attempt count pushes that window past your consumer's visibility timeout or the downstream's SLA, you will silently drop or duplicate events. Watching the timeline bar chart makes it obvious when the schedule flattens out at the cap and whether adding attempts still buys meaningful time or just wastes queue depth. Re-roll the jitter a few times to see the spread of realistic windows rather than a single deterministic guess.</p>
+  </div>
+
+  <h2>Related Tools</h2>
+  <ul>
+    <li><a href="/tools/webhook-retry-calculator">Webhook Retry Success Calculator</a> &mdash; estimate delivery probability across attempts.</li>
+    <li><a href="/tools/dead-letter-queue-estimator">Dead-Letter Queue Volume Estimator</a> &mdash; project DLQ growth from failure rates.</li>
+    <li><a href="/tools/rate-limit-planner">Rate Limit &amp; Concurrency Planner</a> &mdash; size retry storms against provider limits.</li>
+  </ul>
+</main>
+
+<footer>
+  <div>
+    <a href="/">Home</a>
+    <a href="/tools/">Tools</a>
+    <a href="/about/">About</a>
+  </div>
+  <div style="margin-top:8px">&copy; 2026 invokebot.com &mdash; webhook &amp; event-driven architecture dev tools.</div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var els = {
+    strategy: $("strategy"), base: $("base"), mult: $("mult"),
+    attempts: $("attempts"), cap: $("cap"), jitter: $("jitter"),
+    summary: $("summary"), chart: $("chart"),
+    tbody: $("tbl").querySelector("tbody"), json: $("json"),
+    capNote: $("capNote")
+  };
+  var DEFAULTS = { strategy:"exponential", base:1000, mult:2, attempts:6, cap:30000, jitter:"full" };
+
+  function num(el, min, max, fallback){
+    var v = parseFloat(el.value);
+    if(!isFinite(v)) v = fallback;
+    if(min !== null && v < min) v = min;
+    if(max !== null && v > max) v = max;
+    return v;
+  }
+
+  // format ms into a human string
+  function fmt(ms){
+    if(ms < 1000) return Math.round(ms) + " ms";
+    var s = ms / 1000;
+    if(s < 60) return (s < 10 ? s.toFixed(2) : s.toFixed(1)) + " s";
+    var m = s / 60;
+    if(m < 60) return m.toFixed(m < 10 ? 2 : 1) + " min";
+    var h = m / 60;
+    return h.toFixed(2) + " h";
+  }
+  function commas(n){ return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  function nominalDelay(strategy, base, mult, n){
+    if(strategy === "fixed") return base;
+    if(strategy === "linear") return base * (n + 1);
+    // exponential
+    return base * Math.pow(mult, n);
+  }
+
+  function applyJitter(mode, d, prevActual, base, cap){
+    if(mode === "none") return d;
+    if(mode === "full") return Math.random() * d;
+    if(mode === "equal") return d / 2 + Math.random() * (d / 2);
+    if(mode === "decorrelated"){
+      // sleep = min(cap, random_between(base, prev*3))
+      var lo = base;
+      var hi = (prevActual > 0 ? prevActual : base) * 3;
+      var v = lo + Math.random() * (hi - lo);
+      return Math.min(cap, v);
+    }
+    return d;
+  }
+
+  function compute(){
+    var strategy = els.strategy.value;
+    var base = num(els.base, 1, null, 1000);
+    var mult = num(els.mult, 1, null, 2);
+    var attempts = Math.round(num(els.attempts, 1, 30, 6));
+    var cap = num(els.cap, 1, null, 30000);
+    var jitter = els.jitter.value;
+
+    // multiplier only meaningful for exponential
+    els.mult.disabled = (strategy !== "exponential");
+    els.mult.style.opacity = (strategy !== "exponential") ? "0.45" : "1";
+
+    var rows = [];
+    var cum = 0;
+    var prevActual = base; // for decorrelated seed
+    var anyCapped = false;
+    for(var n = 0; n < attempts; n++){
+      var nominal = nominalDelay(strategy, base, mult, n);
+      var capped = nominal >= cap;
+      var clamped = Math.min(cap, nominal);
+      var actual;
+      if(jitter === "decorrelated"){
+        actual = applyJitter(jitter, clamped, prevActual, base, cap);
+      } else {
+        actual = applyJitter(jitter, clamped, prevActual, base, cap);
+      }
+      prevActual = actual;
+      if(capped) anyCapped = true;
+      cum += actual;
+      rows.push({
+        n: n + 1,
+        nominal: nominal,
+        actual: actual,
+        clamped: clamped,
+        cum: cum,
+        capped: capped
+      });
+    }
+    return {
+      rows: rows, total: cum, attempts: attempts, cap: cap,
+      anyCapped: anyCapped, strategy: strategy, jitter: jitter
+    };
+  }
+
+  function render(){
+    var r = compute();
+    var rows = r.rows;
+
+    // summary stats
+    var maxDelay = 0, i;
+    for(i = 0; i < rows.length; i++){ if(rows[i].actual > maxDelay) maxDelay = rows[i].actual; }
+    var avg = r.total / (rows.length || 1);
+    els.summary.innerHTML =
+      stat("Total retry window", fmt(r.total), false) +
+      stat("Attempts before dead-letter", String(r.attempts), true) +
+      stat("Longest single delay", fmt(maxDelay), false) +
+      stat("Avg delay / attempt", fmt(avg), false);
+
+    // cap note
+    if(r.anyCapped){
+      els.capNote.style.display = "block";
+      els.capNote.textContent = "⚠ Cap reached — one or more attempts are clamped to the " + commas(r.cap) + " ms ceiling. Extra attempts add flat time, not exponential growth.";
+    } else {
+      els.capNote.style.display = "none";
+    }
+
+    // chart
+    var scaleMax = 0;
+    for(i = 0; i < rows.length; i++){ if(rows[i].actual > scaleMax) scaleMax = rows[i].actual; }
+    if(scaleMax <= 0) scaleMax = 1;
+    var chartHtml = "";
+    for(i = 0; i < rows.length; i++){
+      var row = rows[i];
+      var pct = Math.max(1.5, (row.actual / scaleMax) * 100);
+      chartHtml +=
+        '<div class="row">' +
+          '<div class="lab">#' + row.n + '</div>' +
+          '<div class="track"><div class="fill' + (row.capped ? ' capped' : '') + '" style="width:' + pct.toFixed(1) + '%">' +
+            '<span>' + fmt(row.actual) + '</span></div></div>' +
+          '<div class="cum">&Sigma; ' + fmt(row.cum) + '</div>' +
+        '</div>';
+    }
+    els.chart.innerHTML = chartHtml;
+
+    // table
+    var tb = "";
+    for(i = 0; i < rows.length; i++){
+      var rr = rows[i];
+      tb +=
+        '<tr>' +
+          '<td>#' + rr.n + '</td>' +
+          '<td>' + commas(rr.nominal) + '</td>' +
+          '<td' + (rr.capped ? ' class="capped"' : '') + '>' + commas(rr.actual) + '</td>' +
+          '<td>' + commas(rr.cum) + '</td>' +
+          '<td>' + (rr.capped ? 'capped' : (r.jitter === 'none' ? '—' : 'jittered')) + '</td>' +
+        '</tr>';
+    }
+    els.tbody.innerHTML = tb;
+
+    // json
+    var delays = rows.map(function(x){ return Math.round(x.actual); });
+    var payload = {
+      strategy: r.strategy,
+      jitter: r.jitter,
+      maxAttempts: r.attempts,
+      capMs: r.cap,
+      delaysMs: delays,
+      totalWindowMs: Math.round(r.total)
+    };
+    els.json.textContent = JSON.stringify(payload, null, 2);
+  }
+
+  function stat(k, v, small){
+    return '<div class="stat"><div class="k">' + k + '</div><div class="v' + (small ? ' small' : '') + '">' + v + '</div></div>';
+  }
+
+  // events
+  ["strategy","base","mult","attempts","cap","jitter"].forEach(function(id){
+    els[id].addEventListener("input", render);
+    els[id].addEventListener("change", render);
+  });
+  $("reroll").addEventListener("click", render);
+  $("copyJson").addEventListener("click", function(){
+    var txt = els.json.textContent;
+    var btn = this;
+    function done(){ btn.textContent = "Copied ✓"; setTimeout(function(){ btn.textContent = "Copy JSON schedule"; }, 1400); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(done, done);
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = txt; document.body.appendChild(ta); ta.select();
+      try{ document.execCommand("copy"); }catch(e){}
+      document.body.removeChild(ta); done();
+    }
+  });
+  $("reset").addEventListener("click", function(){
+    els.strategy.value = DEFAULTS.strategy;
+    els.base.value = DEFAULTS.base;
+    els.mult.value = DEFAULTS.mult;
+    els.attempts.value = DEFAULTS.attempts;
+    els.cap.value = DEFAULTS.cap;
+    els.jitter.value = DEFAULTS.jitter;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -95,4 +95,8 @@
 <url><loc>https://invokebot.com/tools/backoff-retry-schedule-visualizer</loc><lastmod>2026-07-09</lastmod></url>
 <url><loc>https://invokebot.com/tools/cloudevents-envelope-validator</loc><lastmod>2026-07-09</lastmod></url>
 <url><loc>https://invokebot.com/tools/webhook-signature-verifier</loc><lastmod>2026-07-09</lastmod></url>
+<url><loc>https://invokebot.com/tools/webhook-monitor-dashboard.html</loc><lastmod>2026-07-29</lastmod></url>
+<url><loc>https://invokebot.com/tools/api-timeout-calculator</loc><lastmod>2026-06-09</lastmod></url>
+<url><loc>https://invokebot.com/tools/circuit-breaker-tool</loc><lastmod>2026-06-09</lastmod></url>
+<url><loc>https://invokebot.com/tools/dead-letter-queue-estimator</loc><lastmod>2026-06-09</lastmod></url>
 </urlset>

@@ -26,12 +26,9 @@
   "@type": "WebSite",
   "name": "InvokeBot",
   "url": "https://invokebot.com/",
-  "sameAs": ["https://github.com/theluckystrike/invokebot.com"],
-  "author": {
-    "@type": "Person",
-    "name": "Michael Lip",
-    "url": "https://zovo.one"
-  }
+  "sameAs": [
+    "https://github.com/theluckystrike/invokebot.com"
+  ]
 }
 </script>
 <script type="application/ld+json">
@@ -43,11 +40,21 @@
   "description": "Visual webhook and HTTP request builder with code generation for curl, Python, JavaScript, and Node.js.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Any",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
   "datePublished": "2026-04-05",
-  "dateModified": "2026-05-25",
-  "featureList": ["Visual HTTP request builder", "Code generation for curl/Python/JavaScript/Node.js", "Request history", "Header presets", "JSON and form data body", "Response inspection"]
+  "dateModified": "2026-10-28",
+  "featureList": [
+    "Visual HTTP request builder",
+    "Code generation for curl/Python/JavaScript/Node.js",
+    "Request history",
+    "Header presets",
+    "JSON and form data body",
+    "Response inspection"
+  ]
 }
 </script>
 <script type="application/ld+json">
@@ -55,11 +62,62 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "What is a webhook?", "acceptedAnswer": { "@type": "Answer", "text": "A webhook is an HTTP callback — an automated POST request sent to a URL you specify when a specific event occurs. Instead of polling for changes, the source system pushes updates to your endpoint in real time." } },
-    { "@type": "Question", "name": "How do I test webhooks locally?", "acceptedAnswer": { "@type": "Answer", "text": "Use InvokeBot to build and send test webhook payloads to your local endpoint. For forwarding production webhooks to localhost, combine InvokeBot with tunneling tools like ngrok that create temporary public URLs." } },
-    { "@type": "Question", "name": "How do I generate curl commands from a request?", "acceptedAnswer": { "@type": "Answer", "text": "InvokeBot generates equivalent curl, Python, JavaScript Fetch, and Node.js Axios code from your visual request configuration. Set your method, URL, headers, and body, then click Generate Code." } },
-    { "@type": "Question", "name": "Is InvokeBot free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, InvokeBot is completely free. It runs in your browser with no sign-up, no API keys, and no usage limits. Request history is stored locally in your browser." } },
-    { "@type": "Question", "name": "Does InvokeBot store my requests?", "acceptedAnswer": { "@type": "Answer", "text": "Request history is stored in your browser's localStorage only. No data is sent to any server. Your API keys, headers, and request bodies never leave your machine." } }
+    {
+      "@type": "Question",
+      "name": "What is a webhook?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A webhook is an HTTP callback — an automated POST request sent to a URL you specify when a specific event occurs in a source system. Instead of polling for changes, webhooks push updates to your endpoint in real time, making them more efficient for event-driven architectures."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I test webhooks locally?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use InvokeBot to build and send test webhook payloads to your local endpoint. Set the URL to your localhost address, configure the headers and JSON body to match the webhook format you expect, and click Send. For forwarding production webhooks to localhost, combine with tunneling tools like ngrok."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I generate curl commands from a request?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Configure your request in InvokeBot's visual interface — set the method, URL, headers, and body. Then click Generate Code. InvokeBot produces equivalent code in curl, Python requests, JavaScript Fetch, and Node.js Axios that you can copy directly into your terminal or codebase."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is InvokeBot free to use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, InvokeBot is completely free with no sign-up, no API keys, and no usage limits. It runs entirely in your browser. Request history is stored locally on your device."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does InvokeBot store my requests on a server?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. All request history is stored in your browser's localStorage only. No data — including API keys, authorization headers, and request bodies — is ever sent to any external server."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What HTTP methods does InvokeBot support?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "InvokeBot supports GET, POST, PUT, PATCH, and DELETE — the five standard HTTP methods used in REST API development and webhook integrations. Each method works with custom headers and request bodies."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I use InvokeBot for API testing beyond webhooks?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. While InvokeBot is optimized for webhook development, it works as a general-purpose HTTP client. You can test any REST API endpoint, inspect responses, and generate code for any HTTP request — not just webhooks."
+      }
+    }
   ]
 }
 </script>
@@ -86,7 +144,11 @@
 
 <section class="hero">
   <h1>Webhook <span>Request Builder</span></h1>
-  <p>Build HTTP requests visually, send them, and generate equivalent code in curl, Python, JavaScript, and Node.js.</p>
+  <div class="answer-block" style="max-width:820px;margin:1.5rem auto;padding:1rem 1.25rem;border-left:3px solid #14B8A6;background:#161b22;border-radius:6px;">
+  <p style="margin:0 0 .5rem;line-height:1.6;"><strong>Short answer.</strong> InvokeBot is a free webhook request builder that runs in your browser. Pick GET, POST, PUT, PATCH or DELETE, add headers and a JSON or form body, then send the request and read the response. Generate curl, Python, JavaScript Fetch or Node.js Axios code from the same request. History stays in localStorage and there is no sign-up.</p>
+  <p style="margin:0;font-size:.85rem;opacity:.75;">Updated 2026-10-28</p>
+</div>
+<p>Build HTTP requests visually, send them, and generate equivalent code in curl, Python, JavaScript, and Node.js.</p>
 </section>
 
 <div class="tool-container">
@@ -176,7 +238,7 @@
   <h3>Privacy</h3>
   <p>InvokeBot runs in your browser. The only network requests made are the ones you explicitly send using the tool. Request history is stored in your browser's localStorage — no data is sent to any external server. There is no tracking, no analytics, and no account required. The source code is available on <a href="https://github.com/theluckystrike/invokebot.com">GitHub</a>.</p>
 
-  <div class="last-updated"><time datetime="2026-05-25">Last updated: May 25, 2026</time></div>
+  <div class="last-updated"><time datetime="2026-10-28">Last updated: October 28, 2026</time></div>
 </section>
 
 <section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">

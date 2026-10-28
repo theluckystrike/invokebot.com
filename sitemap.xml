@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://invokebot.com/</loc></url>
+  <url><loc>https://invokebot.com/</loc><lastmod>2026-10-28</lastmod></url>
   <url><loc>https://invokebot.com/about.html</loc></url>
   <url><loc>https://invokebot.com/answers/</loc></url>
   <url><loc>https://invokebot.com/answers/automation-recipe-builder.html</loc></url>
@@ -92,11 +92,14 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
-<url><loc>https://invokebot.com/tools/backoff-retry-schedule-visualizer</loc><lastmod>2026-07-09</lastmod></url>
-<url><loc>https://invokebot.com/tools/cloudevents-envelope-validator</loc><lastmod>2026-07-09</lastmod></url>
-<url><loc>https://invokebot.com/tools/webhook-signature-verifier</loc><lastmod>2026-07-09</lastmod></url>
-<url><loc>https://invokebot.com/tools/webhook-monitor-dashboard.html</loc><lastmod>2026-07-29</lastmod></url>
+<url><loc>https://invokebot.com/tools/backoff-retry-schedule-visualizer</loc><lastmod>2026-10-28</lastmod></url>
+<url><loc>https://invokebot.com/tools/cloudevents-envelope-validator</loc><lastmod>2026-10-28</lastmod></url>
+<url><loc>https://invokebot.com/tools/webhook-signature-verifier</loc><lastmod>2026-10-28</lastmod></url>
+<url><loc>https://invokebot.com/tools/webhook-monitor-dashboard.html</loc><lastmod>2026-10-28</lastmod></url>
 <url><loc>https://invokebot.com/tools/api-timeout-calculator</loc><lastmod>2026-06-09</lastmod></url>
 <url><loc>https://invokebot.com/tools/circuit-breaker-tool</loc><lastmod>2026-06-09</lastmod></url>
 <url><loc>https://invokebot.com/tools/dead-letter-queue-estimator</loc><lastmod>2026-06-09</lastmod></url>
+  <url><loc>https://invokebot.com/guides/missed-webhook-events.html</loc><lastmod>2026-10-28</lastmod></url>
+  <url><loc>https://invokebot.com/guides/cron-five-vs-six-fields.html</loc><lastmod>2026-10-28</lastmod></url>
+  <url><loc>https://invokebot.com/answers/webhook-secret-rotation.html</loc><lastmod>2026-10-28</lastmod></url>
 </urlset>

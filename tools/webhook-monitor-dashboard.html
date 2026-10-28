@@ -30,12 +30,33 @@
   "description": "Simulate a live webhook delivery monitoring dashboard. Inspect delivery timelines, filter by status, search payload content, drill into request headers and response bodies, and analyze failure reason distributions.",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Any",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
-  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" },
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@id": "https://invokebot.com/#author",
+    "@type": "Person",
+    "name": "Michael Lip",
+    "url": "https://zovo.one"
+  },
+  "publisher": {
+    "@id": "https://invokebot.com/#organization",
+    "@type": "Organization",
+    "name": "InvokeBot",
+    "url": "https://invokebot.com"
+  },
   "datePublished": "2026-05-28",
-  "dateModified": "2026-05-28",
-  "featureList": ["Delivery timeline with status indicators", "Filter by success/retry/failed", "Payload content search", "Request header + body inspector", "Response body viewer", "Stats panel: success rate, avg latency, failure reasons"]
+  "dateModified": "2026-10-28",
+  "featureList": [
+    "Delivery timeline with status indicators",
+    "Filter by success/retry/failed",
+    "Payload content search",
+    "Request header + body inspector",
+    "Response body viewer",
+    "Stats panel: success rate, avg latency, failure reasons"
+  ]
 }
 </script>
 
@@ -43,13 +64,17 @@
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "Webhook Monitor Dashboard — Track Deliveries and Debug Failures",
+  "headline": "Webhook Monitor Dashboard — Track Deliveries & Debug Failures",
   "description": "Learn how webhook delivery monitoring works, what metrics matter, and how to debug failed deliveries using a simulated real-time dashboard.",
   "url": "https://invokebot.com/tools/webhook-monitor-dashboard.html",
   "datePublished": "2026-05-28",
-  "dateModified": "2026-05-28",
-  "author": { "@type": "Person", "name": "Michael Lip", "url": "https://zovo.one" },
-  "publisher": { "@type": "Organization", "name": "InvokeBot", "url": "https://invokebot.com" }
+  "dateModified": "2026-10-28",
+  "author": {
+    "@id": "https://invokebot.com/#author"
+  },
+  "publisher": {
+    "@id": "https://invokebot.com/#organization"
+  }
 }
 </script>
 
@@ -328,7 +353,11 @@
   </nav>
 
   <h1>Webhook Monitor Dashboard &mdash; Track Deliveries &amp; Debug Failures</h1>
-  <div class="meta">May 28, 2026 &middot; 12 min read &middot; By <a href="https://zovo.one/lifetime?utm_source=invokebot&amp;utm_medium=inline&amp;utm_campaign=tools-webhook-monitor-dashboard">Michael Lip</a></div>
+  <div class="answer-block" style="max-width:820px;margin:1.5rem auto;padding:1rem 1.25rem;border-left:3px solid #14B8A6;background:#161b22;border-radius:6px;">
+  <p style="margin:0 0 .5rem;line-height:1.6;"><strong>Short answer.</strong> This dashboard simulates webhook delivery monitoring in the browser. It shows a delivery timeline with success, retry and failed states, filters by status, searches payload text, and opens each event for its request headers, body, response and latency. A stats panel reports success rate, average latency and failure reasons.</p>
+  <p style="margin:0;font-size:.85rem;opacity:.75;">Updated 2026-10-28</p>
+</div>
+<div class="meta">May 28, 2026 &middot; 12 min read &middot; By <a href="https://zovo.one/lifetime?utm_source=invokebot&amp;utm_medium=inline&amp;utm_campaign=tools-webhook-monitor-dashboard">Michael Lip</a></div>
 
   <p>Webhook delivery is a fire-and-forget operation by design, but production systems need visibility into exactly what was sent, what was received, and what failed. This simulated webhook monitor dashboard replicates the core UI of a real delivery monitoring system: a live event timeline with status indicators, filter and search controls, per-event drill-down into request headers and payload body, response status and body, latency measurements, and aggregate statistics including success rate, average latency, and a breakdown of failure reasons.</p>
 
@@ -744,6 +773,7 @@ simulate();
 <li><a href="/tools/event-payload-differ.html" style="color:#3b82f6;text-decoration:none;">Event Payload Differ — Webhook Payload Diff Tool for Debugging Changes</a></li>
 <li><a href="/tools/webhook-payload-builder.html" style="color:#3b82f6;text-decoration:none;">Webhook Payload Builder — Construct &amp; Validate Webhook Payloads</a></li>
 <li><a href="/guides/retry-strategy-calculator.html" style="color:#3b82f6;text-decoration:none;">Exponential Backoff &amp; Retry Strategy Calculator</a></li>
+<li><a href="/guides/missed-webhook-events.html" style="color:#3b82f6;text-decoration:none;">Recover Missed Webhook Events — Replay and Reconcile</a></li>
 <li><a href="/guides/event-sourcing-guide.html" style="color:#3b82f6;text-decoration:none;">Event Sourcing Guide — Build Reliable Event-Driven Systems</a></li>
 </ul>
 </section>

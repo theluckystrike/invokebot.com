@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Do I Recover Missed Webhook Events? | InvokeBot</title>
+<meta name="description" content="Recover webhook events lost in an outage: size the gap from the delivery log, replay from the provider API or a resend control, and dedupe by event ID.">
+<link rel="canonical" href="https://invokebot.com/guides/missed-webhook-events.html">
+<link rel="alternate" hreflang="en" href="https://invokebot.com/guides/missed-webhook-events.html">
+<link rel="alternate" hreflang="x-default" href="https://invokebot.com/guides/missed-webhook-events.html">
+<meta property="og:title" content="How Do I Recover Missed Webhook Events?">
+<meta property="og:description" content="A five-step recovery procedure for missed webhook events, with a replay script and a duplicate check.">
+<meta property="og:url" content="https://invokebot.com/guides/missed-webhook-events.html">
+<meta property="og:image" content="https://invokebot.com/assets/og-image.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="InvokeBot">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How Do I Recover Missed Webhook Events?">
+<meta name="twitter:description" content="A five-step recovery procedure for missed webhook events, with a replay script and a duplicate check.">
+<meta name="twitter:image" content="https://invokebot.com/assets/og-image.png">
+<link rel="stylesheet" href="/assets/style.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "How Do I Recover Missed Webhook Events?",
+  "description": "Recover webhook events lost in an outage: size the gap from the delivery log, replay from the provider API or a resend control, and dedupe by event ID.",
+  "url": "https://invokebot.com/guides/missed-webhook-events.html",
+  "datePublished": "2026-10-28",
+  "dateModified": "2026-10-28",
+  "author": {
+    "@type": "Person",
+    "name": "Michael Lip",
+    "url": "https://zovo.one"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "InvokeBot",
+    "url": "https://invokebot.com"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://invokebot.com/guides/missed-webhook-events.html"
+  }
+}
+</script>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can a replay deliver the same event twice?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, and that is expected. Replay is a manual delivery with the same guarantees as an automatic retry, which means at-least-once. The duplicate check in the handler is what makes the second delivery harmless, so the store must be checked before the side effect and not after it."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What if the provider has no resend control?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Use the provider's events API if it lists past events with a time filter, and page through the window. If there is no list endpoint either, reconciliation is impossible from the provider side, and the only recovery is a manual export or support request. Add a local record of received event IDs so a future outage is at least measurable."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long should I keep the processed event IDs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Longer than the provider's retry window plus your longest replay. Providers retry for hours to days, and an incident replay can happen a week later, so a store that expires in 24 hours is too short for recovery work. Size the store from the retry window of the provider that sends the most events."
+      }
+    }
+  ]
+}
+</script>
+
+<script type="application/ld+json">
+{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://invokebot.com/"}, {"@type": "ListItem", "position": 2, "name": "Guides", "item": "https://invokebot.com/guides/"}, {"@type": "ListItem", "position": 3, "name": "Recover Missed Webhook Events"}]}
+</script>
+
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">invokebot</a>
+  <ul class="nav-links">
+    <li><a href="/">Tool</a></li>
+    <li><a href="/answers/">Answers</a></li>
+    <li><a href="/research/">Research</a></li>
+    <li><a href="/guides/">Guides</a></li>
+    <li><a href="/blog/">Blog</a></li>
+    <li><a href="/about.html">About</a></li>
+  </ul>
+    <div class="nav-right">
+      <a href="https://zovo.one/pricing?utm_source=invokebot&amp;utm_medium=satellite&amp;utm_campaign=nav-link" class="nav-pro" target="_blank">Go Pro &#10022;</a>
+      <a href="https://zovo.one/tools?utm_source=invokebot&amp;utm_medium=nav&amp;utm_campaign=guides-missed-webhook-events" class="nav-zovo">Zovo Tools</a>
+    </div>
+  </nav>
+
+<article class="article">
+  <nav class="breadcrumb" aria-label="Breadcrumb" style="margin-bottom:1.5rem;font-size:0.9rem;">
+    <a href="/">Home</a> &rsaquo; <a href="/guides/">Guides</a> &rsaquo; <span style="color:var(--text-muted);">Recover Missed Webhook Events</span>
+  </nav>
+
+<h1>How Do I Recover Missed Webhook Events?</h1>
+  <div class="meta">October 28, 2026 &middot; 5 min read &middot; By <a href="https://zovo.one/lifetime?utm_source=invokebot&amp;utm_medium=inline&amp;utm_campaign=guides-missed-webhook-events">Michael Lip</a></div>
+
+    <div class="answer-block" style="margin:0 0 1.5rem;padding:1rem 1.25rem;border-left:3px solid #14B8A6;background:rgba(255,255,255,0.04);border-radius:6px;">
+      <p style="margin:0 0 .5rem;"><strong>Short answer.</strong> Missed events come back from three places: the provider's resend control, a backfill call to the provider API, or your own reconciliation job. Write down the gap window from the delivery log first, then replay into an endpoint that drops duplicates by event ID. Replay without a dedupe store and you trade a gap for a double charge.</p>
+      <p style="margin:0;font-size:.85rem;opacity:.75;">Updated 2026-10-28</p>
+    </div>
+
+    <p>A missed event is not an error in your logs. It is a gap between two records: the provider says the event happened, your system has no trace of it, or your system has a trace but the work behind it never ran. Recovery means closing that gap without creating a second copy of the work.</p>
+
+    <h2>Why events go missing</h2>
+    <p>Four causes cover most incidents. The endpoint was down for longer than the provider's retry window, so the last attempt failed and nothing was left to retry. The handler returned an error after it had already written to the database. The signature check rejected the request because the secret had been rotated. Or the endpoint did not exist yet, because the first deploy went out after the event was sent.</p>
+    <p>The first case loses the event. The other three deliver it and discard it, which is why a replay can quietly do the work twice.</p>
+
+    <h2>Step 1: Define the gap window</h2>
+    <p>Open the provider's delivery log and find two timestamps: the last delivery that reached your endpoint with a 2xx response, and the first delivery that exhausted its attempts. Use the provider's clock, not your own, because the two drift and your log may start after the event.</p>
+    <p>Write the window down before you touch anything: start, end, event types, and the count the provider reports. That count is the target for every later check. The simulated dashboard in <a href="/tools/webhook-monitor-dashboard.html">InvokeBot's monitor tool</a> shows the same fields you need to read in a real log: status per attempt, response code, and latency.</p>
+
+    <h2>Step 2: Choose the recovery source</h2>
+    <table style="width:100%;border-collapse:collapse;margin:1rem 0;">
+      <thead>
+        <tr><th style="text-align:left;padding:.5rem;border-bottom:1px solid rgba(255,255,255,.15);">Source</th><th style="text-align:left;padding:.5rem;border-bottom:1px solid rgba(255,255,255,.15);">When it works</th><th style="text-align:left;padding:.5rem;border-bottom:1px solid rgba(255,255,255,.15);">What to watch</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">Resend from the delivery log</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">The provider still lists the failed deliveries</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">One event at a time, so it is slow for a long outage</td></tr>
+        <tr><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">Backfill from the events API</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">The provider exposes an events list with a time filter</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">Pagination, rate limits, and events created after your window</td></tr>
+        <tr><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">Your own reconciliation</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">The provider has no resend control</td><td style="padding:.5rem;border-bottom:1px solid rgba(255,255,255,.08);">You need a list endpoint on your side to compare against</td></tr>
+      </tbody>
+    </table>
+    <p>Stripe keeps failed deliveries and offers a resend action in its webhook log, and its Events API can list past events for a backfill. GitHub lets you redeliver a failed delivery from the delivery log. Both providers are described in the <a href="/tools/webhook-monitor-dashboard.html#faq">monitor page FAQ</a>. When neither control exists, reconciliation is the only path.</p>
+
+    <h2>Step 3: Make the replay safe</h2>
+    <p>Every replay passes through the same handler as a live delivery, so the handler needs a duplicate check that survives a restart. Store the provider event ID before the side effect runs, and return success when the ID is already present. A short script that replays a window into the same handler looks like this:</p>
+    <pre style="background:rgba(255,255,255,0.04);padding:1rem;border-radius:8px;overflow-x:auto;line-height:1.6;"><code>def handle(event):
+    key = "webhook:seen:" + event["id"]
+    if store.set(key, "1", nx=True, ex=7 * 24 * 3600) is None:
+        return "duplicate"          # already processed, stop here
+    apply_side_effect(event)        # charge, email, ticket update
+    return "ok"
+
+for event in provider.events(created_gte=window_start, created_lte=window_end):
+    handle(event)</code></pre>
+    <p>The expiry on the key has to outlive the provider's retry window, otherwise a late retry arrives after the key disappears and the work runs twice. The same rule is why <a href="/guides/idempotency-key-generator.html">idempotency keys</a> are worth using from the first deploy rather than after the first incident.</p>
+
+    <h2>Step 4: Reconcile before you close the incident</h2>
+    <p>Pull the provider's event IDs for the window into one set. Pull the IDs your system marked as processed into another. The difference is the real gap, and it is usually smaller than the number of failed deliveries suggests, because some retries did land.</p>
+    <p>Run the comparison twice: once before the replay, to size the job, and once after, to prove it is empty. A non-empty difference after a replay means the handler is rejecting events, not that the replay failed.</p>
+
+    <h2>Step 5: Stop the next gap</h2>
+    <ul>
+      <li>Return 2xx before the work starts, then process from a queue. A handler that answers after the database write will time out under load.</li>
+      <li>Send events that keep failing to a dead letter queue, and alert on the queue depth rather than on individual failures.</li>
+      <li>Alert on a drop in delivery success rate, not only on a 5xx rate. A provider-side failure looks like silence on your side.</li>
+      <li>Keep the delivery log longer than your longest incident. A log that expires in 24 hours cannot recover a weekend outage.</li>
+    </ul>
+
+    <h2>Frequently Asked Questions</h2>
+    <details>
+      <summary>Can a replay deliver the same event twice?</summary>
+      <p>Yes, and that is expected. Replay is a manual delivery with the same guarantees as an automatic retry, which means at-least-once. The duplicate check in the handler is what makes the second delivery harmless, so the store must be checked before the side effect and not after it.</p>
+    </details>
+    <details>
+      <summary>What if the provider has no resend control?</summary>
+      <p>Use the provider's events API if it lists past events with a time filter, and page through the window. If there is no list endpoint either, reconciliation is impossible from the provider side, and the only recovery is a manual export or support request. Add a local record of received event IDs so a future outage is at least measurable.</p>
+    </details>
+    <details>
+      <summary>How long should I keep the processed event IDs?</summary>
+      <p>Longer than the provider's retry window plus your longest replay. Providers retry for hours to days, and an incident replay can happen a week later, so a store that expires in 24 hours is too short for recovery work. Size the store from the retry window of the provider that sends the most events.</p>
+    </details>
+</article>
+
+<section class="faq-section" style="max-width:800px;margin:2rem auto;padding:0 1.5rem;">
+  <h2>Frequently Asked Questions</h2>
+  <details>
+    <summary>How do I verify a webhook signature with HMAC-SHA256?</summary>
+    <p>Compute HMAC-SHA256 of the raw request body using your webhook secret, then compare the hex digest to the signature header. In Node.js: <code>const sig = crypto.createHmac('sha256', secret).update(rawBody).digest('hex')</code>. Use <code>crypto.timingSafeEqual()</code> for comparison to prevent timing attacks. Always hash the raw bytes, never parsed JSON.</p>
+  </details>
+  <details>
+    <summary>What are the most common webhook security vulnerabilities?</summary>
+    <p>The top vulnerabilities are: missing signature verification (accepting any request), using parsed JSON instead of raw body for HMAC (breaks signatures), string comparison instead of constant-time comparison (enables timing attacks), no timestamp validation (allows replay attacks), missing TLS (payloads visible in transit), and overly permissive IP allowlists.</p>
+  </details>
+  <details>
+    <summary>Should I restrict webhook endpoints by IP address?</summary>
+    <p>IP allowlisting is a defense-in-depth measure but should not be your only protection. Major providers publish their webhook source IPs. IP allowlisting blocks spoofed requests before they reach your application code, but HMAC signature verification is still required because IPs can be spoofed at the network level.</p>
+  </details>
+  <details>
+    <summary>How do I prevent webhook replay attacks?</summary>
+    <p>Include a timestamp in the signed payload and reject requests older than 5 minutes. Store processed event IDs and reject duplicates. Together, timestamp validation and idempotency keys prevent both replay attacks and duplicate processing from legitimate retries.</p>
+  </details>
+  <details>
+    <summary>What should my webhook endpoint return on failure?</summary>
+    <p>Return 200 for successfully processed events, 202 for accepted-but-queued events, 400 for malformed payloads, 401 for invalid signatures, and 500 for internal processing errors. Never return detailed error messages &mdash; they leak implementation details to attackers. The status code alone tells the provider whether to retry.</p>
+  </details>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand">InvokeBot</div>
+    <div class="footer-tagline">Webhook Request Builder &amp; Tester</div>
+    <a href="/" class="footer-cta">Open Webhook Tester</a>
+    <div class="footer-copy">&copy; 2026 <a href="https://zovo.one/lifetime?utm_source=invokebot&amp;utm_medium=footer&amp;utm_campaign=guides-missed-webhook-events">Zovo Tools</a></div>
+  </div>
+  <div class="zovo-network">
+    <div class="zovo-network-inner">
+      <div class="zovo-network-title">Zovo Tools Network</div>
+      <div class="zovo-network-links">
+        <a href="https://zovo.one/tools?utm_source=invokebot&amp;utm_medium=footer&amp;utm_campaign=guides-missed-webhook-events">All Tools</a>
+        <a href="https://invokebot.com">InvokeBot</a>
+        <a href="https://claudhq.com">ClaudHQ</a>
+        <a href="https://kappafy.com">Kappafy</a>
+        <a href="https://lochbot.com">LochBot</a>
+        <a href="https://tg.zovo.one/">Tiny Telegram Tools — Telegram Bots</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// HMAC Signature Calculator (Web Crypto API)
+// ============================================================
+let computedSigHex = '';
+
+async function computeSignature() {
+  const secret = document.getElementById('hmacSecret').value;
+  const body = document.getElementById('hmacBody').value;
+  const algo = document.getElementById('hmacAlgo').value;
+  const output = document.getElementById('hmacResult');
+
+  if (!secret) {
+    output.textContent = 'Enter a webhook secret to compute the signature.';
+    output.className = 'hmac-result hmac-neutral';
+    return;
+  }
+  if (!body) {
+    output.textContent = 'Enter the request body to compute the signature.';
+    output.className = 'hmac-result hmac-neutral';
+    return;
+  }
+
+  try {
+    const enc = new TextEncoder();
+    const keyData = enc.encode(secret);
+    const msgData = enc.encode(body);
+
+    const key = await crypto.subtle.importKey(
+      'raw', keyData, { name: 'HMAC', hash: algo }, false, ['sign']
+    );
+
+    const sig = await crypto.subtle.sign('HMAC', key, msgData);
+    const hashArray = Array.from(new Uint8Array(sig));
+    computedSigHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    let prefix = '';
+    if (algo === 'SHA-256') prefix = 'sha256=';
+    else if (algo === 'SHA-1') prefix = 'sha1=';
+    else if (algo === 'SHA-384') prefix = 'sha384=';
+    else if (algo === 'SHA-512') prefix = 'sha512=';
+
+    output.textContent = prefix + computedSigHex;
+    output.className = 'hmac-result hmac-neutral';
+
+    verifySig();
+  } catch (e) {
+    output.textContent = 'Error: ' + e.message;
+    output.className = 'hmac-result hmac-mismatch';
+  }
+}
+
+function verifySig() {
+  const expected = document.getElementById('expectedSig').value.trim();
+  const result = document.getElementById('verifyResult');
+
+  if (!expected) {
+    result.textContent = 'Enter an expected signature above to verify.';
+    result.className = 'hmac-result';
+    result.style.color = 'var(--text-muted)';
+    return;
+  }
+
+  if (!computedSigHex) {
+    result.textContent = 'Click "Compute" first to generate the HMAC signature.';
+    result.className = 'hmac-result';
+    result.style.color = 'var(--text-muted)';
+    return;
+  }
+
+  // Normalize: remove common prefixes for comparison
+  const normalize = (s) => s.replace(/^(sha256=|sha1=|sha384=|sha512=)/i, '').toLowerCase().trim();
+  const normalizedExpected = normalize(expected);
+  const normalizedComputed = normalize(computedSigHex);
+
+  if (normalizedExpected === normalizedComputed) {
+    result.textContent = 'MATCH — Signature is valid. The payload was signed with this secret.';
+    result.className = 'hmac-result hmac-match';
+    result.style.color = '';
+  } else {
+    result.textContent = 'MISMATCH — Signature does not match. Check the secret, body, and algorithm.';
+    result.className = 'hmac-result hmac-mismatch';
+    result.style.color = '';
+  }
+}
+
+function copySignature() {
+  const output = document.getElementById('hmacResult').textContent;
+  navigator.clipboard.writeText(output).then(() => {
+    const btns = document.querySelectorAll('.btn.btn-sm');
+    btns.forEach(btn => {
+      if (btn.textContent === 'Copy') {
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = orig, 1500);
+      }
+    });
+  });
+}
+
+// ============================================================
+// Security Audit Checklist Scoring
+// ============================================================
+function updateScore() {
+  const checkboxes = document.querySelectorAll('#checklistSection input[type="checkbox"]');
+  let totalWeight = 0;
+  let checkedWeight = 0;
+  let checkedCount = 0;
+
+  checkboxes.forEach(cb => {
+    const weight = parseInt(cb.getAttribute('data-weight')) || 1;
+    totalWeight += weight;
+    if (cb.checked) {
+      checkedWeight += weight;
+      checkedCount++;
+    }
+  });
+
+  const totalItems = checkboxes.length;
+  const percent = totalWeight > 0 ? Math.round((checkedWeight / totalWeight) * 100) : 0;
+
+  // Update ring
+  const circumference = 2 * Math.PI * 42; // 264
+  const offset = circumference - (percent / 100) * circumference;
+  const arc = document.getElementById('scoreArc');
+  arc.setAttribute('stroke-dashoffset', offset);
+
+  // Color based on grade
+  let grade, gradeClass, label;
+  if (percent >= 90) { grade = 'A'; gradeClass = 'grade-a'; label = 'Excellent — production ready'; }
+  else if (percent >= 75) { grade = 'B'; gradeClass = 'grade-b'; label = 'Good — minor gaps remain'; }
+  else if (percent >= 55) { grade = 'C'; gradeClass = 'grade-c'; label = 'Fair — significant gaps'; }
+  else if (percent >= 35) { grade = 'D'; gradeClass = 'grade-d'; label = 'Poor — critical items missing'; }
+  else { grade = 'F'; gradeClass = 'grade-f'; label = 'Failing — not safe for production'; }
+
+  arc.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#f97316');
+  if (percent >= 90) arc.setAttribute('stroke', '#22c55e');
+  else if (percent >= 75) arc.setAttribute('stroke', '#84cc16');
+  else if (percent >= 55) arc.setAttribute('stroke', '#eab308');
+  else if (percent >= 35) arc.setAttribute('stroke', '#f97316');
+  else arc.setAttribute('stroke', '#ef4444');
+
+  document.getElementById('scorePercent').textContent = percent + '%';
+  document.getElementById('scorePercent').style.color = arc.getAttribute('stroke');
+
+  const gradeEl = document.getElementById('scoreGrade');
+  gradeEl.textContent = grade;
+  gradeEl.className = 'grade ' + gradeClass;
+
+  document.getElementById('scoreLabel').textContent = label;
+  document.getElementById('scoreCount').textContent = checkedCount + ' / ' + totalItems + ' items passed';
+}
+
+// Initialize
+computeSignature();
+updateScore();
+</script>
+
+
+<section style="margin-top:48px;padding:24px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;">
+<h2 style="font-size:18px;margin-bottom:16px;">Related Tools</h2>
+<ul style="list-style:none;padding:0;display:grid;gap:8px;">
+<li><a href="/tools/webhook-monitor-dashboard.html" style="color:#3b82f6;text-decoration:none;">Webhook Monitor Dashboard — Track Deliveries and Debug Failures</a></li>
+<li><a href="/guides/idempotency-key-generator.html" style="color:#3b82f6;text-decoration:none;">Idempotency Implementation Guide — Key Generator & Dedup Simulator</a></li>
+<li><a href="/guides/retry-strategy-calculator.html" style="color:#3b82f6;text-decoration:none;">Exponential Backoff & Retry Strategy Calculator</a></li>
+<li><a href="/research/webhook-reliability-patterns.html" style="color:#3b82f6;text-decoration:none;">Webhook Reliability Patterns</a></li>
+</ul>
+</section>
+
+
+<nav class="zovo-network" aria-label="Zovo Tools Network">
+    <div class="zovo-network-inner">
+        <h3 class="zovo-network-title">Explore More Tools</h3>
+        <div class="zovo-network-links">
+            <a href="https://abwex.com">ABWex — A/B Testing</a>
+            <a href="https://b2berp.com">B2BERP — Business Tools</a>
+            <a href="https://bugbountyreality.com">BugBountyReality — Security</a>
+            <a href="https://claudflow.com">ClaudFlow — Workflows</a>
+            <a href="https://claudkit.com">ClaudKit — API Tools</a>
+            <a href="https://dismissticket.com">DismissTicket — Support</a>
+            <a href="https://enhio.com">Enhio — Text Tools</a>
+            <a href="https://epochpilot.com">EpochPilot — Timestamps</a>
+            <a href="https://gen8x.com">Gen8X — Color Tools</a>
+            <a href="https://gpt0x.com">GPT0X — AI Models</a>
+            <a href="https://heytensor.com">HeyTensor — ML Tools</a>
+            <a href="https://ingredientcalculator.com">IngredientCalc — Recipes</a>
+            <a href="https://kappafy.com">Kappafy — JSON</a>
+            <a href="https://kappakit.com">KappaKit — Dev Toolkit</a>
+            <a href="https://kickllm.com">KickLLM — LLM Costs</a>
+            <a href="https://krzen.com">Krzen — Image Tools</a>
+            <a href="https://lochbot.com">LochBot — Security</a>
+            <a href="https://lockml.com">LockML — ML Security</a>
+            <a href="https://ml0x.com?utm_source=invokebot&amp;utm_medium=nav&amp;utm_campaign=guides-missed-webhook-events">ML0X — ML Basics</a>
+            <a href="https://ml3x.com">ML3X — Matrix Math</a>
+            <a href="https://pictureeditor.net">PictureEditor — Image Editing</a>
+            <a href="https://recipetool.net">RecipeTool — Cooking</a>
+            <a href="https://viryd.com">Viryd — Dev Tools</a>
+        </div>
+    </div>
+</nav>
+
+<div class="pow-strip">
+  <div class="pow-strip-inner">
+    <span class="pow-label">By the same builder:</span>
+    <a href="https://github.com/theluckystrike" rel="nofollow">GitHub — theluckystrike</a>
+    <a href="https://www.belikenative.com" rel="nofollow">BeLikeNative — Grammar AI</a>
+    <a href="https://earlythunder.com" rel="nofollow">EarlyThunder — Dev Blog</a>
+    <a href="https://bugbountyreality.com" rel="nofollow">Bug Bounty Reality</a>
+    <a href="https://zovo.one/lifetime?utm_source=invokebot&amp;utm_medium=inline&amp;utm_campaign=guides-missed-webhook-events" rel="nofollow">Zovo — AI Dev Tools</a>
+  </div>
+</div>
+</body>
+</html>
